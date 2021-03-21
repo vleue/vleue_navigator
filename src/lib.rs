@@ -16,7 +16,7 @@ pub struct NavMesh {
 }
 impl NavMesh {
     pub fn from_mesh(mesh: &Mesh) -> NavMesh {
-        warn!("creating navmesh");
+        info!("creating navmesh");
         fn mesh_to_option(mesh: &Mesh) -> Option<NavMesh> {
             let indices = match mesh.primitive_topology() {
                 PrimitiveTopology::TriangleList => mesh.indices()?,
@@ -113,9 +113,7 @@ impl NavMesh {
             }
             None
         }
-        let ret = mesh_to_option(mesh).unwrap_or_default();
-        warn!("done creating navmesh");
-        ret
+        mesh_to_option(mesh).unwrap_or_default()
     }
 
     pub fn point_in_mesh(&self, point: Vec3) -> bool {
@@ -137,7 +135,7 @@ impl NavMesh {
     }
 
     fn path_option(&self, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
-        warn!("searching for path");
+        info!("searching for path");
         let start = self.point_to_triangle(from)?;
         let end = self.point_to_triangle(to)?;
         let mut graph = self.graph.clone();
@@ -169,7 +167,6 @@ impl NavMesh {
             .map(|n| self.vertices[*n])
             .collect();
         path.push(to);
-        warn!("done searching for path");
         Some(path)
     }
 }
