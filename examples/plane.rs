@@ -53,6 +53,7 @@ struct GltfHandles {
 }
 
 struct FpsText;
+struct Camera;
 
 fn setup(
     mut commands: Commands,
