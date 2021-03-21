@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use bevy::{
     asset::LoadState,
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
@@ -35,8 +37,9 @@ fn main() {
             SystemSet::on_update(AppState::Playing)
                 .with_system(give_target.system())
                 .with_system(move_object.system())
-                .with_system(display_fps.system())
-                .with_system(rotate_camera.system()),
+                // .with_system(display_fps.system())
+                .with_system(rotate_camera.system())
+                .with_system(trigger_navmesh_visibility.system()),
         )
         .run();
 }
@@ -60,7 +63,10 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut navmeshes: ResMut<GltfHandles>,
 ) {
-    navmeshes.handles = vec![asset_server.load("meshes/plane_with_holes.glb")];
+    navmeshes.handles = vec![
+        asset_server.load("meshes/my_level_nav.glb"),
+        asset_server.load("meshes/my_level.glb"),
+    ];
 
     commands
         .spawn(LightBundle {
@@ -79,39 +85,39 @@ fn setup(
         })
         .with(Camera);
 
-    commands
-        .spawn(UiCameraBundle::default())
-        .spawn(TextBundle {
-            style: Style {
-                align_self: AlignSelf::FlexEnd,
-                ..Default::default()
-            },
-            // Use `Text` directly
-            text: Text {
-                // Construct a `Vec` of `TextSection`s
-                sections: vec![
-                    TextSection {
-                        value: "FPS: ".to_string(),
-                        style: TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 30.0,
-                            color: Color::WHITE,
-                        },
-                    },
-                    TextSection {
-                        value: "".to_string(),
-                        style: TextStyle {
-                            font: asset_server.load("fonts/FiraMono-Medium.ttf"),
-                            font_size: 30.0,
-                            color: Color::GOLD,
-                        },
-                    },
-                ],
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .with(FpsText);
+    // commands
+    //     .spawn(UiCameraBundle::default())
+    //     .spawn(TextBundle {
+    //         style: Style {
+    //             align_self: AlignSelf::FlexEnd,
+    //             ..Default::default()
+    //         },
+    //         // Use `Text` directly
+    //         text: Text {
+    //             // Construct a `Vec` of `TextSection`s
+    //             sections: vec![
+    //                 TextSection {
+    //                     value: "FPS: ".to_string(),
+    //                     style: TextStyle {
+    //                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+    //                         font_size: 30.0,
+    //                         color: Color::WHITE,
+    //                     },
+    //                 },
+    //                 TextSection {
+    //                     value: "".to_string(),
+    //                     style: TextStyle {
+    //                         font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+    //                         font_size: 30.0,
+    //                         color: Color::GOLD,
+    //                     },
+    //                 },
+    //             ],
+    //             ..Default::default()
+    //         },
+    //         ..Default::default()
+    //     })
+    //     .with(FpsText);
 }
 
 fn display_fps(diagnostics: Res<Diagnostics>, mut query: Query<&mut Text, With<FpsText>>) {
@@ -144,6 +150,7 @@ struct Path {
 struct Object;
 struct Target;
 struct Waiting(Timer);
+struct NavMeshDisp;
 
 fn setup_scene(
     mut commands: Commands,
@@ -154,6 +161,10 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut navmesh: ResMut<Option<NavMesh>>,
 ) {
+    if let Some(gltf) = gltfs.get(&navmeshes.handles[1]) {
+        commands.spawn_scene(gltf.default_scene.as_ref().unwrap().clone());
+    }
+
     if let Some(gltf) = gltfs.get(&navmeshes.handles[0]) {
         let gltf_mesh_handle = gltf.meshes[0].clone();
         let gltf_mesh = gltf_meshes.get(gltf_mesh_handle).unwrap();
@@ -163,9 +174,11 @@ fn setup_scene(
             .spawn(PbrBundle {
                 mesh: mesh_handle.clone(),
                 material: materials.add(Color::ORANGE.into()),
+                transform: Transform::from_xyz(0.0, -0.2, 0.0),
                 ..Default::default()
             })
-            .with(Wireframe);
+            .with(Wireframe)
+            .with(NavMeshDisp);
 
         let mesh = meshes.get(mesh_handle).unwrap();
 
@@ -243,7 +256,7 @@ fn give_target(
             commands
                 .spawn(PbrBundle {
                     mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
-                    material: materials.add(Color::GREEN.into()),
+                    material: materials.add(Color::RED.into()),
                     transform: Transform::from_xyz(x, 0.0, z),
                     ..Default::default()
                 })
@@ -251,7 +264,7 @@ fn give_target(
         } else {
             commands.spawn(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
-                material: materials.add(Color::RED.into()),
+                material: materials.add(Color::GREEN.into()),
                 transform: Transform::from_xyz(x, 0.0, z),
                 ..Default::default()
             });
@@ -285,10 +298,22 @@ fn move_object(
 fn rotate_camera(time: Res<Time>, mut camera_query: Query<&mut Transform, With<Camera>>) {
     for mut camera in camera_query.iter_mut() {
         *camera = Transform::from_xyz(
-            (time.seconds_since_startup() / 40.0).sin() as f32 * 20.0,
+            (time.seconds_since_startup() / (2.0 * PI) * 40.0 / 30.0).sin() as f32 * 20.0,
             40.0,
-            (time.seconds_since_startup() / 40.0).cos() as f32 * 20.0,
+            (time.seconds_since_startup() / (2.0 * PI) * 40.0 / 30.0).cos() as f32 * 20.0,
         )
         .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y);
+    }
+}
+
+fn trigger_navmesh_visibility(
+    mut query: Query<(&mut Visible, &mut Transform), With<NavMeshDisp>>,
+    keyboard_input: ResMut<Input<KeyCode>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        for (mut visible, mut transform) in query.iter_mut() {
+            // visible.is_visible = !visible.is_visible;
+            transform.translation.y = -1.0 * transform.translation.y;
+        }
     }
 }
