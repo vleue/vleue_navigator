@@ -3,7 +3,7 @@ use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
     gltf::{Gltf, GltfMesh},
     prelude::*,
-    render::wireframe::{WireframeConfig, WireframePlugin},
+    render::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
 };
 use rand::Rng;
@@ -15,13 +15,13 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
         // .insert_resource(WireframeConfig { global: true })
-        // .insert_resource(WgpuOptions {
-        //     features: WgpuFeatures {
-        //         // The Wireframe requires NonFillPolygonMode feature
-        //         features: vec![WgpuFeature::NonFillPolygonMode],
-        //     },
-        //     ..Default::default()
-        // })
+        .insert_resource(WgpuOptions {
+            features: WgpuFeatures {
+                // The Wireframe requires NonFillPolygonMode feature
+                features: vec![WgpuFeature::NonFillPolygonMode],
+            },
+            ..Default::default()
+        })
         .init_resource::<GltfHandles>()
         .add_plugins(DefaultPlugins)
         .add_plugin(WireframePlugin)
@@ -156,11 +156,13 @@ fn setup_scene(
         let gltf_mesh = gltf_meshes.get(gltf_mesh_handle).unwrap();
         let mesh_handle = gltf_mesh.primitives[0].mesh.clone();
 
-        commands.spawn(PbrBundle {
-            mesh: mesh_handle.clone(),
-            material: materials.add(Color::ORANGE.into()),
-            ..Default::default()
-        });
+        commands
+            .spawn(PbrBundle {
+                mesh: mesh_handle.clone(),
+                material: materials.add(Color::ORANGE.into()),
+                ..Default::default()
+            })
+            .with(Wireframe);
 
         let mesh = meshes.get(mesh_handle).unwrap();
 
