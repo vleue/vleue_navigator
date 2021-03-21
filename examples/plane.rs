@@ -266,13 +266,13 @@ fn move_object(
 ) {
     for (mut transform, mut target, entity) in object_query.iter_mut() {
         let move_direction = target.current - transform.translation;
-        transform.translation += move_direction.normalize() * time.delta_seconds() * 5.0;
-        if transform.translation.distance(target.current) < 0.05 {
+        transform.translation += move_direction.normalize() * time.delta_seconds() * 10.0;
+        if transform.translation.distance(target.current) < 0.1 {
             if let Some(next) = target.next.pop() {
                 target.current = next;
             } else {
                 commands.remove::<Path>(entity);
-                commands.insert(entity, Waiting(Timer::from_seconds(0.5, false)));
+                commands.insert(entity, Waiting(Timer::from_seconds(0.01, false)));
                 for target in target_query.iter() {
                     commands.despawn_recursive(target);
                 }
