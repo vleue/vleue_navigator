@@ -3,27 +3,25 @@ use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
     gltf::{Gltf, GltfMesh},
     prelude::*,
-    render::{
-        mesh::{Indices, VertexAttributeValues},
-        pipeline::PrimitiveTopology,
-        wireframe::{WireframeConfig, WireframePlugin},
-    },
+    render::wireframe::{WireframeConfig, WireframePlugin},
     wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
 };
 use rand::Rng;
+
+use navmesh::*;
 
 fn main() {
     App::build()
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
-        .insert_resource(WireframeConfig { global: true })
-        .insert_resource(WgpuOptions {
-            features: WgpuFeatures {
-                // The Wireframe requires NonFillPolygonMode feature
-                features: vec![WgpuFeature::NonFillPolygonMode],
-            },
-            ..Default::default()
-        })
+        // .insert_resource(WireframeConfig { global: true })
+        // .insert_resource(WgpuOptions {
+        //     features: WgpuFeatures {
+        //         // The Wireframe requires NonFillPolygonMode feature
+        //         features: vec![WgpuFeature::NonFillPolygonMode],
+        //     },
+        //     ..Default::default()
+        // })
         .init_resource::<GltfHandles>()
         .add_plugins(DefaultPlugins)
         .add_plugin(WireframePlugin)
@@ -136,8 +134,13 @@ fn check_textures(
     }
 }
 
-struct Target(Vec3);
+struct Path {
+    current: Vec3,
+    next: Vec<Vec3>,
+}
 struct Object;
+struct Target;
+struct Waiting(Timer);
 
 fn setup_scene(
     mut commands: Commands,
@@ -164,7 +167,6 @@ fn setup_scene(
         *navmesh = Some(NavMesh::from_mesh(mesh));
 
         let mut x;
-        let y = 0.0;
         let mut z;
         loop {
             x = rand::thread_rng().gen_range(-20.0..20.0);
@@ -172,8 +174,7 @@ fn setup_scene(
             if navmesh
                 .as_ref()
                 .unwrap()
-                .point_in_mesh(Vec3::new(x, y, z))
-                .is_some()
+                .point_in_mesh(Vec3::new(x, 0.0, z))
             {
                 break;
             }
@@ -186,18 +187,25 @@ fn setup_scene(
                 transform: Transform::from_xyz(x, 0.0, z),
                 ..Default::default()
             })
-            .with(Object);
+            .with(Object)
+            .with(Waiting(Timer::from_seconds(1.0, false)));
     }
 }
 
 fn give_target(
     mut commands: Commands,
-    object_query: Query<Entity, (With<Object>, Without<Target>)>,
+    mut object_query: Query<(Entity, &Transform, &mut Waiting)>,
     navmesh: Res<Option<NavMesh>>,
+    time: Res<Time>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    if let Some(entity) = object_query.iter().next() {
+    for (entity, transform, mut waiting) in object_query.iter_mut() {
+        if !waiting.0.tick(time.delta()).finished() {
+            break;
+        }
+
         let mut x;
-        let y = 0.0;
         let mut z;
         loop {
             x = rand::thread_rng().gen_range(-20.0..20.0);
@@ -205,108 +213,66 @@ fn give_target(
             if navmesh
                 .as_ref()
                 .unwrap()
-                .point_in_mesh(Vec3::new(x, y, z))
-                .is_some()
+                .point_in_mesh(Vec3::new(x, 0.0, z))
             {
                 break;
             }
         }
 
-        commands.insert(entity, Target(Vec3::new(x, y, z)));
+        let path = navmesh
+            .as_ref()
+            .unwrap()
+            .path_from_to(transform.translation, Vec3::new(x, 0.0, z));
+
+        if let Some((first, remaining)) = path.split_first() {
+            let mut remaining = remaining.to_vec();
+            remaining.reverse();
+            commands.insert(
+                entity,
+                Path {
+                    current: first.clone(),
+                    next: remaining,
+                },
+            );
+            commands.remove::<Waiting>(entity);
+            commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
+                    material: materials.add(Color::GREEN.into()),
+                    transform: Transform::from_xyz(x, 0.0, z),
+                    ..Default::default()
+                })
+                .with(Target);
+        } else {
+            commands.spawn(PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
+                material: materials.add(Color::RED.into()),
+                transform: Transform::from_xyz(x, 0.0, z),
+                ..Default::default()
+            });
+        }
     }
 }
 
 fn move_object(
     mut commands: Commands,
-    mut object_query: Query<(&mut Transform, &Target, Entity)>,
+    mut object_query: Query<(&mut Transform, &mut Path, Entity)>,
+    target_query: Query<Entity, With<Target>>,
     time: Res<Time>,
 ) {
-    for (mut transform, target, entity) in object_query.iter_mut() {
-        let move_direction = target.0 - transform.translation;
+    for (mut transform, mut target, entity) in object_query.iter_mut() {
+        let move_direction = target.current - transform.translation;
         transform.translation += move_direction.normalize() * time.delta_seconds() * 5.0;
-        if transform.translation.distance(target.0) < 0.05 {
-            commands.remove::<Target>(entity);
-        }
-    }
-}
-
-pub struct NavMesh {
-    triangles: Vec<(Vec3, Vec3, Vec3)>,
-}
-impl NavMesh {
-    pub fn from_mesh(mesh: &Mesh) -> NavMesh {
-        fn mesh_to_list(mesh: &Mesh) -> Option<Vec<(Vec3, Vec3, Vec3)>> {
-            let indices = match mesh.primitive_topology() {
-                PrimitiveTopology::TriangleList => mesh.indices()?,
-                PrimitiveTopology::TriangleStrip => mesh.indices()?,
-                _ => return None,
-            };
-
-            let indices: Vec<usize> = match indices {
-                Indices::U16(indices) => indices.iter().map(|v| *v as usize).collect(),
-                Indices::U32(indices) => indices.iter().map(|v| *v as usize).collect(),
-            };
-
-            let grouped_indices = indices
-                .iter()
-                .fold((vec![], vec![]), |(mut triangles, mut buffer), i| {
-                    buffer.push(*i);
-                    if buffer.len() == 3 {
-                        triangles.push(buffer.clone());
-                        buffer = vec![];
-                        if mesh.primitive_topology() == PrimitiveTopology::LineStrip {
-                            buffer.push(*i);
-                        }
-                    }
-                    (triangles, buffer)
-                })
-                .0;
-
-            if let VertexAttributeValues::Float3(positions) = mesh.attribute("Vertex_Position")? {
-                return Some(
-                    grouped_indices
-                        .iter()
-                        .map(|indices| {
-                            (
-                                Vec3::from_slice_unaligned(&positions[indices[0]]),
-                                Vec3::from_slice_unaligned(&positions[indices[1]]),
-                                Vec3::from_slice_unaligned(&positions[indices[2]]),
-                            )
-                        })
-                        .collect(),
-                );
+        if transform.translation.distance(target.current) < 0.05 {
+            if let Some(next) = target.next.pop() {
+                target.current = next;
+            } else {
+                commands.remove::<Path>(entity);
+                commands.insert(entity, Waiting(Timer::from_seconds(0.5, false)));
+                for target in target_query.iter() {
+                    commands.despawn_recursive(target);
+                }
             }
-            None
         }
-
-        NavMesh {
-            triangles: mesh_to_list(mesh).unwrap_or_default(),
-        }
-    }
-
-    pub fn point_in_mesh(&self, point: Vec3) -> Option<(Vec3, Vec3, Vec3)> {
-        self.triangles
-            .iter()
-            .filter(|(a, b, c)| point_in_triangle(point, (a, b, c)))
-            .next()
-            .cloned()
-    }
-}
-
-fn point_in_triangle(point: Vec3, (a, b, c): (&Vec3, &Vec3, &Vec3)) -> bool {
-    let a = *a - point;
-    let b = *b - point;
-    let c = *c - point;
-
-    let u = b.cross(c);
-    let v = c.cross(a);
-    let w = a.cross(b);
-
-    if u.dot(v) < 0.0 {
-        false
-    } else if u.dot(w) < 0.0 {
-        false
-    } else {
-        true
     }
 }
