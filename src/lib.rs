@@ -98,7 +98,17 @@ impl NavMesh {
                         if vertices.len() > 1 {
                             vertices.iter().fold(None, |last, current| {
                                 if let Some(last) = last {
-                                    graph.add_edge(last, *current, 0.0);
+                                    let edges = graph
+                                        .edges(*current)
+                                        .map(|(a, b, w)| (a, b, *w))
+                                        .collect::<Vec<_>>();
+                                    for (from, to, weight) in edges.into_iter() {
+                                        if from == *current {
+                                            graph.add_edge(last, to, weight);
+                                        } else {
+                                            graph.add_edge(last, from, weight);
+                                        }
+                                    }
                                 }
                                 Some(*current)
                             });
