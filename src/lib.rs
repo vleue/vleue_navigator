@@ -141,7 +141,12 @@ impl NavMesh {
     }
 
     pub fn path_from_to(&self, from: Vec3, to: Vec3) -> Vec<Vec3> {
-        self.path_option(from, to).unwrap_or_default()
+        let mut path = self.path_option(from, to).unwrap_or_default();
+        if path.len() > 1 {
+            self.smoothen_path(from, &mut path);
+            path.push(to);
+        }
+        path
     }
 
     fn path_option(&self, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
@@ -178,6 +183,44 @@ impl NavMesh {
             .collect();
         path.push(to);
         Some(path)
+    }
+
+    fn smoothen_path(&self, from: Vec3, path: &mut Vec<Vec3>) {
+        // eprintln!("{:?}", path);
+        let mut new_path = vec![];
+        let mut current = from;
+        let mut last = from;
+        let mut diff = 0;
+        for point in path.iter() {
+            diff += 1;
+            let delta = *point - current;
+            let mut is_in = true;
+            // Check that line is in mesh
+            // println!("    {:?}   ->    {:?}", current, point);
+            for i in 1..(diff * 10) {
+                let to_check = current + delta * (i as f32 / (diff as f32 * 10.0));
+                // println!(
+                //     "           {:?} - {:?}",
+                //     to_check,
+                //     self.point_in_mesh(to_check)
+                // );
+                if !self.point_in_mesh(to_check) {
+                    is_in = false;
+                    break;
+                }
+            }
+            if !is_in {
+                // eprintln!("+ {:?}", point);
+                new_path.push(last);
+                current = last;
+                diff = 0;
+            } else {
+                // eprintln!("--- {:?}", point);
+            }
+            last = *point;
+        }
+
+        *path = new_path;
     }
 }
 
