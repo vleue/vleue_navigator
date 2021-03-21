@@ -35,7 +35,8 @@ fn main() {
             SystemSet::on_update(AppState::Playing)
                 .with_system(give_target.system())
                 .with_system(move_object.system())
-                .with_system(display_fps.system()),
+                .with_system(display_fps.system())
+                .with_system(rotate_camera.system()),
         )
         .run();
 }
@@ -74,7 +75,8 @@ fn setup(
             transform: Transform::from_xyz(0.0, 40.0, 0.1)
                 .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
             ..Default::default()
-        });
+        })
+        .with(Camera);
 
     commands
         .spawn(UiCameraBundle::default())
@@ -276,5 +278,16 @@ fn move_object(
                 }
             }
         }
+    }
+}
+
+fn rotate_camera(time: Res<Time>, mut camera_query: Query<&mut Transform, With<Camera>>) {
+    for mut camera in camera_query.iter_mut() {
+        *camera = Transform::from_xyz(
+            (time.seconds_since_startup() / 40.0).sin() as f32 * 20.0,
+            40.0,
+            (time.seconds_since_startup() / 40.0).cos() as f32 * 20.0,
+        )
+        .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y);
     }
 }
