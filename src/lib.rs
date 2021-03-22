@@ -186,7 +186,6 @@ impl NavMesh {
     }
 
     fn smoothen_path(&self, from: Vec3, path: &mut Vec<Vec3>) {
-        // eprintln!("{:?}", path);
         let mut new_path = vec![];
         let mut current = from;
         let mut last = from;
@@ -195,27 +194,29 @@ impl NavMesh {
             diff += 1;
             let delta = *point - current;
             let mut is_in = true;
+            let mut last_triangle = None;
             // Check that line is in mesh
-            // println!("    {:?}   ->    {:?}", current, point);
-            for i in 1..(diff * 10) {
-                let to_check = current + delta * (i as f32 / (diff as f32 * 10.0));
-                // println!(
-                //     "           {:?} - {:?}",
-                //     to_check,
-                //     self.point_in_mesh(to_check)
-                // );
-                if !self.point_in_mesh(to_check) {
+            let factor = 100;
+            for i in 1..(diff * factor) {
+                let to_check = current + delta * (i as f32 / (diff * factor) as f32);
+                if last_triangle
+                    .map(|triangle| point_in_triangle(&to_check, triangle))
+                    .unwrap_or(false)
+                {
+                    continue;
+                }
+                if let Some(triangle) = self.point_to_triangle(to_check) {
+                    last_triangle = Some((&triangle.0 .0, &triangle.1 .0, &triangle.2 .0));
+                } else {
                     is_in = false;
                     break;
                 }
             }
             if !is_in {
-                // eprintln!("+ {:?}", point);
                 new_path.push(last);
                 current = last;
                 diff = 0;
             } else {
-                // eprintln!("--- {:?}", point);
             }
             last = *point;
         }
