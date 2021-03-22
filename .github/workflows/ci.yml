@@ -20,9 +20,6 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
-
       - uses: actions-rs/cargo@v1
         with:
           command: build
