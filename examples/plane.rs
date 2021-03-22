@@ -39,7 +39,8 @@ fn main() {
                 .with_system(move_object.system())
                 .with_system(display_fps.system())
                 .with_system(rotate_camera.system())
-                .with_system(trigger_navmesh_visibility.system()),
+                .with_system(trigger_navmesh_visibility.system())
+                .with_system(exit.system()),
         )
         .run();
 }
@@ -315,5 +316,12 @@ fn trigger_navmesh_visibility(
             // visible.is_visible = !visible.is_visible;
             transform.translation.y = -1.0 * transform.translation.y;
         }
+    }
+}
+
+fn exit(mut n: Local<u32>, mut aee: EventWriter<bevy::app::AppExit>) {
+    *n += 1;
+    if *n > 150 {
+        aee.send(bevy::app::AppExit);
     }
 }
