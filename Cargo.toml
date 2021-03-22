@@ -7,8 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { path =  "../bevy_friends/bevy", default-features = false, features = ["bevy_winit", "render", "bevy_wgpu", "bevy_gltf"] }
+bevy = { version = "0.4", default-features = false, features = ["bevy_winit", "render", "bevy_wgpu", "bevy_gltf"] }
 petgraph = "0.5"
 
 [dev-dependencies]
 rand = "0.8"
+
+[patch.crates-io]
+bevy = { git = "https://github.com/bevyengine/bevy", branch = "main" }
