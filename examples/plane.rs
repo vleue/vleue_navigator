@@ -37,7 +37,7 @@ fn main() {
             SystemSet::on_update(AppState::Playing)
                 .with_system(give_target.system())
                 .with_system(move_object.system())
-                // .with_system(display_fps.system())
+                .with_system(display_fps.system())
                 .with_system(rotate_camera.system())
                 .with_system(trigger_navmesh_visibility.system()),
         )
@@ -85,39 +85,39 @@ fn setup(
         })
         .with(Camera);
 
-    // commands
-    //     .spawn(UiCameraBundle::default())
-    //     .spawn(TextBundle {
-    //         style: Style {
-    //             align_self: AlignSelf::FlexEnd,
-    //             ..Default::default()
-    //         },
-    //         // Use `Text` directly
-    //         text: Text {
-    //             // Construct a `Vec` of `TextSection`s
-    //             sections: vec![
-    //                 TextSection {
-    //                     value: "FPS: ".to_string(),
-    //                     style: TextStyle {
-    //                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-    //                         font_size: 30.0,
-    //                         color: Color::WHITE,
-    //                     },
-    //                 },
-    //                 TextSection {
-    //                     value: "".to_string(),
-    //                     style: TextStyle {
-    //                         font: asset_server.load("fonts/FiraMono-Medium.ttf"),
-    //                         font_size: 30.0,
-    //                         color: Color::GOLD,
-    //                     },
-    //                 },
-    //             ],
-    //             ..Default::default()
-    //         },
-    //         ..Default::default()
-    //     })
-    //     .with(FpsText);
+    commands
+        .spawn(UiCameraBundle::default())
+        .spawn(TextBundle {
+            style: Style {
+                align_self: AlignSelf::FlexEnd,
+                ..Default::default()
+            },
+            // Use `Text` directly
+            text: Text {
+                // Construct a `Vec` of `TextSection`s
+                sections: vec![
+                    TextSection {
+                        value: "FPS: ".to_string(),
+                        style: TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 30.0,
+                            color: Color::WHITE,
+                        },
+                    },
+                    TextSection {
+                        value: "".to_string(),
+                        style: TextStyle {
+                            font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                            font_size: 30.0,
+                            color: Color::GOLD,
+                        },
+                    },
+                ],
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .with(FpsText);
 }
 
 fn display_fps(diagnostics: Res<Diagnostics>, mut query: Query<&mut Text, With<FpsText>>) {
