@@ -5,7 +5,7 @@ use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
     gltf::{Gltf, GltfMesh},
     prelude::*,
-    render::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
+    render::wireframe::{Wireframe, WireframePlugin},
     wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
 };
 use rand::Rng;
@@ -16,7 +16,6 @@ fn main() {
     App::build()
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
-        // .insert_resource(WireframeConfig { global: true })
         .insert_resource(WgpuOptions {
             features: WgpuFeatures {
                 // The Wireframe requires NonFillPolygonMode feature
@@ -312,10 +311,13 @@ fn trigger_navmesh_visibility(
     keyboard_input: ResMut<Input<KeyCode>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        for (mut visible, mut transform) in query.iter_mut() {
-            // visible.is_visible = !visible.is_visible;
+        for (_visible, mut transform) in query.iter_mut() {
             transform.translation.y = -1.0 * transform.translation.y;
         }
+        // https://github.com/bevyengine/bevy/issues/1717
+        // for (mut visible, _transform) in query.iter_mut() {
+        //     visible.is_visible = !visible.is_visible;
+        // }
     }
 }
 
