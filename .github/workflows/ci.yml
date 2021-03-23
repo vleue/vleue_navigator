@@ -4,7 +4,7 @@ name: Continuous integration
 
 jobs:
   ci:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         rust:
@@ -15,7 +15,6 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
@@ -28,17 +27,17 @@ jobs:
         with:
           command: test
 
-      # - uses: actions-rs/cargo@v1
-      #   with:
-      #     command: fmt
-      #     args: --all -- --check
-
-      # - uses: actions-rs/cargo@v1
-      #   with:
-      #     command: clippy
-      #     args: -- -D warnings
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
 
       - uses: actions-rs/cargo@v1
         with:
-          command: run
-          args: --example plane
+          command: clippy
+          args: -- -D warnings
+
+      # - uses: actions-rs/cargo@v1
+      #   with:
+      #     command: run
+      #     args: --example plane
