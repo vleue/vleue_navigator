@@ -15,21 +15,19 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
 
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
-
       - uses: actions-rs/cargo@v1
         with:
           command: build
+          args: --features linuxci
 
       - uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --features linuxci
 
       - uses: actions-rs/cargo@v1
         with:
@@ -39,4 +37,4 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: --features linuxci -- -D warnings

@@ -1,3 +1,5 @@
+#![allow(clippy::needless_collect)]
+
 use bevy::{
     prelude::*,
     render::{
@@ -8,9 +10,15 @@ use bevy::{
 };
 use petgraph::{algo::connected_components, graphmap::UnGraphMap};
 
+struct Triangle {
+    a: (Vec3, usize),
+    b: (Vec3, usize),
+    c: (Vec3, usize),
+}
+
 #[derive(Default)]
 pub struct NavMesh {
-    triangles: Vec<((Vec3, usize), (Vec3, usize), (Vec3, usize))>,
+    triangles: Vec<Triangle>,
     graph: UnGraphMap<usize, f32>,
     vertices: Vec<Vec3>,
 }
@@ -68,7 +76,7 @@ impl NavMesh {
                                 (a.y * 1000.0) as i32,
                                 (a.z * 1000.0) as i32,
                             ))
-                            .or_insert_with(|| HashSet::default())
+                            .or_insert_with(HashSet::default)
                             .insert(indices[0]);
                         graph_connections
                             .entry(IVec3::new(
@@ -76,7 +84,7 @@ impl NavMesh {
                                 (b.y * 1000.0) as i32,
                                 (b.z * 1000.0) as i32,
                             ))
-                            .or_insert_with(|| HashSet::default())
+                            .or_insert_with(HashSet::default)
                             .insert(indices[1]);
                         graph_connections
                             .entry(IVec3::new(
@@ -84,13 +92,17 @@ impl NavMesh {
                                 (c.y * 1000.0) as i32,
                                 (c.z * 1000.0) as i32,
                             ))
-                            .or_insert_with(|| HashSet::default())
+                            .or_insert_with(HashSet::default)
                             .insert(indices[2]);
 
                         graph.add_edge(indices[0], indices[1], a.distance(b));
                         graph.add_edge(indices[0], indices[2], a.distance(c));
                         graph.add_edge(indices[1], indices[2], b.distance(c));
-                        ((a, indices[0]), (b, indices[1]), (c, indices[2]))
+                        Triangle {
+                            a: (a, indices[0]),
+                            b: (b, indices[1]),
+                            c: (c, indices[2]),
+                        }
                     })
                     .collect();
                 if connected_components(&graph) > 1 {
@@ -130,14 +142,10 @@ impl NavMesh {
         self.point_to_triangle(point).is_some()
     }
 
-    fn point_to_triangle(
-        &self,
-        point: Vec3,
-    ) -> Option<&((Vec3, usize), (Vec3, usize), (Vec3, usize))> {
-        self.triangles
-            .iter()
-            .filter(|(a, b, c)| point_in_triangle(&point, (&a.0, &b.0, &c.0)))
-            .next()
+    fn point_to_triangle(&self, point: Vec3) -> Option<&Triangle> {
+        self.triangles.iter().find(|triangle| {
+            point_in_triangle(&point, (&triangle.a.0, &triangle.b.0, &triangle.c.0))
+        })
     }
 
     pub fn path_from_to(&self, from: Vec3, to: Vec3) -> Vec<Vec3> {
@@ -154,12 +162,12 @@ impl NavMesh {
         let start = self.point_to_triangle(from)?;
         let end = self.point_to_triangle(to)?;
         let mut graph = self.graph.clone();
-        graph.add_edge(usize::MAX, start.0 .1, from.distance(start.0 .0));
-        graph.add_edge(usize::MAX, start.1 .1, from.distance(start.1 .0));
-        graph.add_edge(usize::MAX, start.2 .1, from.distance(start.2 .0));
-        graph.add_edge(usize::MAX - 1, end.0 .1, from.distance(end.0 .0));
-        graph.add_edge(usize::MAX - 1, end.1 .1, from.distance(end.1 .0));
-        graph.add_edge(usize::MAX - 1, end.2 .1, from.distance(end.2 .0));
+        graph.add_edge(usize::MAX, start.a.1, from.distance(start.a.0));
+        graph.add_edge(usize::MAX, start.b.1, from.distance(start.b.0));
+        graph.add_edge(usize::MAX, start.c.1, from.distance(start.c.0));
+        graph.add_edge(usize::MAX - 1, end.a.1, from.distance(end.a.0));
+        graph.add_edge(usize::MAX - 1, end.b.1, from.distance(end.b.0));
+        graph.add_edge(usize::MAX - 1, end.c.1, from.distance(end.c.0));
         let path = petgraph::algo::astar(
             &graph,
             usize::MAX,
@@ -206,7 +214,7 @@ impl NavMesh {
                     continue;
                 }
                 if let Some(triangle) = self.point_to_triangle(to_check) {
-                    last_triangle = Some((&triangle.0 .0, &triangle.1 .0, &triangle.2 .0));
+                    last_triangle = Some((&triangle.a.0, &triangle.b.0, &triangle.c.0));
                 } else {
                     is_in = false;
                     break;
@@ -225,20 +233,18 @@ impl NavMesh {
     }
 }
 
-fn point_in_triangle(point: &Vec3, (a, b, c): (&Vec3, &Vec3, &Vec3)) -> bool {
-    let a = *a - *point;
-    let b = *b - *point;
-    let c = *c - *point;
+fn point_in_triangle(point: &Vec3, (va, vb, vc): (&Vec3, &Vec3, &Vec3)) -> bool {
+    let pa = *va - *point;
+    let pb = *vb - *point;
+    let pc = *vc - *point;
 
-    let u = b.cross(c);
-    let v = c.cross(a);
-    let w = a.cross(b);
+    let u = pb.cross(pc);
+    let v = pc.cross(pa);
+    let w = pa.cross(pb);
 
     if u.dot(v) < 0.0 {
         false
-    } else if u.dot(w) < 0.0 {
-        false
     } else {
-        true
+        u.dot(w) < 0.0
     }
 }
