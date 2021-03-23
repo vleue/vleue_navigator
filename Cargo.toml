@@ -12,5 +12,9 @@ petgraph = "0.5"
 [dev-dependencies]
 rand = "0.8"
 
+[features]
+default = []
+linuxci = ["bevy/x11"]
+
 [patch.crates-io]
 bevy = { git = "https://github.com/bevyengine/bevy", branch = "main" }
