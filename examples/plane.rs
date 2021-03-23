@@ -68,26 +68,26 @@ fn setup(
         asset_server.load("meshes/my_level.glb"),
     ];
 
-    commands
-        .spawn(LightBundle {
-            transform: Transform::from_xyz(0.0, 10.0, 0.0),
-            light: Light {
-                range: 40.0,
-                intensity: 500.0,
-                ..Default::default()
-            },
+    commands.spawn_bundle(LightBundle {
+        transform: Transform::from_xyz(0.0, 10.0, 0.0),
+        light: Light {
+            range: 40.0,
+            intensity: 500.0,
             ..Default::default()
-        })
-        .spawn(PerspectiveCameraBundle {
+        },
+        ..Default::default()
+    });
+    commands
+        .spawn_bundle(PerspectiveCameraBundle {
             transform: Transform::from_xyz(0.0, 40.0, 0.1)
                 .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
             ..Default::default()
         })
-        .with(Camera);
+        .insert(Camera);
 
+    commands.spawn_bundle(UiCameraBundle::default());
     commands
-        .spawn(UiCameraBundle::default())
-        .spawn(TextBundle {
+        .spawn_bundle(TextBundle {
             style: Style {
                 align_self: AlignSelf::FlexEnd,
                 ..Default::default()
@@ -117,7 +117,7 @@ fn setup(
             },
             ..Default::default()
         })
-        .with(FpsText);
+        .insert(FpsText);
 }
 
 fn display_fps(diagnostics: Res<Diagnostics>, mut query: Query<&mut Text, With<FpsText>>) {
@@ -171,14 +171,14 @@ fn setup_scene(
         let mesh_handle = gltf_mesh.primitives[0].mesh.clone();
 
         commands
-            .spawn(PbrBundle {
+            .spawn_bundle(PbrBundle {
                 mesh: mesh_handle.clone(),
                 material: materials.add(Color::ORANGE.into()),
                 transform: Transform::from_xyz(0.0, -0.2, 0.0),
                 ..Default::default()
             })
-            .with(Wireframe)
-            .with(NavMeshDisp);
+            .insert(Wireframe)
+            .insert(NavMeshDisp);
 
         let mesh = meshes.get(mesh_handle).unwrap();
 
@@ -199,14 +199,14 @@ fn setup_scene(
         }
 
         commands
-            .spawn(PbrBundle {
+            .spawn_bundle(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::Cube { size: 0.7 })),
                 material: materials.add(Color::BLUE.into()),
                 transform: Transform::from_xyz(x, 0.0, z),
                 ..Default::default()
             })
-            .with(Object)
-            .with(Waiting(Timer::from_seconds(1.0, false)));
+            .insert(Object)
+            .insert(Waiting(Timer::from_seconds(1.0, false)));
     }
 }
 
@@ -245,24 +245,21 @@ fn give_target(
         if let Some((first, remaining)) = path.split_first() {
             let mut remaining = remaining.to_vec();
             remaining.reverse();
-            commands.insert(
-                entity,
-                Path {
-                    current: first.clone(),
-                    next: remaining,
-                },
-            );
-            commands.remove::<Waiting>(entity);
+            commands.entity(entity).insert(Path {
+                current: first.clone(),
+                next: remaining,
+            });
+            commands.entity(entity).remove::<Waiting>();
             commands
-                .spawn(PbrBundle {
+                .spawn_bundle(PbrBundle {
                     mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
                     material: materials.add(Color::RED.into()),
                     transform: Transform::from_xyz(x, 0.0, z),
                     ..Default::default()
                 })
-                .with(Target);
+                .insert(Target);
         } else {
-            commands.spawn(PbrBundle {
+            commands.spawn_bundle(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
                 material: materials.add(Color::GREEN.into()),
                 transform: Transform::from_xyz(x, 0.0, z),
@@ -285,10 +282,12 @@ fn move_object(
             if let Some(next) = target.next.pop() {
                 target.current = next;
             } else {
-                commands.remove::<Path>(entity);
-                commands.insert(entity, Waiting(Timer::from_seconds(0.01, false)));
+                commands
+                    .entity(entity)
+                    .remove::<Path>()
+                    .insert(Waiting(Timer::from_seconds(0.01, false)));
                 for target in target_query.iter() {
-                    commands.despawn_recursive(target);
+                    commands.entity(target).despawn();
                 }
             }
         }
@@ -322,8 +321,10 @@ fn trigger_navmesh_visibility(
 }
 
 fn exit(mut n: Local<u32>, mut aee: EventWriter<bevy::app::AppExit>) {
-    *n += 1;
-    if *n > 150 {
-        aee.send(bevy::app::AppExit);
+    if std::env::var("FAILFAST").is_ok() {
+        *n += 1;
+        if *n > 150 {
+            aee.send(bevy::app::AppExit);
+        }
     }
 }
