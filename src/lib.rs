@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
     render::{
         mesh::{Indices, VertexAttributeValues},
-        pipeline::PrimitiveTopology,
+        render_resource::PrimitiveTopology,
     },
     utils::{HashMap, HashSet},
 };
@@ -16,7 +16,7 @@ struct Triangle {
     c: (Vec3, usize),
 }
 
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct NavMesh {
     triangles: Vec<Triangle>,
     graph: UnGraphMap<usize, f32>,
@@ -52,15 +52,12 @@ impl NavMesh {
                 })
                 .0;
 
-            if let VertexAttributeValues::Float3(positions) =
+            if let VertexAttributeValues::Float32x3(positions) =
                 mesh.attribute(Mesh::ATTRIBUTE_POSITION)?
             {
                 let mut graph = UnGraphMap::with_capacity(0, 0);
 
-                let vertices: Vec<Vec3> = positions
-                    .iter()
-                    .map(|p| Vec3::from_slice_unaligned(p))
-                    .collect();
+                let vertices: Vec<Vec3> = positions.iter().map(|p| Vec3::from_slice(p)).collect();
 
                 let mut graph_connections: HashMap<IVec3, HashSet<usize>> = HashMap::default();
 
