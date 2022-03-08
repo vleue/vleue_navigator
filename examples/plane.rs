@@ -4,47 +4,39 @@ use bevy::{
     asset::LoadState,
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
     gltf::{Gltf, GltfMesh},
+    pbr::wireframe::{Wireframe, WireframePlugin},
     prelude::*,
-    render::wireframe::{Wireframe, WireframePlugin},
-    wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
 };
 use rand::Rng;
 
 use navmesh::*;
 
 fn main() {
-    App::build()
+    App::new()
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
-        .insert_resource(WgpuOptions {
-            features: WgpuFeatures {
-                // The Wireframe requires NonFillPolygonMode feature
-                features: vec![WgpuFeature::NonFillPolygonMode],
-            },
-            ..Default::default()
-        })
         .init_resource::<GltfHandles>()
         .add_plugins(DefaultPlugins)
         .add_plugin(WireframePlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_startup_system(setup.system())
-        .init_resource::<Option<NavMesh>>()
+        .init_resource::<NavMesh>()
         .add_state(AppState::Setup)
-        .add_system_set(SystemSet::on_update(AppState::Setup).with_system(check_textures.system()))
-        .add_system_set(SystemSet::on_enter(AppState::Playing).with_system(setup_scene.system()))
+        .add_system_set(SystemSet::on_enter(AppState::Setup).with_system(setup))
+        .add_system_set(SystemSet::on_update(AppState::Setup).with_system(check_textures))
+        .add_system_set(SystemSet::on_exit(AppState::Setup).with_system(setup_scene))
         .add_system_set(
             SystemSet::on_update(AppState::Playing)
-                .with_system(give_target.system())
-                .with_system(move_object.system())
-                .with_system(display_fps.system())
-                .with_system(rotate_camera.system())
-                .with_system(trigger_navmesh_visibility.system())
-                .with_system(exit.system()),
+                .with_system(give_target)
+                .with_system(move_object)
+                .with_system(display_fps)
+                .with_system(rotate_camera)
+                .with_system(trigger_navmesh_visibility)
+                .with_system(exit),
         )
         .run();
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum AppState {
     Setup,
     Playing,
@@ -54,8 +46,9 @@ enum AppState {
 struct GltfHandles {
     handles: Vec<Handle<Gltf>>,
 }
-
+#[derive(Component)]
 struct FpsText;
+#[derive(Component)]
 struct Camera;
 
 fn setup(
@@ -68,9 +61,9 @@ fn setup(
         asset_server.load("meshes/my_level.glb"),
     ];
 
-    commands.spawn_bundle(LightBundle {
+    commands.spawn_bundle(PointLightBundle {
         transform: Transform::from_xyz(0.0, 10.0, 0.0),
-        light: Light {
+        point_light: PointLight {
             range: 40.0,
             intensity: 500.0,
             ..Default::default()
@@ -85,7 +78,6 @@ fn setup(
         })
         .insert(Camera);
 
-    commands.spawn_bundle(UiCameraBundle::default());
     commands
         .spawn_bundle(TextBundle {
             style: Style {
@@ -139,17 +131,25 @@ fn check_textures(
     if let LoadState::Loaded =
         asset_server.get_group_load_state(navmeshes.handles.iter().map(|handle| handle.id))
     {
-        state.set_next(AppState::Playing).unwrap();
+        state.set(AppState::Playing).unwrap();
     }
 }
 
+#[derive(Component)]
 struct Path {
     current: Vec3,
     next: Vec<Vec3>,
 }
+
+#[derive(Component)]
 struct Object;
+
+#[derive(Component)]
 struct Target;
+
+#[derive(Component)]
 struct Waiting(Timer);
+#[derive(Component, Clone, Copy)]
 struct NavMeshDisp;
 
 fn setup_scene(
@@ -159,7 +159,7 @@ fn setup_scene(
     gltf_meshes: Res<Assets<GltfMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut navmesh: ResMut<Option<NavMesh>>,
+    mut navmesh: ResMut<NavMesh>,
 ) {
     if let Some(gltf) = gltfs.get(&navmeshes.handles[1]) {
         commands.spawn_scene(gltf.default_scene.as_ref().unwrap().clone());
@@ -182,18 +182,13 @@ fn setup_scene(
 
         let mesh = meshes.get(mesh_handle).unwrap();
 
-        *navmesh = Some(NavMesh::from_mesh(mesh));
-
         let mut x;
         let mut z;
+        *navmesh = NavMesh::from_mesh(mesh);
         loop {
             x = rand::thread_rng().gen_range(-20.0..20.0);
             z = rand::thread_rng().gen_range(-20.0..20.0);
-            if navmesh
-                .as_ref()
-                .unwrap()
-                .point_in_mesh(Vec3::new(x, 0.0, z))
-            {
+            if navmesh.point_in_mesh(Vec3::new(x, 0.0, z)) {
                 break;
             }
         }
@@ -213,7 +208,7 @@ fn setup_scene(
 fn give_target(
     mut commands: Commands,
     mut object_query: Query<(Entity, &Transform, &mut Waiting)>,
-    navmesh: Res<Option<NavMesh>>,
+    navmesh: Res<NavMesh>,
     time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -228,19 +223,13 @@ fn give_target(
         loop {
             x = rand::thread_rng().gen_range(-20.0..20.0);
             z = rand::thread_rng().gen_range(-20.0..20.0);
-            if navmesh
-                .as_ref()
-                .unwrap()
-                .point_in_mesh(Vec3::new(x, 0.0, z))
-            {
+
+            if navmesh.point_in_mesh(Vec3::new(x, 0.0, z)) {
                 break;
             }
         }
 
-        let path = navmesh
-            .as_ref()
-            .unwrap()
-            .path_from_to(transform.translation, Vec3::new(x, 0.0, z));
+        let path = navmesh.path_from_to(transform.translation, Vec3::new(x, 0.0, z));
 
         if let Some((first, remaining)) = path.split_first() {
             let mut remaining = remaining.to_vec();
@@ -306,7 +295,7 @@ fn rotate_camera(time: Res<Time>, mut camera_query: Query<&mut Transform, With<C
 }
 
 fn trigger_navmesh_visibility(
-    mut query: Query<(&mut Visible, &mut Transform), With<NavMeshDisp>>,
+    mut query: Query<(&mut Visibility, &mut Transform), With<NavMeshDisp>>,
     keyboard_input: ResMut<Input<KeyCode>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
