@@ -9,7 +9,7 @@ Current status:
 To view the demo:
 
 ```
-cargo run example --plane
+cargo run --example --plane
 ```
 
 ## Next Steps
