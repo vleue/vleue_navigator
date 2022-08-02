@@ -71,7 +71,7 @@ fn setup(
         ..Default::default()
     });
     commands
-        .spawn_bundle(PerspectiveCameraBundle {
+        .spawn_bundle(Camera3dBundle {
             transform: Transform::from_xyz(0.0, 40.0, 0.1)
                 .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
             ..Default::default()
@@ -162,12 +162,15 @@ fn setup_scene(
     mut navmesh: ResMut<NavMesh>,
 ) {
     if let Some(gltf) = gltfs.get(&navmeshes.handles[1]) {
-        commands.spawn_scene(gltf.default_scene.as_ref().unwrap().clone());
+        commands.spawn_bundle(SceneBundle {
+            scene: gltf.default_scene.as_ref().unwrap().clone(),
+            ..default()
+        });
     }
 
     if let Some(gltf) = gltfs.get(&navmeshes.handles[0]) {
         let gltf_mesh_handle = gltf.meshes[0].clone();
-        let gltf_mesh = gltf_meshes.get(gltf_mesh_handle).unwrap();
+        let gltf_mesh = gltf_meshes.get(&gltf_mesh_handle).unwrap();
         let mesh_handle = gltf_mesh.primitives[0].mesh.clone();
 
         commands
@@ -180,7 +183,7 @@ fn setup_scene(
             .insert(Wireframe)
             .insert(NavMeshDisp);
 
-        let mesh = meshes.get(mesh_handle).unwrap();
+        let mesh = meshes.get(&mesh_handle).unwrap();
 
         let mut x;
         let mut z;
