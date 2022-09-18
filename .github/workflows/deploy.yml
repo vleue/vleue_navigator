@@ -35,7 +35,7 @@ jobs:
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/polyanya.wasm
 
       - name: Copy Assets
-        run: cp -r Assets wasm/
+        run: cp -r assets wasm/
 
       - name: Setup Pages
         uses: actions/configure-pages@v2
