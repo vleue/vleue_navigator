@@ -1,20 +1,17 @@
 [package]
-name = "navmesh"
-version = "0.2.0"
+name = "bevy_pathmesh"
+version = "0.3.0"
 authors = ["François Mockers <mockersf@gmail.com>"]
 edition = "2021"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
-petgraph = "0.6"
+polyanya = "0.1"
 
 [dependencies.bevy]
 version = "0.8.0"
 features = ["render", "bevy_winit", "bevy_asset", "bevy_scene"]
 default-features = false
-
-[dev-dependencies]
-rand = "0.8"
 
 [features]
 default = []
