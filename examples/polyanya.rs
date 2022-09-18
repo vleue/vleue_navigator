@@ -148,6 +148,7 @@ fn on_mesh_change(
         if let Ok(entity) = text.get_single() {
             commands.entity(entity).despawn();
         }
+        let font = asset_server.load("fonts/FiraMono-Medium.ttf");
         commands.spawn_bundle(TextBundle {
             text: Text::from_sections([
                 TextSection::new(
@@ -157,15 +158,23 @@ fn on_mesh_change(
                         CurrentMesh::Aurora => "Aurora\n",
                     },
                     TextStyle {
-                        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                        font: font.clone_weak(),
                         font_size: 30.0,
                         color: Color::WHITE,
                     },
                 ),
                 TextSection::new(
-                    "Press spacebar to switch",
+                    "Press spacebar to switch mesh\n",
                     TextStyle {
-                        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                        font: font.clone_weak(),
+                        font_size: 15.0,
+                        color: Color::WHITE,
+                    },
+                ),
+                TextSection::new(
+                    "Click to find a path",
+                    TextStyle {
+                        font: font.clone_weak(),
                         font_size: 15.0,
                         color: Color::WHITE,
                     },
