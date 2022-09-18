@@ -206,7 +206,7 @@ fn on_click(
                             .with_scale(Vec3::splat(5.0)),
                             ..default()
                         })
-                        .insert(Navigator { speed: 50.0 });
+                        .insert(Navigator { speed: 100.0 });
                 }
             } else {
                 info!("clicked outside of mesh");
