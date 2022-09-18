@@ -1,2 +1,6 @@
 /target
 Cargo.lock
+/wasm/assets
+/wasm/*.wasm
+/wasm/*.js
+TODO.md
