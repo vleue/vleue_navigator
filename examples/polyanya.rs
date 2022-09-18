@@ -106,6 +106,8 @@ fn on_mesh_change(
     mut current_mesh_entity: Local<Option<Entity>>,
     windows: Res<Windows>,
     navigator: Query<Entity, With<Navigator>>,
+    asset_server: Res<AssetServer>,
+    text: Query<Entity, With<Text>>,
 ) {
     if mesh.is_changed() {
         let handle = match mesh.mesh {
@@ -137,6 +139,43 @@ fn on_mesh_change(
                 })
                 .id(),
         );
+        if let Ok(entity) = text.get_single() {
+            commands.entity(entity).despawn();
+        }
+        commands.spawn_bundle(TextBundle {
+            text: Text::from_sections([
+                TextSection::new(
+                    match mesh.mesh {
+                        CurrentMesh::Simple => "Simple\n",
+                        CurrentMesh::Arena => "Arena\n",
+                        CurrentMesh::Aurora => "Aurora\n",
+                    },
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                        font_size: 30.0,
+                        color: Color::WHITE,
+                    },
+                ),
+                TextSection::new(
+                    "Press spacebar to switch",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                        font_size: 15.0,
+                        color: Color::WHITE,
+                    },
+                ),
+            ]),
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Px(5.0),
+                    left: Val::Px(5.0),
+                    ..default()
+                },
+                ..default()
+            },
+            ..default()
+        });
     }
 }
 
