@@ -1,4 +1,4 @@
-use bevy::{math::Vec3Swizzles, prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{math::Vec3Swizzles, prelude::*, sprite::MaterialMesh2dBundle, window::WindowResized};
 use bevy_pathmesh::{PathMesh, PathmeshPlugin};
 
 fn main() {
@@ -106,10 +106,11 @@ fn on_mesh_change(
     mut current_mesh_entity: Local<Option<Entity>>,
     windows: Res<Windows>,
     navigator: Query<Entity, With<Navigator>>,
+    window_resized: EventReader<WindowResized>,
     asset_server: Res<AssetServer>,
     text: Query<Entity, With<Text>>,
 ) {
-    if mesh.is_changed() {
+    if mesh.is_changed() || !window_resized.is_empty() {
         let handle = match mesh.mesh {
             CurrentMesh::Simple => &path_meshes.simple,
             CurrentMesh::Arena => &path_meshes.arena,
