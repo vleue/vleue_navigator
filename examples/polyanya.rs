@@ -213,6 +213,7 @@ fn on_click(
     meshes: Res<Meshes>,
     mut commands: Commands,
     query: Query<Entity, With<Navigator>>,
+    pathmeshes: Res<Assets<PathMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
         if let Some(position) = windows.primary().cursor_position() {
@@ -220,7 +221,15 @@ fn on_click(
             let factor = (screen.x / mesh.size.x).min(screen.y / mesh.size.y);
 
             let in_mesh = (position - screen / 2.0) / factor + mesh.size / 2.0;
-            if (0.0..mesh.size.x).contains(&in_mesh.x) && (0.0..mesh.size.y).contains(&in_mesh.y) {
+            if pathmeshes
+                .get(match mesh.mesh {
+                    CurrentMesh::Simple => &meshes.simple,
+                    CurrentMesh::Arena => &meshes.arena,
+                    CurrentMesh::Aurora => &meshes.aurora,
+                })
+                .map(|mesh| mesh.is_in_mesh(in_mesh))
+                .unwrap_or_default()
+            {
                 if let Ok(navigator) = query.get_single() {
                     info!("going to {}", in_mesh);
                     commands.entity(navigator).insert(Target {

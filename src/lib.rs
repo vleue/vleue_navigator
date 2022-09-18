@@ -30,6 +30,10 @@ impl PathMesh {
         self.mesh.path(from, to)
     }
 
+    pub fn is_in_mesh(&self, point: Vec2) -> bool {
+        self.mesh.point_in_mesh(point)
+    }
+
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList);
         new_mesh.insert_attribute(
