@@ -4,6 +4,11 @@ use bevy_pathmesh::{PathMesh, PathmeshPlugin};
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(WindowDescriptor {
+            title: "Navmesh with Polyanya".to_string(),
+            fit_canvas_to_parent: true,
+            ..default()
+        })
         .add_plugins(DefaultPlugins)
         .add_plugin(PathmeshPlugin)
         .add_startup_system(setup)
