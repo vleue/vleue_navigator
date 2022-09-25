@@ -6,6 +6,7 @@ use bevy::{
 };
 
 use bevy_pathmesh::{PathMesh, PathmeshPlugin};
+use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
@@ -16,6 +17,7 @@ fn main() {
             ..default()
         })
         .add_plugins(DefaultPlugins)
+        .add_plugin(DebugLinesPlugin::default())
         .add_plugin(PathmeshPlugin)
         .add_startup_system(setup)
         .add_system(on_mesh_change)
@@ -24,6 +26,7 @@ fn main() {
         .add_system(compute_paths)
         .add_system(poll_path_tasks)
         .add_system(move_navigator)
+        .add_system(display_path)
         .run();
 }
 
@@ -356,5 +359,30 @@ fn move_navigator(
         }
         transform.translation +=
             (toward.normalize() * time.delta_seconds() * navigator.speed).extend(0.0);
+    }
+}
+
+fn display_path(
+    query: Query<(&Transform, &Path)>,
+    mut lines: ResMut<DebugLines>,
+    mesh: Res<MeshDetails>,
+    windows: Res<Windows>,
+) {
+    let window = windows.primary();
+    let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
+
+    for (transform, path) in &query {
+        (1..path.path.len()).for_each(|i| {
+            lines.line(
+                ((path.path[i - 1] - mesh.size / 2.0) * factor).extend(0f32),
+                ((path.path[i] - mesh.size / 2.0) * factor).extend(0f32),
+                0f32,
+            );
+        });
+        lines.line(
+            transform.translation,
+            ((path.path[0] - mesh.size / 2.0) * factor).extend(0f32),
+            0f32,
+        );
     }
 }
