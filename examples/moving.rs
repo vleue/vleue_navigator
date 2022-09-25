@@ -1,4 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 
 use bevy::{
     math::Vec3Swizzles, prelude::*, sprite::MaterialMesh2dBundle, tasks::AsyncComputeTaskPool,
@@ -174,7 +177,7 @@ fn on_mesh_change(
                     },
                 ),
                 TextSection::new(
-                    "Press spacebar to switch mesh\n",
+                    "Press spacebar or long touch to switch mesh\n",
                     TextStyle {
                         font: font.clone_weak(),
                         font_size: 15.0,
@@ -204,8 +207,27 @@ fn on_mesh_change(
     }
 }
 
-fn mesh_change(mut mesh: ResMut<MeshDetails>, keyboard_input: Res<Input<KeyCode>>) {
-    if keyboard_input.just_pressed(KeyCode::Space) {
+fn mesh_change(
+    mut mesh: ResMut<MeshDetails>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mouse_input: Res<Input<MouseButton>>,
+    time: Res<Time>,
+    mut pressed_since: Local<Option<Duration>>,
+) {
+    let mut touch_triggered = false;
+    if mouse_input.just_pressed(MouseButton::Left) {
+        *pressed_since = Some(time.time_since_startup());
+    }
+    if mouse_input.just_released(MouseButton::Left) {
+        *pressed_since = None;
+    }
+    if let Some(started) = *pressed_since {
+        if (time.time_since_startup() - started).as_secs() > 1 {
+            touch_triggered = true;
+            *pressed_since = None;
+        }
+    }
+    if keyboard_input.just_pressed(KeyCode::Space) || touch_triggered {
         match mesh.mesh {
             CurrentMesh::Simple => *mesh = ARENA,
             CurrentMesh::Arena => *mesh = AURORA,
