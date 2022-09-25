@@ -31,8 +31,8 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --target wasm32-unknown-unknown --release --example polyanya
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/polyanya.wasm
+          cargo build --target wasm32-unknown-unknown --release --example moving
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/moving.wasm
 
           cargo build --target wasm32-unknown-unknown --release --example lines
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/lines.wasm
