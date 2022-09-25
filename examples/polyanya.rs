@@ -1,4 +1,12 @@
-use bevy::{math::Vec3Swizzles, prelude::*, sprite::MaterialMesh2dBundle, window::WindowResized};
+use bevy::{
+    math::Vec3Swizzles,
+    prelude::*,
+    sprite::MaterialMesh2dBundle,
+    tasks::{AsyncComputeTaskPool, Task},
+    window::WindowResized,
+};
+use futures_lite::future;
+
 use bevy_pathmesh::{PathMesh, PathmeshPlugin};
 
 fn main() {
@@ -16,6 +24,7 @@ fn main() {
         .add_system(mesh_change)
         .add_system(on_click)
         .add_system(compute_paths)
+        .add_system(poll_path_tasks)
         .add_system(move_navigator)
         .run();
 }
@@ -278,6 +287,9 @@ fn on_click(
     }
 }
 
+#[derive(Component)]
+struct FindingPath(Task<Option<polyanya::Path>>);
+
 fn compute_paths(
     mut commands: Commands,
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
@@ -292,10 +304,25 @@ fn compute_paths(
         let in_mesh = transform.translation.truncate() / factor + mesh.size / 2.0;
         let mesh = meshes.get(&target.pathmesh).unwrap();
 
-        if let Some(path) = mesh.path(in_mesh, target.target) {
-            commands.entity(entity).insert(Path { path: path.path });
-        } else {
-            info!("no path found");
+        let to = target.target;
+        let mesh = mesh.clone();
+        commands.entity(entity).insert(FindingPath(
+            AsyncComputeTaskPool::get().spawn(async move { mesh.path(in_mesh, to) }),
+        ));
+    }
+}
+
+fn poll_path_tasks(mut commands: Commands, mut computing: Query<(Entity, &mut FindingPath)>) {
+    for (entity, mut task) in &mut computing {
+        if let Some(task_complete) = future::block_on(future::poll_once(&mut task.0)) {
+            if let Some(path) = task_complete {
+                commands
+                    .entity(entity)
+                    .insert(Path { path: path.path })
+                    .remove::<FindingPath>();
+            } else {
+                info!("no path found");
+            }
         }
     }
 }

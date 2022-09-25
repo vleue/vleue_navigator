@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bevy::{
     asset::{AssetLoader, LoadContext, LoadedAsset},
     prelude::*,
@@ -15,15 +17,17 @@ impl Plugin for PathmeshPlugin {
     }
 }
 
-#[derive(Debug, TypeUuid)]
+#[derive(Debug, TypeUuid, Clone)]
 #[uuid = "807C7A31-EA06-4A3B-821B-6E91ADB95734"]
 pub struct PathMesh {
-    mesh: polyanya::Mesh,
+    mesh: Arc<polyanya::Mesh>,
 }
 
 impl PathMesh {
     pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> PathMesh {
-        PathMesh { mesh }
+        PathMesh {
+            mesh: Arc::new(mesh),
+        }
     }
 
     pub fn path(&self, from: Vec2, to: Vec2) -> Option<polyanya::Path> {
@@ -85,7 +89,7 @@ impl AssetLoader for PathMeshPolyanyaLoader {
     ) -> BoxedFuture<'a, Result<(), bevy::asset::Error>> {
         Box::pin(async move {
             load_context.set_default_asset(LoadedAsset::new(PathMesh {
-                mesh: polyanya::Mesh::from_bytes(bytes),
+                mesh: Arc::new(polyanya::Mesh::from_bytes(bytes)),
             }));
             Ok(())
         })

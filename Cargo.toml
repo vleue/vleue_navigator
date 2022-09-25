@@ -15,6 +15,7 @@ default-features = false
 
 [dev-dependencies]
 bevy_prototype_debug_lines = "0.8"
+futures-lite = "1.12"
 
 [features]
 default = []
