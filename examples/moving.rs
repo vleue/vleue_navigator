@@ -379,10 +379,12 @@ fn display_path(
                 0f32,
             );
         });
-        lines.line(
-            transform.translation,
-            ((path.path[0] - mesh.size / 2.0) * factor).extend(0f32),
-            0f32,
-        );
+        if let Some(next) = path.path.first() {
+            lines.line(
+                transform.translation,
+                ((*next - mesh.size / 2.0) * factor).extend(0f32),
+                0f32,
+            );
+        }
     }
 }
