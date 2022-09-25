@@ -340,7 +340,7 @@ fn move_navigator(
         let next = (path.path[0] - mesh.size / 2.0) * factor;
         let toward = next - transform.translation.xy();
         // TODO: compare this in mesh dimensions, not in display dimensions
-        if toward.length() < 1.0 {
+        if toward.length() < time.delta_seconds() * navigator.speed {
             path.path.remove(0);
             if path.path.is_empty() {
                 debug!("reached target");
