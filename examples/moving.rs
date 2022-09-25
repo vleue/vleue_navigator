@@ -1,11 +1,9 @@
+use std::sync::{Arc, RwLock};
+
 use bevy::{
-    math::Vec3Swizzles,
-    prelude::*,
-    sprite::MaterialMesh2dBundle,
-    tasks::{AsyncComputeTaskPool, Task},
+    math::Vec3Swizzles, prelude::*, sprite::MaterialMesh2dBundle, tasks::AsyncComputeTaskPool,
     window::WindowResized,
 };
-use futures_lite::future;
 
 use bevy_pathmesh::{PathMesh, PathmeshPlugin};
 
@@ -288,7 +286,7 @@ fn on_click(
 }
 
 #[derive(Component)]
-struct FindingPath(Task<Option<polyanya::Path>>);
+struct FindingPath(Arc<RwLock<(Option<polyanya::Path>, bool)>>);
 
 fn compute_paths(
     mut commands: Commands,
@@ -306,16 +304,23 @@ fn compute_paths(
 
         let to = target.target;
         let mesh = mesh.clone();
-        commands.entity(entity).insert(FindingPath(
-            AsyncComputeTaskPool::get().spawn(async move { mesh.path(in_mesh, to) }),
-        ));
+        let finding = FindingPath(Arc::new(RwLock::new((None, false))));
+        let writer = finding.0.clone();
+        AsyncComputeTaskPool::get()
+            .spawn(async move {
+                let path = mesh.path(in_mesh, to);
+                *writer.write().unwrap() = (path, true);
+            })
+            .detach();
+        commands.entity(entity).insert(finding);
     }
 }
 
-fn poll_path_tasks(mut commands: Commands, mut computing: Query<(Entity, &mut FindingPath)>) {
-    for (entity, mut task) in &mut computing {
-        if let Some(task_complete) = future::block_on(future::poll_once(&mut task.0)) {
-            if let Some(path) = task_complete {
+fn poll_path_tasks(mut commands: Commands, computing: Query<(Entity, &FindingPath)>) {
+    for (entity, task) in &computing {
+        let mut task = task.0.write().unwrap();
+        if task.1 {
+            if let Some(path) = task.0.take() {
                 commands
                     .entity(entity)
                     .insert(Path { path: path.path })
