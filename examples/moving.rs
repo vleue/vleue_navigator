@@ -111,7 +111,7 @@ fn setup(
         arena: asset_server.load("arena-merged.polyanya.mesh"),
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
-    commands.insert_resource(SIMPLE);
+    commands.insert_resource(AURORA);
 }
 
 fn on_mesh_change(
@@ -127,83 +127,88 @@ fn on_mesh_change(
     window_resized: EventReader<WindowResized>,
     asset_server: Res<AssetServer>,
     text: Query<Entity, With<Text>>,
+    mut wait_for_mesh: Local<bool>,
 ) {
-    if mesh.is_changed() || !window_resized.is_empty() {
+    if mesh.is_changed() || !window_resized.is_empty() || *wait_for_mesh {
         let handle = match mesh.mesh {
             CurrentMesh::Simple => &path_meshes.simple,
             CurrentMesh::Arena => &path_meshes.arena,
             CurrentMesh::Aurora => &path_meshes.aurora,
         };
-        let pathmesh = pathmeshes.get(handle).unwrap();
-        if let Some(entity) = *current_mesh_entity {
-            commands.entity(entity).despawn();
-        }
-        if let Ok(entity) = navigator.get_single() {
-            commands.entity(entity).despawn();
-        }
-        let window = windows.primary();
-        let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
-        *current_mesh_entity = Some(
-            commands
-                .spawn_bundle(MaterialMesh2dBundle {
-                    mesh: meshes.add(pathmesh.to_mesh()).into(),
-                    transform: Transform::from_translation(Vec3::new(
-                        -mesh.size.x / 2.0 * factor,
-                        -mesh.size.y / 2.0 * factor,
-                        0.0,
-                    ))
-                    .with_scale(Vec3::splat(factor)),
-                    material: materials.add(ColorMaterial::from(Color::BLUE)),
-                    ..default()
-                })
-                .id(),
-        );
-        if let Ok(entity) = text.get_single() {
-            commands.entity(entity).despawn();
-        }
-        let font = asset_server.load("fonts/FiraMono-Medium.ttf");
-        commands.spawn_bundle(TextBundle {
-            text: Text::from_sections([
-                TextSection::new(
-                    match mesh.mesh {
-                        CurrentMesh::Simple => "Simple\n",
-                        CurrentMesh::Arena => "Arena\n",
-                        CurrentMesh::Aurora => "Aurora\n",
+        if let Some(pathmesh) = pathmeshes.get(handle) {
+            *wait_for_mesh = false;
+            if let Some(entity) = *current_mesh_entity {
+                commands.entity(entity).despawn();
+            }
+            if let Ok(entity) = navigator.get_single() {
+                commands.entity(entity).despawn();
+            }
+            let window = windows.primary();
+            let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
+            *current_mesh_entity = Some(
+                commands
+                    .spawn_bundle(MaterialMesh2dBundle {
+                        mesh: meshes.add(pathmesh.to_mesh()).into(),
+                        transform: Transform::from_translation(Vec3::new(
+                            -mesh.size.x / 2.0 * factor,
+                            -mesh.size.y / 2.0 * factor,
+                            0.0,
+                        ))
+                        .with_scale(Vec3::splat(factor)),
+                        material: materials.add(ColorMaterial::from(Color::BLUE)),
+                        ..default()
+                    })
+                    .id(),
+            );
+            if let Ok(entity) = text.get_single() {
+                commands.entity(entity).despawn();
+            }
+            let font = asset_server.load("fonts/FiraMono-Medium.ttf");
+            commands.spawn_bundle(TextBundle {
+                text: Text::from_sections([
+                    TextSection::new(
+                        match mesh.mesh {
+                            CurrentMesh::Simple => "Simple\n",
+                            CurrentMesh::Arena => "Arena\n",
+                            CurrentMesh::Aurora => "Aurora\n",
+                        },
+                        TextStyle {
+                            font: font.clone_weak(),
+                            font_size: 30.0,
+                            color: Color::WHITE,
+                        },
+                    ),
+                    TextSection::new(
+                        "Press spacebar or long touch to switch mesh\n",
+                        TextStyle {
+                            font: font.clone_weak(),
+                            font_size: 15.0,
+                            color: Color::WHITE,
+                        },
+                    ),
+                    TextSection::new(
+                        "Click to find a path",
+                        TextStyle {
+                            font: font.clone_weak(),
+                            font_size: 15.0,
+                            color: Color::WHITE,
+                        },
+                    ),
+                ]),
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    position: UiRect {
+                        top: Val::Px(5.0),
+                        left: Val::Px(5.0),
+                        ..default()
                     },
-                    TextStyle {
-                        font: font.clone_weak(),
-                        font_size: 30.0,
-                        color: Color::WHITE,
-                    },
-                ),
-                TextSection::new(
-                    "Press spacebar or long touch to switch mesh\n",
-                    TextStyle {
-                        font: font.clone_weak(),
-                        font_size: 15.0,
-                        color: Color::WHITE,
-                    },
-                ),
-                TextSection::new(
-                    "Click to find a path",
-                    TextStyle {
-                        font: font.clone_weak(),
-                        font_size: 15.0,
-                        color: Color::WHITE,
-                    },
-                ),
-            ]),
-            style: Style {
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    top: Val::Px(5.0),
-                    left: Val::Px(5.0),
                     ..default()
                 },
                 ..default()
-            },
-            ..default()
-        });
+            });
+        } else {
+            *wait_for_mesh = true;
+        }
     }
 }
 
