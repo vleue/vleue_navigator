@@ -249,10 +249,13 @@ struct Stats {
 
 fn poll_path_tasks(
     mut commands: Commands,
-    computing: Query<(Entity, &FindingPath)>,
+    computing: Query<(Entity, &FindingPath, &Transform)>,
     mut stats: ResMut<Stats>,
+    pathmeshes: Res<Assets<PathMesh>>,
+    meshes: Res<Meshes>,
+    windows: Res<Windows>,
 ) {
-    for (entity, task) in &computing {
+    for (entity, task, transform) in &computing {
         let mut task = task.0.write().unwrap();
         if task.1 {
             stats.pathfinding_duration.push_front(task.2);
@@ -263,6 +266,18 @@ fn poll_path_tasks(
                     .insert(Path { path: path.path })
                     .remove::<FindingPath>();
             } else {
+                let screen = Vec2::new(windows.primary().width(), windows.primary().height());
+                let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
+
+                if !pathmeshes
+                    .get(&meshes.aurora)
+                    .unwrap()
+                    .blocking()
+                    .is_in_mesh(transform.translation.xy() / factor + MESH_SIZE / 2.0)
+                {
+                    commands.entity(entity).despawn();
+                }
+
                 commands
                     .entity(entity)
                     .remove::<FindingPath>()
