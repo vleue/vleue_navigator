@@ -4,8 +4,14 @@ use std::{
 };
 
 use bevy::{
-    core::TaskPoolThreadAssignmentPolicy, math::Vec3Swizzles, prelude::*,
-    sprite::MaterialMesh2dBundle, tasks::AsyncComputeTaskPool, time::FixedTimestep, utils::Instant,
+    core::TaskPoolThreadAssignmentPolicy,
+    diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::Vec3Swizzles,
+    prelude::*,
+    sprite::MaterialMesh2dBundle,
+    tasks::AsyncComputeTaskPool,
+    time::FixedTimestep,
+    utils::Instant,
     window::WindowResized,
 };
 use rand::prelude::*;
@@ -33,6 +39,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(PathmeshPlugin)
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(LogDiagnosticsPlugin::default())
         .init_resource::<Stats>()
         .add_startup_system(setup)
         .add_system(on_mesh_change)
@@ -74,6 +82,22 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ),
             TextSection::new(
                 "0\n",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 30.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "FPS: ",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 30.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "0.0\n",
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 30.0,
@@ -374,13 +398,21 @@ fn update_ui(
     agents: Query<&Navigator>,
     mut count: Local<usize>,
     stats: Res<Stats>,
+    diagnostics: Res<Diagnostics>,
 ) {
     let new_count = agents.iter().len();
     if *count != new_count {
         let mut text = ui_query.single_mut();
         text.sections[1].value = format!("{}\n", new_count);
         text.sections[3].value = format!(
-            "{:.2}",
+            "{:.2}\n",
+            diagnostics
+                .get(FrameTimeDiagnosticsPlugin::FPS)
+                .and_then(|d| d.average())
+                .unwrap_or_default()
+        );
+        text.sections[5].value = format!(
+            "{:.3}",
             stats.pathfinding_duration.iter().sum::<f32>()
                 / (stats.pathfinding_duration.len() as f32)
         );
