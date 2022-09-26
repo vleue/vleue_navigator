@@ -37,6 +37,9 @@ jobs:
           cargo build --target wasm32-unknown-unknown --release --example lines
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/lines.wasm
 
+          cargo build --target wasm32-unknown-unknown --release --example many
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/many.wasm
+
       - name: Copy Assets
         run: cp -r assets wasm/
 
