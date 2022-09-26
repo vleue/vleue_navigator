@@ -142,7 +142,7 @@ fn on_mesh_change(
     *current_mesh_entity = Some(
         commands
             .spawn_bundle(MaterialMesh2dBundle {
-                mesh: meshes.add(pathmesh.to_mesh()).into(),
+                mesh: meshes.add(pathmesh.blocking().to_mesh()).into(),
                 transform: Transform::from_translation(Vec3::new(
                     -mesh.size.x / 2.0 * factor,
                     -mesh.size.y / 2.0 * factor,
@@ -234,7 +234,7 @@ fn on_click(
                     CurrentMesh::Arena => &meshes.arena,
                     CurrentMesh::Aurora => &meshes.aurora,
                 })
-                .map(|mesh| mesh.is_in_mesh(in_mesh))
+                .map(|mesh| mesh.blocking().is_in_mesh(in_mesh))
                 .unwrap_or_default()
             {
                 info!("going to {}", in_mesh);
@@ -266,7 +266,10 @@ fn compute_paths(
                 CurrentMesh::Aurora => &meshes.aurora,
             })
             .unwrap();
-        if let Some(path) = path_mesh.path(*path_to_display.steps.last().unwrap(), ev.0) {
+        if let Some(path) = path_mesh
+            .blocking()
+            .path(*path_to_display.steps.last().unwrap(), ev.0)
+        {
             for p in path.path {
                 path_to_display.steps.push(p);
             }
