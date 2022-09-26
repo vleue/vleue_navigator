@@ -190,12 +190,7 @@ fn spawn(
         .unwrap_or_default()
     {
         info!("spawning at {}", in_mesh);
-        let color = Color::hsl(
-            rng.gen_range(0.0..360.0),
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.5..1.0),
-        )
-        .as_rgba();
+        let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
         commands
             .spawn_bundle(SpriteBundle {
                 sprite: Sprite {
