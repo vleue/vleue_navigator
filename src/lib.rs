@@ -30,7 +30,12 @@ impl PathMesh {
         }
     }
 
-impl BlockingPathMesh {
+    #[inline]
+    pub async fn get_path(&self, from: Vec2, to: Vec2) -> Option<polyanya::Path> {
+        self.mesh.get_path(from, to).await
+    }
+
+    #[inline]
     pub fn path(&self, from: Vec2, to: Vec2) -> Option<polyanya::Path> {
         self.mesh.path(from, to)
     }
