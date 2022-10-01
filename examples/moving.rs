@@ -148,7 +148,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn_bundle(MaterialMesh2dBundle {
-                        mesh: meshes.add(pathmesh.blocking().to_mesh()).into(),
+                        mesh: meshes.add(pathmesh.to_mesh()).into(),
                         transform: Transform::from_translation(Vec3::new(
                             -mesh.size.x / 2.0 * factor,
                             -mesh.size.y / 2.0 * factor,
@@ -278,7 +278,7 @@ fn on_click(
                     CurrentMesh::Arena => &meshes.arena,
                     CurrentMesh::Aurora => &meshes.aurora,
                 })
-                .map(|mesh| mesh.blocking().is_in_mesh(in_mesh))
+                .map(|mesh| mesh.is_in_mesh(in_mesh))
                 .unwrap_or_default()
             {
                 if let Ok(navigator) = query.get_single() {
@@ -338,7 +338,7 @@ fn compute_paths(
         let writer = finding.0.clone();
         AsyncComputeTaskPool::get()
             .spawn(async move {
-                let path = mesh.path(in_mesh, to).await;
+                let path = mesh.path(in_mesh, to);
                 *writer.write().unwrap() = (path, true);
             })
             .detach();

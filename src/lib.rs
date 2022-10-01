@@ -23,9 +23,12 @@ pub struct PathMesh {
     mesh: Arc<polyanya::Mesh>,
 }
 
-pub struct BlockingPathMesh {
-    mesh: Arc<polyanya::Mesh>,
-}
+impl PathMesh {
+    pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> PathMesh {
+        PathMesh {
+            mesh: Arc::new(mesh),
+        }
+    }
 
 impl BlockingPathMesh {
     pub fn path(&self, from: Vec2, to: Vec2) -> Option<polyanya::Path> {
@@ -73,32 +76,6 @@ impl BlockingPathMesh {
                 .collect::<Vec<[f32; 2]>>(),
         );
         new_mesh
-    }
-}
-
-impl PathMesh {
-    pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> PathMesh {
-        PathMesh {
-            mesh: Arc::new(mesh),
-        }
-    }
-
-    pub fn blocking(&self) -> BlockingPathMesh {
-        BlockingPathMesh {
-            mesh: Arc::clone(&self.mesh),
-        }
-    }
-
-    pub async fn path(&self, from: Vec2, to: Vec2) -> Option<polyanya::Path> {
-        self.mesh.path(from, to)
-    }
-
-    pub async fn is_in_mesh(&self, point: Vec2) -> bool {
-        self.mesh.point_in_mesh(point)
-    }
-
-    pub async fn to_mesh(&self) -> Mesh {
-        self.blocking().to_mesh()
     }
 }
 
