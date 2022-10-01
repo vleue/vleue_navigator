@@ -1,6 +1,7 @@
 use std::{
     collections::VecDeque,
     sync::{Arc, RwLock},
+    time::Duration,
 };
 
 use bevy::{
@@ -42,6 +43,8 @@ fn main() {
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .init_resource::<Stats>()
+        .insert_resource(TaskMode::Blocking)
+        .insert_resource(DisplayMode::Line)
         .add_startup_system(setup)
         .add_system(on_mesh_change)
         .add_system(go_somewhere)
@@ -49,13 +52,26 @@ fn main() {
         .add_system(poll_path_tasks)
         .add_system(move_navigator)
         .add_system(display_path)
-        .add_system(update_ui)
+        .add_system(mode_change)
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(0.5))
-                .with_system(spawn),
+                .with_run_criteria(FixedTimestep::step(0.1))
+                .with_system(spawn)
+                .with_system(update_ui),
         )
         .run();
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum TaskMode {
+    Async,
+    Blocking,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum DisplayMode {
+    Line,
+    Nothing,
 }
 
 struct Meshes {
@@ -92,7 +108,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "FPS: ",
                 TextStyle {
                     font: font.clone_weak(),
-                    font_size: 30.0,
+                    font_size: 20.0,
                     color: Color::WHITE,
                 },
             ),
@@ -100,7 +116,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "0.0\n",
                 TextStyle {
                     font: font.clone_weak(),
-                    font_size: 30.0,
+                    font_size: 20.0,
                     color: Color::WHITE,
                 },
             ),
@@ -108,15 +124,63 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "Task duration: ",
                 TextStyle {
                     font: font.clone_weak(),
-                    font_size: 30.0,
+                    font_size: 20.0,
                     color: Color::WHITE,
                 },
             ),
             TextSection::new(
-                "0.0",
+                "0.0\n",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 20.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "Task overhead: ",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 20.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "0.0\n",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 20.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "space - ",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 15.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "\n",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 15.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "l - ",
+                TextStyle {
+                    font: font.clone_weak(),
+                    font_size: 15.0,
+                    color: Color::WHITE,
+                },
+            ),
+            TextSection::new(
+                "\n",
                 TextStyle {
                     font,
-                    font_size: 30.0,
+                    font_size: 15.0,
                     color: Color::WHITE,
                 },
             ),
@@ -161,7 +225,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn_bundle(MaterialMesh2dBundle {
-                        mesh: meshes.add(pathmesh.blocking().to_mesh()).into(),
+                        mesh: meshes.add(pathmesh.to_mesh()).into(),
                         transform: Transform::from_translation(Vec3::new(
                             -MESH_SIZE.x / 2.0 * factor,
                             -MESH_SIZE.y / 2.0 * factor,
@@ -196,53 +260,48 @@ struct Path {
     path: Vec<Vec2>,
 }
 
-fn spawn(
-    windows: Res<Windows>,
-    meshes: Res<Meshes>,
-    mut commands: Commands,
-    pathmeshes: Res<Assets<PathMesh>>,
-) {
+fn spawn(windows: Res<Windows>, mut commands: Commands) {
     let mut rng = rand::thread_rng();
     let screen = Vec2::new(windows.primary().width(), windows.primary().height());
     let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
     let in_mesh = Vec2::new(575.0, 410.0);
     let position = (in_mesh - MESH_SIZE / 2.0) * factor;
-    if pathmeshes
-        .get(&meshes.aurora)
-        .map(|mesh| mesh.blocking().is_in_mesh(in_mesh))
-        .unwrap_or_default()
-    {
-        info!("spawning at {}", in_mesh);
-        let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
-        commands
-            .spawn_bundle(SpriteBundle {
-                sprite: Sprite {
-                    color,
-                    custom_size: Some(Vec2::ONE),
-                    ..default()
-                },
-                transform: Transform::from_translation(position.extend(1.0))
-                    .with_scale(Vec3::splat(5.0)),
-                ..default()
-            })
-            .insert(Navigator {
-                speed: rng.gen_range(50.0..100.0),
+    let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
+    commands
+        .spawn_bundle(SpriteBundle {
+            sprite: Sprite {
                 color,
-            });
-    } else {
-        info!("clicked outside of mesh");
-    }
+                custom_size: Some(Vec2::ONE),
+                ..default()
+            },
+            transform: Transform::from_translation(position.extend(1.0))
+                .with_scale(Vec3::splat(5.0)),
+            ..default()
+        })
+        .insert(Navigator {
+            speed: rng.gen_range(50.0..100.0),
+            color,
+        });
+}
+
+#[derive(Default)]
+struct TaskResult {
+    path: Option<polyanya::Path>,
+    done: bool,
+    delay: f32,
+    duration: f32,
 }
 
 #[derive(Component)]
-struct FindingPath(Arc<RwLock<(Option<polyanya::Path>, bool, f32)>>);
+struct FindingPath(Arc<RwLock<TaskResult>>);
 
 fn compute_paths(
     mut commands: Commands,
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
     meshes: Res<Assets<PathMesh>>,
     windows: Res<Windows>,
+    task_mode: Res<TaskMode>,
 ) {
     for (entity, target, transform) in &with_target {
         let window = windows.primary();
@@ -253,13 +312,24 @@ fn compute_paths(
 
         let to = target.target;
         let mesh = mesh.clone();
-        let finding = FindingPath(Arc::new(RwLock::new((None, false, 0.0))));
+        let finding = FindingPath(Arc::new(RwLock::new(TaskResult::default())));
         let writer = finding.0.clone();
         let start = Instant::now();
+        let task_mode = *task_mode;
         AsyncComputeTaskPool::get()
             .spawn(async move {
-                let path = mesh.path(in_mesh, to).await;
-                *writer.write().unwrap() = (path, true, (Instant::now() - start).as_secs_f32());
+                let delay = (Instant::now() - start).as_secs_f32();
+                let path = if task_mode == TaskMode::Async {
+                    mesh.get_path(in_mesh, to).await
+                } else {
+                    mesh.path(in_mesh, to)
+                };
+                *writer.write().unwrap() = TaskResult {
+                    path,
+                    done: true,
+                    delay,
+                    duration: (Instant::now() - start).as_secs_f32() - delay,
+                };
             })
             .detach();
         commands.entity(entity).insert(finding);
@@ -269,6 +339,7 @@ fn compute_paths(
 #[derive(Default)]
 struct Stats {
     pathfinding_duration: VecDeque<f32>,
+    task_delay: VecDeque<f32>,
 }
 
 fn poll_path_tasks(
@@ -281,10 +352,12 @@ fn poll_path_tasks(
 ) {
     for (entity, task, transform) in &computing {
         let mut task = task.0.write().unwrap();
-        if task.1 {
-            stats.pathfinding_duration.push_front(task.2);
+        if task.done {
+            stats.pathfinding_duration.push_front(task.duration);
             stats.pathfinding_duration.truncate(100);
-            if let Some(path) = task.0.take() {
+            stats.task_delay.push_front(task.delay);
+            stats.pathfinding_duration.truncate(100);
+            if let Some(path) = task.path.take() {
                 commands
                     .entity(entity)
                     .insert(Path { path: path.path })
@@ -296,7 +369,6 @@ fn poll_path_tasks(
                 if !pathmeshes
                     .get(&meshes.aurora)
                     .unwrap()
-                    .blocking()
                     .is_in_mesh(transform.translation.xy() / factor + MESH_SIZE / 2.0)
                 {
                     commands.entity(entity).despawn();
@@ -306,7 +378,6 @@ fn poll_path_tasks(
                     .entity(entity)
                     .remove::<FindingPath>()
                     .remove::<Target>();
-                info!("no path found");
             }
         }
     }
@@ -327,10 +398,7 @@ fn move_navigator(
         if toward.length() < time.delta_seconds() * navigator.speed * 2.0 {
             path.path.remove(0);
             if path.path.is_empty() {
-                debug!("reached target");
                 commands.entity(entity).remove::<Path>().remove::<Target>();
-            } else {
-                debug!("reached next step");
             }
         }
         transform.translation +=
@@ -342,26 +410,29 @@ fn display_path(
     query: Query<(&Transform, &Path, &Navigator)>,
     mut lines: ResMut<DebugLines>,
     windows: Res<Windows>,
+    display_mode: Res<DisplayMode>,
 ) {
-    let window = windows.primary();
-    let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
+    if *display_mode == DisplayMode::Line {
+        let window = windows.primary();
+        let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
-    for (transform, path, navigator) in &query {
-        (1..path.path.len()).for_each(|i| {
-            lines.line_colored(
-                ((path.path[i - 1] - MESH_SIZE / 2.0) * factor).extend(0f32),
-                ((path.path[i] - MESH_SIZE / 2.0) * factor).extend(0f32),
-                0f32,
-                navigator.color,
-            );
-        });
-        if let Some(next) = path.path.first() {
-            lines.line_colored(
-                transform.translation,
-                ((*next - MESH_SIZE / 2.0) * factor).extend(0f32),
-                0f32,
-                navigator.color,
-            );
+        for (transform, path, navigator) in &query {
+            (1..path.path.len()).for_each(|i| {
+                lines.line_colored(
+                    ((path.path[i - 1] - MESH_SIZE / 2.0) * factor).extend(0f32),
+                    ((path.path[i] - MESH_SIZE / 2.0) * factor).extend(0f32),
+                    0f32,
+                    navigator.color,
+                );
+            });
+            if let Some(next) = path.path.first() {
+                lines.line_colored(
+                    transform.translation,
+                    ((*next - MESH_SIZE / 2.0) * factor).extend(0f32),
+                    0f32,
+                    navigator.color,
+                );
+            }
         }
     }
 }
@@ -385,7 +456,6 @@ fn go_somewhere(
             rng.gen_range(0.0..MESH_SIZE.x),
             rng.gen_range(0.0..MESH_SIZE.y),
         );
-        info!("going to {}", target);
         commands.entity(navigator).insert(Target {
             target: target,
             pathmesh: meshes.aurora.clone_weak(),
@@ -399,23 +469,59 @@ fn update_ui(
     mut count: Local<usize>,
     stats: Res<Stats>,
     diagnostics: Res<Diagnostics>,
+    task_mode: Res<TaskMode>,
+    display_mode: Res<DisplayMode>,
 ) {
     let new_count = agents.iter().len();
-    if *count != new_count {
-        let mut text = ui_query.single_mut();
-        text.sections[1].value = format!("{}\n", new_count);
-        text.sections[3].value = format!(
-            "{:.2}\n",
-            diagnostics
-                .get(FrameTimeDiagnosticsPlugin::FPS)
-                .and_then(|d| d.average())
-                .unwrap_or_default()
-        );
-        text.sections[5].value = format!(
-            "{:.3}",
+    let mut text = ui_query.single_mut();
+    text.sections[1].value = format!("{}\n", new_count);
+    text.sections[3].value = format!(
+        "{:.2}\n",
+        diagnostics
+            .get(FrameTimeDiagnosticsPlugin::FPS)
+            .and_then(|d| d.average())
+            .unwrap_or_default()
+    );
+
+    text.sections[5].value = format!(
+        "{:?}\n",
+        Duration::from_secs_f32(
             stats.pathfinding_duration.iter().sum::<f32>()
-                / (stats.pathfinding_duration.len() as f32)
-        );
-        *count = new_count;
+                / (stats.pathfinding_duration.len().max(1) as f32)
+        ),
+    );
+    text.sections[7].value = format!(
+        "{:?}\n",
+        Duration::from_secs_f32(
+            stats.task_delay.iter().sum::<f32>() / (stats.task_delay.len().max(1) as f32)
+        )
+    );
+    text.sections[9].value = format!("{:?}\n", *task_mode);
+    text.sections[11].value = format!(
+        "{}",
+        match *display_mode {
+            DisplayMode::Line => "hide lines",
+            DisplayMode::Nothing => "display lines",
+        }
+    );
+    *count = new_count;
+}
+
+fn mode_change(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut task_mode: ResMut<TaskMode>,
+    mut display_mode: ResMut<DisplayMode>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        match *task_mode {
+            TaskMode::Async => *task_mode = TaskMode::Blocking,
+            TaskMode::Blocking => *task_mode = TaskMode::Async,
+        }
+    }
+    if keyboard_input.just_pressed(KeyCode::L) {
+        match *display_mode {
+            DisplayMode::Line => *display_mode = DisplayMode::Nothing,
+            DisplayMode::Nothing => *display_mode = DisplayMode::Line,
+        }
     }
 }
