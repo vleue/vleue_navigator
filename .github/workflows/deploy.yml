@@ -27,7 +27,9 @@ jobs:
           override: true
 
       - name: Install wasm-bindgen
-        run: cargo install --force wasm-bindgen-cli
+        run: |
+          cargo install cargo-quickinstall
+          cargo quickinstall wasm-bindgen-cli
 
       - name: Build
         run: |
