@@ -252,7 +252,6 @@ struct Navigator {
 #[derive(Component)]
 struct Target {
     target: Vec2,
-    pathmesh: Handle<PathMesh>,
 }
 
 #[derive(Component)]
@@ -302,13 +301,18 @@ fn compute_paths(
     meshes: Res<Assets<PathMesh>>,
     windows: Res<Windows>,
     task_mode: Res<TaskMode>,
+    mesh: Res<Meshes>,
 ) {
+    let mesh = if let Some(mesh) = meshes.get(&mesh.aurora) {
+        mesh
+    } else {
+        return;
+    };
     for (entity, target, transform) in &with_target {
         let window = windows.primary();
         let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
         let in_mesh = transform.translation.truncate() / factor + MESH_SIZE / 2.0;
-        let mesh = meshes.get(&target.pathmesh).unwrap();
 
         let to = target.target;
         let mesh = mesh.clone();
@@ -448,7 +452,6 @@ fn go_somewhere(
         ),
     >,
     mut commands: Commands,
-    meshes: Res<Meshes>,
 ) {
     let mut rng = rand::thread_rng();
     for navigator in &query {
@@ -456,10 +459,7 @@ fn go_somewhere(
             rng.gen_range(0.0..MESH_SIZE.x),
             rng.gen_range(0.0..MESH_SIZE.y),
         );
-        commands.entity(navigator).insert(Target {
-            target: target,
-            pathmesh: meshes.aurora.clone_weak(),
-        });
+        commands.entity(navigator).insert(Target { target: target });
     }
 }
 
