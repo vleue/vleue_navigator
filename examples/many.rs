@@ -206,7 +206,6 @@ fn on_mesh_change(
     path_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
     windows: Res<Windows>,
-    navigator: Query<Entity, With<Navigator>>,
     window_resized: EventReader<WindowResized>,
     mut wait_for_mesh: Local<bool>,
 ) {
@@ -215,9 +214,6 @@ fn on_mesh_change(
         if let Some(pathmesh) = pathmeshes.get(handle) {
             *wait_for_mesh = false;
             if let Some(entity) = *current_mesh_entity {
-                commands.entity(entity).despawn();
-            }
-            if let Ok(entity) = navigator.get_single() {
                 commands.entity(entity).despawn();
             }
             let window = windows.primary();
