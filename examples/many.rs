@@ -255,29 +255,47 @@ struct Path {
     path: Vec<Vec2>,
 }
 
-fn spawn(windows: Res<Windows>, mut commands: Commands) {
-    let mut rng = rand::thread_rng();
-    let screen = Vec2::new(windows.primary().width(), windows.primary().height());
-    let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
+fn spawn(
+    windows: Res<Windows>,
+    mut commands: Commands,
+    pathmeshes: Res<Assets<PathMesh>>,
+    path_meshes: Res<Meshes>,
+) {
+    if pathmeshes.contains(&path_meshes.aurora) {
+        let mut rng = rand::thread_rng();
+        let screen = Vec2::new(windows.primary().width(), windows.primary().height());
+        let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
-    let in_mesh = Vec2::new(575.0, 410.0);
-    let position = (in_mesh - MESH_SIZE / 2.0) * factor;
-    let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
-    commands
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                color,
-                custom_size: Some(Vec2::ONE),
+        let in_mesh = *[
+            Vec2::new(575.0, 410.0),
+            Vec2::new(387.0, 524.0),
+            Vec2::new(762.0, 692.0),
+            Vec2::new(991.0, 426.0),
+            Vec2::new(746.0, 241.0),
+            Vec2::new(391.0, 231.0),
+            Vec2::new(25.0, 433.0),
+            Vec2::new(300.0, 679.0),
+        ]
+        .choose(&mut rng)
+        .unwrap();
+        let position = (in_mesh - MESH_SIZE / 2.0) * factor;
+        let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
+        commands
+            .spawn_bundle(SpriteBundle {
+                sprite: Sprite {
+                    color,
+                    custom_size: Some(Vec2::ONE),
+                    ..default()
+                },
+                transform: Transform::from_translation(position.extend(1.0))
+                    .with_scale(Vec3::splat(5.0)),
                 ..default()
-            },
-            transform: Transform::from_translation(position.extend(1.0))
-                .with_scale(Vec3::splat(5.0)),
-            ..default()
-        })
-        .insert(Navigator {
-            speed: rng.gen_range(50.0..100.0),
-            color,
-        });
+            })
+            .insert(Navigator {
+                speed: rng.gen_range(50.0..100.0),
+                color,
+            });
+    }
 }
 
 #[derive(Default)]
