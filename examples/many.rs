@@ -374,7 +374,7 @@ fn poll_path_tasks(
             stats.pathfinding_duration.push_front(task.duration);
             stats.pathfinding_duration.truncate(100);
             stats.task_delay.push_front(task.delay);
-            stats.pathfinding_duration.truncate(100);
+            stats.task_delay.truncate(100);
             if let Some(path) = task.path.take() {
                 commands
                     .entity(entity)
