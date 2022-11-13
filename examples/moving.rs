@@ -14,12 +14,14 @@ use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(WindowDescriptor {
-            title: "Navmesh with Polyanya".to_string(),
-            fit_canvas_to_parent: true,
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                title: "Navmesh with Polyanya".to_string(),
+                fit_canvas_to_parent: true,
+                ..default()
+            },
             ..default()
-        })
-        .add_plugins(DefaultPlugins)
+        }))
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(PathmeshPlugin)
         .add_startup_system(setup)
@@ -33,6 +35,7 @@ fn main() {
         .run();
 }
 
+#[derive(Resource)]
 struct Meshes {
     simple: Handle<PathMesh>,
     arena: Handle<PathMesh>,
@@ -45,6 +48,7 @@ enum CurrentMesh {
     Aurora,
 }
 
+#[derive(Resource)]
 struct MeshDetails {
     mesh: CurrentMesh,
     size: Vec2,
@@ -70,7 +74,7 @@ fn setup(
     mut pathmeshes: ResMut<Assets<PathMesh>>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
     commands.insert_resource(Meshes {
         simple: pathmeshes.add(PathMesh::from_polyanya_mesh(polyanya::Mesh::new(
             vec![
@@ -147,7 +151,7 @@ fn on_mesh_change(
             let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
             *current_mesh_entity = Some(
                 commands
-                    .spawn_bundle(MaterialMesh2dBundle {
+                    .spawn(MaterialMesh2dBundle {
                         mesh: meshes.add(pathmesh.to_mesh()).into(),
                         transform: Transform::from_translation(Vec3::new(
                             -mesh.size.x / 2.0 * factor,
@@ -164,7 +168,7 @@ fn on_mesh_change(
                 commands.entity(entity).despawn();
             }
             let font = asset_server.load("fonts/FiraMono-Medium.ttf");
-            commands.spawn_bundle(TextBundle {
+            commands.spawn(TextBundle {
                 text: Text::from_sections([
                     TextSection::new(
                         match mesh.mesh {
@@ -221,13 +225,13 @@ fn mesh_change(
 ) {
     let mut touch_triggered = false;
     if mouse_input.just_pressed(MouseButton::Left) {
-        *pressed_since = Some(time.time_since_startup());
+        *pressed_since = Some(time.elapsed());
     }
     if mouse_input.just_released(MouseButton::Left) {
         *pressed_since = None;
     }
     if let Some(started) = *pressed_since {
-        if (time.time_since_startup() - started).as_secs() > 1 {
+        if (time.elapsed() - started).as_secs() > 1 {
             touch_triggered = true;
             *pressed_since = None;
         }
@@ -293,8 +297,8 @@ fn on_click(
                     });
                 } else {
                     info!("spawning at {}", in_mesh);
-                    commands
-                        .spawn_bundle(SpriteBundle {
+                    commands.spawn((
+                        SpriteBundle {
                             sprite: Sprite {
                                 color: Color::RED,
                                 custom_size: Some(Vec2::ONE),
@@ -305,8 +309,9 @@ fn on_click(
                             )
                             .with_scale(Vec3::splat(5.0)),
                             ..default()
-                        })
-                        .insert(Navigator { speed: 100.0 });
+                        },
+                        Navigator { speed: 100.0 },
+                    ));
                 }
             } else {
                 info!("clicked outside of mesh");

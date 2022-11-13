@@ -23,21 +23,28 @@ use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(WindowDescriptor {
-            title: "Navmesh with Polyanya".to_string(),
-            fit_canvas_to_parent: true,
-            ..default()
-        })
-        // This example will be async heavy, increase the default threadpool
-        .insert_resource(DefaultTaskPoolOptions {
-            async_compute: TaskPoolThreadAssignmentPolicy {
-                min_threads: 1,
-                max_threads: usize::MAX,
-                percent: 1.0,
-            },
-            ..default()
-        })
-        .add_plugins(DefaultPlugins)
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        title: "Navmesh with Polyanya".to_string(),
+                        fit_canvas_to_parent: true,
+                        ..default()
+                    },
+                    ..default()
+                })
+                // This example will be async heavy, increase the default threadpool
+                .set(CorePlugin {
+                    task_pool_options: TaskPoolOptions {
+                        async_compute: TaskPoolThreadAssignmentPolicy {
+                            min_threads: 1,
+                            max_threads: usize::MAX,
+                            percent: 1.0,
+                        },
+                        ..default()
+                    },
+                }),
+        )
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(PathmeshPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
@@ -62,18 +69,19 @@ fn main() {
         .run();
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Resource)]
 enum TaskMode {
     Async,
     Blocking,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Resource)]
 enum DisplayMode {
     Line,
     Nothing,
 }
 
+#[derive(Resource)]
 struct Meshes {
     aurora: Handle<PathMesh>,
 }
@@ -81,12 +89,12 @@ struct Meshes {
 const MESH_SIZE: Vec2 = Vec2::new(1024.0, 768.0);
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
     commands.insert_resource(Meshes {
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
     let font = asset_server.load("fonts/FiraMono-Medium.ttf");
-    commands.spawn_bundle(TextBundle {
+    commands.spawn(TextBundle {
         text: Text::from_sections([
             TextSection::new(
                 "Agents: ",
@@ -220,7 +228,7 @@ fn on_mesh_change(
             let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
             *current_mesh_entity = Some(
                 commands
-                    .spawn_bundle(MaterialMesh2dBundle {
+                    .spawn(MaterialMesh2dBundle {
                         mesh: meshes.add(pathmesh.to_mesh()).into(),
                         transform: Transform::from_translation(Vec3::new(
                             -MESH_SIZE.x / 2.0 * factor,
@@ -280,8 +288,8 @@ fn spawn(
         .unwrap();
         let position = (in_mesh - MESH_SIZE / 2.0) * factor;
         let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
-        commands
-            .spawn_bundle(SpriteBundle {
+        commands.spawn((
+            SpriteBundle {
                 sprite: Sprite {
                     color,
                     custom_size: Some(Vec2::ONE),
@@ -290,11 +298,12 @@ fn spawn(
                 transform: Transform::from_translation(position.extend(1.0))
                     .with_scale(Vec3::splat(5.0)),
                 ..default()
-            })
-            .insert(Navigator {
+            },
+            Navigator {
                 speed: rng.gen_range(50.0..100.0),
                 color,
-            });
+            },
+        ));
     }
 }
 
@@ -354,7 +363,7 @@ fn compute_paths(
     }
 }
 
-#[derive(Default)]
+#[derive(Resource, Default)]
 struct Stats {
     pathfinding_duration: VecDeque<f32>,
     task_delay: VecDeque<f32>,
