@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use bevy::render::mesh::VertexAttributeValues;
 use bevy::{
     asset::{AssetLoader, LoadContext, LoadedAsset},
     prelude::*,
@@ -7,6 +8,7 @@ use bevy::{
     render::{mesh::Indices, render_resource::PrimitiveTopology},
     utils::BoxedFuture,
 };
+use itertools::Itertools;
 
 pub struct PathmeshPlugin;
 
@@ -28,6 +30,31 @@ impl PathMesh {
         PathMesh {
             mesh: Arc::new(mesh),
         }
+    }
+
+    pub fn from_bevy_mesh(mesh: Mesh) -> PathMesh {
+        assert_eq!(mesh.primitive_topology(), PrimitiveTopology::TriangleList);
+        let mesh_vertices = match mesh
+            .attribute(Mesh::ATTRIBUTE_POSITION)
+            .expect("No positions data found in mesh")
+        {
+            VertexAttributeValues::Float32x3(values) => values,
+            _ => panic!("Unexpected VertexAttributeValues found for Mesh::ATTRIBUTE_POSITION"),
+        };
+        let vertices = mesh_vertices
+            .into_iter()
+            .map(|coords| Vec2::new(coords[0], coords[2]))
+            .collect();
+        let triangles = mesh
+            .indices()
+            .expect("No polygon indices found in mesh")
+            .iter()
+            .tuples::<(_, _, _)>()
+            .map(polyanya::VertexIndices::from)
+            .collect();
+        let polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
+
+        Self::from_polyanya_mesh(polyanya_mesh)
     }
 
     pub fn get(&self) -> Arc<polyanya::Mesh> {
