@@ -32,6 +32,8 @@ impl PathMesh {
         }
     }
 
+    /// Creates a `PathMesh` from a Bevy `Mesh`, assuming it constructs a 2D structure.
+    /// All y coordinates are ignored.
     pub fn from_bevy_mesh(mesh: Mesh) -> PathMesh {
         assert_eq!(mesh.primitive_topology(), PrimitiveTopology::TriangleList);
         let mesh_vertices = match mesh
