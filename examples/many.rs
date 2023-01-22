@@ -17,7 +17,7 @@ use bevy::{
 };
 use rand::prelude::*;
 
-use bevy_pathmesh::{PathMesh, PathmeshPlugin};
+use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
@@ -46,7 +46,7 @@ fn main() {
                 }),
         )
         .add_plugin(DebugLinesPlugin::default())
-        .add_plugin(PathmeshPlugin)
+        .add_plugin(PathMeshPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .init_resource::<Stats>()

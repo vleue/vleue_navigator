@@ -10,9 +10,9 @@ use bevy::{
 };
 use itertools::Itertools;
 
-pub struct PathmeshPlugin;
+pub struct PathMeshPlugin;
 
-impl Plugin for PathmeshPlugin {
+impl Plugin for PathMeshPlugin {
     fn build(&self, app: &mut App) {
         app.add_asset::<PathMesh>()
             .init_asset_loader::<PathMeshPolyanyaLoader>();
