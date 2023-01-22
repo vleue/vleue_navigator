@@ -186,10 +186,14 @@ mod tests {
         let bevy_mesh = expected_path_mesh.to_mesh();
         let actual_path_mesh = PathMesh::from_bevy_mesh(&bevy_mesh);
 
-        let expected_mesh = expected_path_mesh.mesh;
-        let actual_mesh = actual_path_mesh.mesh;
+        assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
+    }
 
-        assert_eq!(actual_mesh.polygons, expected_mesh.polygons);
+    fn assert_same_path_mesh(expected: PathMesh, actual: PathMesh) {
+        let expected_mesh = expected.mesh;
+        let actual_mesh = actual.mesh;
+
+        assert_eq!(expected_mesh.polygons, actual_mesh.polygons);
         for (index, (expected_vertex, actual_vertex)) in expected_mesh
             .vertices
             .iter()
