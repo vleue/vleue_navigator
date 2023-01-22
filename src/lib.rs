@@ -33,11 +33,15 @@ impl PathMesh {
         }
     }
 
-    /// Creates a [`polyanya::PathMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
+    /// Creates a [`PathMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
     /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
+    /// The [`polyanya::Mesh`] generated in the process can be modified via `callback`.
     ///
     /// Only supports triangle lists.
-    pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
+    pub fn from_bevy_mesh_and_then(
+        mesh: &Mesh,
+        callback: impl Fn(&mut polyanya::Mesh),
+    ) -> PathMesh {
         let rotations = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL)
             .map(|normal| Quat::from_rotation_arc(normal, Vec3::Z));
 
@@ -55,9 +59,18 @@ impl PathMesh {
             .map(polyanya::Triangle::from)
             .collect();
 
-        let polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
+        let mut polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
+        callback(&mut polyanya_mesh);
 
         Self::from_polyanya_mesh(polyanya_mesh)
+    }
+
+    /// Creates a [`PathMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
+    /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
+    ///
+    /// Only supports triangle lists.
+    pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
+        Self::from_bevy_mesh_and_then(mesh, |_| {})
     }
 
     pub fn get(&self) -> Arc<polyanya::Mesh> {
