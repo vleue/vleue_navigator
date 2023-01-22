@@ -189,6 +189,44 @@ mod tests {
         assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
     }
 
+    #[test]
+    fn rotated_mesh_generates_expected_path_mesh() {
+        let expected_path_mesh = PathMesh::from_polyanya_mesh(polyanya::Mesh::from_trimesh(
+            vec![
+                Vec2::new(-1., -1.),
+                Vec2::new(1., -1.),
+                Vec2::new(-1., 1.),
+                Vec2::new(1., 1.),
+            ],
+            vec![(0, 1, 3).into(), (0, 3, 2).into()],
+        ));
+        let mut bevy_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        bevy_mesh.insert_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![
+                [-1.0, 0.0, 1.0],
+                [1.0, 0.0, 1.0],
+                [-1.0, 0.0, -1.0],
+                [1.0, 0.0, -1.0],
+            ],
+        );
+        bevy_mesh.insert_attribute(
+            Mesh::ATTRIBUTE_NORMAL,
+            vec![
+                [0.0, 1.0, -0.0],
+                [0.0, 1.0, -0.0],
+                [0.0, 1.0, -0.0],
+                [0.0, 1.0, -0.0],
+            ],
+        );
+        bevy_mesh.set_indices(Some(Indices::U32(vec![0, 1, 3, 0, 3, 2])));
+
+        let actual_path_mesh = PathMesh::from_bevy_mesh(&bevy_mesh);
+        println!("actual_path_mesh: {:?}", actual_path_mesh);
+
+        assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
+    }
+
     fn assert_same_path_mesh(expected: PathMesh, actual: PathMesh) {
         let expected_mesh = expected.mesh;
         let actual_mesh = actual.mesh;
@@ -200,8 +238,10 @@ mod tests {
             .zip(actual_mesh.vertices.iter())
             .enumerate()
         {
-            assert_eq!(
-                expected_vertex.coords, actual_vertex.coords,
+            let nearly_same_coords =
+                (expected_vertex.coords - actual_vertex.coords).length_squared() < 1e-8;
+            assert!(nearly_same_coords
+               ,
                 "\nvertex {index} does not have the expected coords.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
                 expected_mesh.vertices, actual_mesh.vertices
             );
