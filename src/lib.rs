@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use bevy::math::Vec3Swizzles;
 use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
 use bevy::{
     asset::{AssetLoader, LoadContext, LoadedAsset},
@@ -35,21 +34,27 @@ impl PathMesh {
 
     /// Creates a `PathMesh` from a Bevy `Mesh`, assuming it constructs a 2D structure.
     /// Only supports triangle lists.
-    /// All y coordinates are ignored.
     pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
-        assert_eq!(mesh.primitive_topology(), PrimitiveTopology::TriangleList);
-
-        let rotations = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).map(|normal| {
-            let delta_xy = (-Vec2::Y).angle_between(normal.xy());
-            let delta_zy = (-Vec2::Y).angle_between(normal.zy());
-            Quat::from_rotation_z(delta_xy).mul_quat(Quat::from_rotation_x(delta_zy))
-        });
-        let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
-            .zip(rotations)
-            .map(|(vertex, rotation)| rotation.mul_vec3(vertex));
-
+        println!(
+            "normals: {:?}",
+            get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).collect::<Vec<_>>()
+        );
+        let rotations: Vec<_> = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL)
+            .map(|normal| Quat::from_rotation_arc(normal, Vec3::Z))
+            .collect();
+        println!("rotations: {:?}", rotations);
+        println!(
+            "vertices before: {:?}",
+            get_vectors(mesh, Mesh::ATTRIBUTE_POSITION).collect::<Vec<_>>()
+        );
+        let vertices: Vec<_> = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
+            .zip(rotations.iter())
+            .map(|(vertex, rotation)| rotation.mul_vec3(vertex))
+            .collect();
+        println!("vertices after: {:?}", vertices);
         let vertices = vertices
-            .map(|coords| Vec2::new(coords[0], coords[2]))
+            .into_iter()
+            .map(|coords| Vec2::new(coords[0], coords[1]))
             .collect();
         let triangles = mesh
             .indices()
