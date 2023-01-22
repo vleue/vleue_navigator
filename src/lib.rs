@@ -32,7 +32,9 @@ impl PathMesh {
         }
     }
 
-    /// Creates a `PathMesh` from a Bevy `Mesh`, assuming it constructs a 2D structure.
+    /// Creates a [`polyanya::PathMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
+    /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
+    ///
     /// Only supports triangle lists.
     pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
         println!(
