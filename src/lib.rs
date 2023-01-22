@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use bevy::math::Vec3Swizzles;
 use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
 use bevy::{
     asset::{AssetLoader, LoadContext, LoadedAsset},
@@ -35,14 +36,19 @@ impl PathMesh {
     /// Creates a `PathMesh` from a Bevy `Mesh`, assuming it constructs a 2D structure.
     /// Only supports triangle lists.
     /// All y coordinates are ignored.
-    pub fn from_bevy_mesh(mesh: Mesh) -> PathMesh {
+    pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
         assert_eq!(mesh.primitive_topology(), PrimitiveTopology::TriangleList);
 
-        let vertices = get_vectors(&mesh, Mesh::ATTRIBUTE_POSITION);
-        let normals = get_vectors(&mesh, Mesh::ATTRIBUTE_NORMAL);
+        let rotations = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).map(|normal| {
+            let delta_xy = (-Vec2::Y).angle_between(normal.xy());
+            let delta_zy = (-Vec2::Y).angle_between(normal.zy());
+            Quat::from_rotation_z(delta_xy).mul_quat(Quat::from_rotation_x(delta_zy))
+        });
+        let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
+            .zip(rotations)
+            .map(|(vertex, rotation)| rotation.mul_vec3(vertex));
 
         let vertices = vertices
-            .into_iter()
             .map(|coords| Vec2::new(coords[0], coords[2]))
             .collect();
         let triangles = mesh
@@ -137,10 +143,88 @@ impl AssetLoader for PathMeshPolyanyaLoader {
     }
 }
 
-fn get_vectors(mesh: &Mesh, id: impl Into<MeshVertexAttributeId>) -> &Vec<[f32; 3]> {
-    match mesh.attribute(id).unwrap() {
+fn get_vectors(
+    mesh: &Mesh,
+    id: impl Into<MeshVertexAttributeId>,
+) -> impl Iterator<Item = Vec3> + '_ {
+    let vectors = match mesh.attribute(id).unwrap() {
         VertexAttributeValues::Float32x3(values) => values,
         // Guaranteed by Bevy
         _ => unreachable!(),
+    };
+    vectors.into_iter().cloned().map(Vec3::from)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generating_from_existing_path_mesh_results_in_same_path_mesh() {
+        let expected_path_mesh = PathMesh::from_polyanya_mesh(polyanya::Mesh::from_trimesh(
+            vec![
+                Vec2::new(1., 1.),
+                Vec2::new(5., 1.),
+                Vec2::new(5., 4.),
+                Vec2::new(1., 4.),
+                Vec2::new(2., 2.),
+                Vec2::new(4., 3.),
+            ],
+            vec![
+                (0, 1, 4).into(),
+                (1, 2, 5).into(),
+                (5, 2, 3).into(),
+                (1, 5, 3).into(),
+                (0, 4, 3).into(),
+            ],
+        ));
+        let bevy_mesh = expected_path_mesh.to_mesh();
+        let actual_path_mesh = PathMesh::from_bevy_mesh(&bevy_mesh);
+
+        let expected_mesh = expected_path_mesh.mesh;
+        let actual_mesh = actual_path_mesh.mesh;
+
+        assert_eq!(actual_mesh.polygons, expected_mesh.polygons);
+        for (index, (expected_vertex, actual_vertex)) in expected_mesh
+            .vertices
+            .iter()
+            .zip(actual_mesh.vertices.iter())
+            .enumerate()
+        {
+            assert_eq!(
+                expected_vertex.coords, actual_vertex.coords,
+                "\nvertex {index} does not have the expected coords.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
+                expected_mesh.vertices, actual_mesh.vertices
+            );
+
+            let adjusted_actual = wrap_to_first(&actual_vertex.polygons, |index| *index != -1).unwrap_or_else(||
+                panic!("vertex {index}: Found only surrounded by obstacles.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
+                       expected_mesh.vertices, actual_mesh.vertices));
+
+            let adjusted_expectation= wrap_to_first(&expected_vertex.polygons, |polygon| {
+                *polygon == adjusted_actual[0]
+            })
+                .unwrap_or_else(||
+                    panic!("vertex {index}: Failed to expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
+                           expected_mesh.vertices, actual_mesh.vertices));
+
+            assert_eq!(
+                adjusted_expectation, adjusted_actual,
+                "\nvertex {index} does not have the expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
+                expected_mesh.vertices, actual_mesh.vertices
+            );
+        }
+    }
+
+    fn wrap_to_first(polygons: &[isize], pred: impl Fn(&isize) -> bool) -> Option<Vec<isize>> {
+        let offset = polygons.iter().position(pred)?;
+        Some(
+            polygons
+                .iter()
+                .skip(offset)
+                .chain(polygons.iter().take(offset))
+                .cloned()
+                .collect(),
+        )
     }
 }
