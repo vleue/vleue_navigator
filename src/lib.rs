@@ -37,27 +37,15 @@ impl PathMesh {
     ///
     /// Only supports triangle lists.
     pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
-        println!(
-            "normals: {:?}",
-            get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).collect::<Vec<_>>()
-        );
-        let rotations: Vec<_> = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL)
-            .map(|normal| Quat::from_rotation_arc(normal, Vec3::Z))
-            .collect();
-        println!("rotations: {:?}", rotations);
-        println!(
-            "vertices before: {:?}",
-            get_vectors(mesh, Mesh::ATTRIBUTE_POSITION).collect::<Vec<_>>()
-        );
-        let vertices: Vec<_> = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
-            .zip(rotations.iter())
+        let rotations = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL)
+            .map(|normal| Quat::from_rotation_arc(normal, Vec3::Z));
+
+        let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
+            .zip(rotations)
             .map(|(vertex, rotation)| rotation.mul_vec3(vertex))
-            .collect();
-        println!("vertices after: {:?}", vertices);
-        let vertices = vertices
-            .into_iter()
             .map(|coords| Vec2::new(coords[0], coords[1]))
             .collect();
+
         let triangles = mesh
             .indices()
             .expect("No polygon indices found in mesh")
@@ -65,6 +53,7 @@ impl PathMesh {
             .tuples::<(_, _, _)>()
             .map(polyanya::Triangle::from)
             .collect();
+
         let polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
 
         Self::from_polyanya_mesh(polyanya_mesh)
@@ -224,7 +213,6 @@ mod tests {
         bevy_mesh.set_indices(Some(Indices::U32(vec![0, 1, 3, 0, 3, 2])));
 
         let actual_path_mesh = PathMesh::from_bevy_mesh(&bevy_mesh);
-        println!("actual_path_mesh: {:?}", actual_path_mesh);
 
         assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
     }
