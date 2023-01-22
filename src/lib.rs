@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bevy::render::mesh::VertexAttributeValues;
+use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
 use bevy::{
     asset::{AssetLoader, LoadContext, LoadedAsset},
     prelude::*,
@@ -33,17 +33,15 @@ impl PathMesh {
     }
 
     /// Creates a `PathMesh` from a Bevy `Mesh`, assuming it constructs a 2D structure.
+    /// Only supports triangle lists.
     /// All y coordinates are ignored.
     pub fn from_bevy_mesh(mesh: Mesh) -> PathMesh {
         assert_eq!(mesh.primitive_topology(), PrimitiveTopology::TriangleList);
-        let mesh_vertices = match mesh
-            .attribute(Mesh::ATTRIBUTE_POSITION)
-            .expect("No positions data found in mesh")
-        {
-            VertexAttributeValues::Float32x3(values) => values,
-            _ => panic!("Unexpected VertexAttributeValues found for Mesh::ATTRIBUTE_POSITION"),
-        };
-        let vertices = mesh_vertices
+
+        let vertices = get_vectors(&mesh, Mesh::ATTRIBUTE_POSITION);
+        let normals = get_vectors(&mesh, Mesh::ATTRIBUTE_NORMAL);
+
+        let vertices = vertices
             .into_iter()
             .map(|coords| Vec2::new(coords[0], coords[2]))
             .collect();
@@ -52,7 +50,7 @@ impl PathMesh {
             .expect("No polygon indices found in mesh")
             .iter()
             .tuples::<(_, _, _)>()
-            .map(polyanya::VertexIndices::from)
+            .map(polyanya::Triangle::from)
             .collect();
         let polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
 
@@ -136,5 +134,13 @@ impl AssetLoader for PathMeshPolyanyaLoader {
 
     fn extensions(&self) -> &[&str] {
         &["polyanya.mesh"]
+    }
+}
+
+fn get_vectors(mesh: &Mesh, id: impl Into<MeshVertexAttributeId>) -> &Vec<[f32; 3]> {
+    match mesh.attribute(id).unwrap() {
+        VertexAttributeValues::Float32x3(values) => values,
+        // Guaranteed by Bevy
+        _ => unreachable!(),
     }
 }
