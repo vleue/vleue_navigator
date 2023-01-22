@@ -26,7 +26,8 @@ pub struct PathMesh {
 }
 
 impl PathMesh {
-    pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> PathMesh {
+    pub fn from_polyanya_mesh(mut mesh: polyanya::Mesh) -> PathMesh {
+        mesh.bake();
         PathMesh {
             mesh: Arc::new(mesh),
         }
