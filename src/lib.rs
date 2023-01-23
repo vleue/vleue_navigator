@@ -39,6 +39,7 @@ impl PathMesh {
     ///
     /// Returns the generated [`PathMesh`] and a [`bevy::Transform`] that describes how to go
     /// from the [`bevy::Mesh`] space to the [`PathMesh`] space.
+    /// After the transform, the `z` coordinate can be dropped since the [`PathMesh`] is 2D.
     ///
     /// Only supports triangle lists.
     pub fn from_bevy_mesh_and_then(
@@ -73,6 +74,7 @@ impl PathMesh {
     ///
     /// Returns the generated [`PathMesh`] and a [`bevy::Transform`] that describes how to go
     /// from the [`bevy::Mesh`] space to the [`PathMesh`] space.
+    /// After the transform, the `z` coordinate can be dropped since the [`PathMesh`] is 2D.
     ///
     /// Only supports triangle lists.
     pub fn from_bevy_mesh(mesh: &Mesh) -> (PathMesh, Transform) {
