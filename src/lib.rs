@@ -155,7 +155,6 @@ impl PathMesh {
                     (2..p.vertices.len())
                         .flat_map(|i| [p.vertices[0], p.vertices[i - 1], p.vertices[i]])
                 })
-                .map(|v| v as u32)
                 .collect(),
         )));
         new_mesh.insert_attribute(
@@ -218,7 +217,7 @@ fn get_vectors(
         // Guaranteed by Bevy
         _ => unreachable!(),
     };
-    vectors.into_iter().cloned().map(Vec3::from)
+    vectors.iter().cloned().map(Vec3::from)
 }
 
 #[cfg(test)]
