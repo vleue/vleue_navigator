@@ -6,7 +6,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-polyanya = { git = "https://github.com/janhohenheim/polyanya.git", branch = "import-trimesh" }
+polyanya = { git = "https://github.com/vleue/polyanya.git" }
 itertools = "0.10.5"
 
 [dependencies.bevy]
