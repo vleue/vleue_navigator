@@ -58,7 +58,7 @@ impl PathMesh {
 
         let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
             .map(|vertex| rotation.mul_vec3(vertex))
-            .map(|coords| Vec2::new(coords[0], coords[1]))
+            .map(|coords| coords.xy())
             .collect();
 
         let triangles = mesh
