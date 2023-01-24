@@ -8,7 +8,7 @@ use bevy::{
     window::WindowResized,
 };
 
-use bevy_pathmesh::{PathMesh, PathmeshPlugin};
+use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
@@ -23,7 +23,7 @@ fn main() {
             ..default()
         }))
         .add_plugin(DebugLinesPlugin::default())
-        .add_plugin(PathmeshPlugin)
+        .add_plugin(PathMeshPlugin)
         .add_startup_system(setup)
         .add_system(on_mesh_change)
         .add_system(mesh_change)

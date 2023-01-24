@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle, window::WindowResized};
-use bevy_pathmesh::{PathMesh, PathmeshPlugin};
+use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
@@ -14,7 +14,7 @@ fn main() {
             ..default()
         }))
         .add_plugin(DebugLinesPlugin::default())
-        .add_plugin(PathmeshPlugin)
+        .add_plugin(PathMeshPlugin)
         .add_event::<NewPathStepEvent>()
         .insert_resource(PathToDisplay::default())
         .add_startup_system(setup)
