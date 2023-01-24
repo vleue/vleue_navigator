@@ -40,7 +40,7 @@ impl PathMesh {
     pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> PathMesh {
         PathMesh {
             mesh: Arc::new(mesh),
-            transform: Transform::from_scale(Vec3::splat(1.)),
+            transform: Transform::IDENTITY,
         }
     }
 
