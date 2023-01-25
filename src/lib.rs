@@ -125,6 +125,11 @@ impl PathMesh {
         }
     }
 
+    pub fn transformed_is_in_mesh(&self, point: Vec3) -> bool {
+        let point = self.transform.transform_point(point).xy();
+        self.mesh.point_in_mesh(point)
+    }
+
     pub fn is_in_mesh(&self, point: Vec2) -> bool {
         self.mesh.point_in_mesh(point)
     }
