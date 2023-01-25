@@ -140,6 +140,10 @@ impl PathMesh {
         self.transform
     }
 
+    pub fn set_transform(&mut self, transform: Transform) {
+        self.transform = transform;
+    }
+
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList);
         let inverse_transform = self.inverse_transform();
