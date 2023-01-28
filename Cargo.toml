@@ -6,17 +6,24 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-polyanya = "0.2.1"
 itertools = "0.10.5"
+
+[dependencies.polyanya]
+version = "0.2.1"
 
 [dependencies.bevy]
 version = "0.9.0"
-features = ["bevy_sprite", "bevy_render", "bevy_ui", "bevy_text", "bevy_core_pipeline", "bevy_winit", "bevy_asset", "bevy_scene"]
+features = ["bevy_render", "bevy_asset"]
 default-features = false
 
 [dev-dependencies]
 bevy_prototype_debug_lines = "0.9"
 rand = "0.8"
+
+[dev-dependencies.bevy]
+version = "0.9.0"
+features = ["bevy_ui", "bevy_text", "bevy_winit", "bevy_core_pipeline", "bevy_scene", "bevy_gltf"]
+default-features = false
 
 [features]
 default = []
@@ -24,4 +31,3 @@ linuxci = ["bevy/x11"]
 
 [profile.dev.package."*"]
 opt-level = 3
-
