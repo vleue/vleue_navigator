@@ -48,6 +48,9 @@ jobs:
       - name: Copy Assets
         run: cp -r assets wasm/
 
+      - name: Copy Screenshots
+        run: cp screenshots/* wasm/
+
       - name: Setup Pages
         uses: actions/configure-pages@v2
 
