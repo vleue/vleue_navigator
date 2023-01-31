@@ -1,4 +1,4 @@
-name: Deploy static content to Pages
+name: Deploy wasm demo to Pages
 
 on:
   workflow_dispatch:
