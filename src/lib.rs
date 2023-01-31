@@ -25,7 +25,6 @@ use itertools::Itertools;
 pub mod asset_loaders;
 
 /// Bevy plugin to add support for the [`PathMesh`] asset type.
-
 #[derive(Debug, Clone, Copy)]
 pub struct PathMeshPlugin;
 
