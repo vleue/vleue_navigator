@@ -274,7 +274,12 @@ mod tests {
                 (0, 4, 3).into(),
             ],
         ));
-        let bevy_mesh = expected_path_mesh.to_mesh();
+        let mut bevy_mesh = expected_path_mesh.to_mesh();
+        // Add back normals as they are used to determine where is up in the mesh
+        bevy_mesh.insert_attribute(
+            Mesh::ATTRIBUTE_NORMAL,
+            (0..6).map(|_| [0.0, 0.0, 1.0]).collect::<Vec<_>>(),
+        );
         let actual_path_mesh = PathMesh::from_bevy_mesh(&bevy_mesh);
 
         assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
