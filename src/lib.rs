@@ -1,26 +1,42 @@
+#![doc = include_str!("../README.md")]
+#![warn(
+    missing_debug_implementations,
+    missing_copy_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications,
+    missing_docs
+)]
+
 use std::sync::Arc;
 
 use bevy::math::Vec3Swizzles;
 use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
 use bevy::{
-    asset::{AssetLoader, LoadContext, LoadedAsset},
     prelude::*,
     reflect::TypeUuid,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
-    utils::BoxedFuture,
 };
 use itertools::Itertools;
 
+pub mod asset_loaders;
+
+/// Bevy plugin to add support for the [`PathMesh`] asset type.
+
+#[derive(Debug, Clone, Copy)]
 pub struct PathMeshPlugin;
 
 impl Plugin for PathMeshPlugin {
     fn build(&self, app: &mut App) {
         app.add_asset::<PathMesh>()
-            .init_asset_loader::<PathMeshPolyanyaLoader>();
+            .init_asset_loader::<asset_loaders::PathMeshPolyanyaLoader>();
     }
 }
 
-/// A path between two points.
+/// A path between two points, in 3 dimensions using [`PathMesh::transform`].
 #[derive(Debug, PartialEq)]
 pub struct TransformedPath {
     /// Length of the path.
@@ -29,6 +45,9 @@ pub struct TransformedPath {
     pub path: Vec<Vec3>,
 }
 
+pub use polyanya::Path;
+
+/// A navigation mesh
 #[derive(Debug, TypeUuid, Clone)]
 #[uuid = "807C7A31-EA06-4A3B-821B-6E91ADB95734"]
 pub struct PathMesh {
@@ -37,6 +56,7 @@ pub struct PathMesh {
 }
 
 impl PathMesh {
+    /// Builds a [`PathMesh`] from a Polyanya [`Mesh`](polyanya::Mesh)
     pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> PathMesh {
         PathMesh {
             mesh: Arc::new(mesh),
@@ -48,7 +68,7 @@ impl PathMesh {
     /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
     /// The [`polyanya::Mesh`] generated in the process can be modified via `callback`.
     ///
-    /// Only supports triangle lists.
+    /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
     pub fn from_bevy_mesh_and_then(
         mesh: &Mesh,
         callback: impl Fn(&mut polyanya::Mesh),
@@ -80,20 +100,25 @@ impl PathMesh {
     /// Creates a [`PathMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
     /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
     ///
-    /// Only supports triangle lists.
+    /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
     pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
         Self::from_bevy_mesh_and_then(mesh, |_| {})
     }
 
+    /// Get the underlying Polyanya navigation mesh
     pub fn get(&self) -> Arc<polyanya::Mesh> {
         self.mesh.clone()
     }
 
+    /// Get a path between two points, in an async way
     #[inline]
-    pub async fn get_path(&self, from: Vec2, to: Vec2) -> Option<polyanya::Path> {
+    pub async fn get_path(&self, from: Vec2, to: Vec2) -> Option<Path> {
         self.mesh.get_path(from, to).await
     }
 
+    /// Get a path between two points, in an async way.
+    ///
+    /// Inputs and results are transformed using the [`PathMesh::transform`]
     pub async fn get_transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
         let inner_from = self.transform.transform_point(from).xy();
         let inner_to = self.transform.transform_point(to).xy();
@@ -101,11 +126,15 @@ impl PathMesh {
         path.map(|path| self.transform_path(path, from, to))
     }
 
+    /// Get a path between two points
     #[inline]
-    pub fn path(&self, from: Vec2, to: Vec2) -> Option<polyanya::Path> {
+    pub fn path(&self, from: Vec2, to: Vec2) -> Option<Path> {
         self.mesh.path(from, to)
     }
 
+    /// Get a path between two points, in an async way.
+    ///
+    /// Inputs and results are transformed using the [`PathMesh::transform`]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
         let inner_from = self.transform.transform_point(from).xy();
         let inner_to = self.transform.transform_point(to).xy();
@@ -113,7 +142,7 @@ impl PathMesh {
         path.map(|path| self.transform_path(path, from, to))
     }
 
-    fn transform_path(&self, path: polyanya::Path, from: Vec3, to: Vec3) -> TransformedPath {
+    fn transform_path(&self, path: Path, from: Vec3, to: Vec3) -> TransformedPath {
         let inverse_transform = self.inverse_transform();
         TransformedPath {
             length: from.distance(to),
@@ -125,11 +154,13 @@ impl PathMesh {
         }
     }
 
+    /// Check if a 3d point is in a navigationable part of the mesh, using the [`Mesh::transform`]
     pub fn transformed_is_in_mesh(&self, point: Vec3) -> bool {
         let point = self.transform.transform_point(point).xy();
         self.mesh.point_in_mesh(point)
     }
 
+    /// Check if a point is in a navigationable part of the mesh
     pub fn is_in_mesh(&self, point: Vec2) -> bool {
         self.mesh.point_in_mesh(point)
     }
@@ -140,10 +171,14 @@ impl PathMesh {
         self.transform
     }
 
+    /// Set the mesh transform
+    ///
+    /// It will be used to transform a 3d point to a 2d point where the `z` axis can be ignored
     pub fn set_transform(&mut self, transform: Transform) {
         self.transform = transform;
     }
 
+    /// Creates a [`Mesh`] from this [`PathMesh`], suitable for rendering
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList);
         let inverse_transform = self.inverse_transform();
@@ -185,35 +220,13 @@ impl PathMesh {
         new_mesh
     }
 
+    #[inline]
     fn inverse_transform(&self) -> Transform {
         Transform {
             translation: -self.transform.translation,
             rotation: self.transform.rotation.inverse(),
             scale: 1.0 / self.transform.scale,
         }
-    }
-}
-
-#[derive(Default)]
-pub struct PathMeshPolyanyaLoader;
-
-impl AssetLoader for PathMeshPolyanyaLoader {
-    fn load<'a>(
-        &'a self,
-        bytes: &'a [u8],
-        load_context: &'a mut LoadContext,
-    ) -> BoxedFuture<'a, Result<(), bevy::asset::Error>> {
-        Box::pin(async move {
-            load_context.set_default_asset(LoadedAsset::new(PathMesh {
-                mesh: Arc::new(polyanya::Mesh::from_bytes(bytes)),
-                transform: Transform::from_scale(Vec3::splat(1.)),
-            }));
-            Ok(())
-        })
-    }
-
-    fn extensions(&self) -> &[&str] {
-        &["polyanya.mesh"]
     }
 }
 
