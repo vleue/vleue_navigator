@@ -222,8 +222,10 @@ impl PathMesh {
                 .iter()
                 .flat_map(|p| {
                     (0..p.vertices.len())
-                        .flat_map(|i| [p.vertices[i], p.vertices[(i + 1) % p.vertices.len()]])
+                        .map(|i| [p.vertices[i], p.vertices[(i + 1) % p.vertices.len()]])
                 })
+                .unique_by(|[a, b]| if a < b { (*a, *b) } else { (*b, *a) })
+                .flatten()
                 .collect(),
         )));
         new_mesh
