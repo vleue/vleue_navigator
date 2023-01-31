@@ -161,7 +161,7 @@ fn on_mesh_change(
                 main_mesh.spawn(MaterialMesh2dBundle {
                     mesh: meshes.add(pathmesh.to_wireframe_mesh()).into(),
                     transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
-                    material: materials.add(ColorMaterial::from(Color::rgb(0.35, 0.35, 1.0))),
+                    material: materials.add(ColorMaterial::from(Color::rgb(0.5, 0.5, 1.0))),
                     ..default()
                 });
             })
