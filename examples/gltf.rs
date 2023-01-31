@@ -288,7 +288,7 @@ fn setup_scene(
                     .unwrap(),
             );
 
-            let mut material: StandardMaterial = Color::WHITE.into();
+            let mut material: StandardMaterial = Color::ANTIQUE_WHITE.into();
             material.unlit = true;
 
             commands.spawn((
