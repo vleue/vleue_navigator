@@ -7,11 +7,6 @@ use bevy::{
     reflect::TypeUuid,
     render::mesh::VertexAttributeValues,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use bevy::{
-    pbr::wireframe::{Wireframe, WireframePlugin},
-    render::settings::{WgpuFeatures, WgpuSettings},
-};
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use itertools::Itertools;
 use rand::Rng;
@@ -25,11 +20,6 @@ fn main() {
     app.insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
         .init_resource::<GltfHandles>();
-    #[cfg(not(target_arch = "wasm32"))]
-    app.insert_resource(WgpuSettings {
-        features: WgpuFeatures::POLYGON_MODE_LINE,
-        ..default()
-    });
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         window: WindowDescriptor {
             title: "Navmesh with Polyanya".to_string(),
@@ -38,25 +28,19 @@ fn main() {
         },
         ..default()
     }));
-    #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugin(WireframePlugin);
     app.add_plugin(PathMeshPlugin)
         .add_state(AppState::Setup)
         .add_system_set(SystemSet::on_enter(AppState::Setup).with_system(setup))
         .add_system_set(SystemSet::on_update(AppState::Setup).with_system(check_textures))
         .add_system_set(SystemSet::on_exit(AppState::Setup).with_system(setup_scene))
         .add_system_set({
-            let set = SystemSet::on_update(AppState::Playing)
+            SystemSet::on_update(AppState::Playing)
                 .with_system(give_target_auto)
                 .with_system(give_target_on_click)
                 .with_system(move_object)
                 .with_system(move_hover)
-                .with_system(target_activity);
-            #[cfg(not(target_arch = "wasm32"))]
-            let set = set.with_system(trigger_navmesh_visibility);
-            #[cfg(target_arch = "wasm32")]
-            let set = set;
-            set
+                .with_system(target_activity)
+                .with_system(trigger_navmesh_visibility)
         })
         .run();
 }
@@ -106,7 +90,6 @@ fn setup(
         },
         text: Text {
             sections: vec![
-                #[cfg(not(target_arch = "wasm32"))]
                 TextSection {
                     value: "<space> to display the navmesh, ".to_string(),
                     style: TextStyle {
@@ -305,16 +288,17 @@ fn setup_scene(
                     .unwrap(),
             );
 
+            let mut material: StandardMaterial = Color::WHITE.into();
+            material.unlit = true;
+
             commands.spawn((
                 PbrBundle {
-                    mesh: meshes.add(navmesh.to_mesh()),
-                    material: ground_material.clone(),
+                    mesh: meshes.add(navmesh.to_wireframe_mesh()),
+                    material: materials.add(material),
                     transform: Transform::from_xyz(0.0, 0.2, 0.0),
                     visibility: Visibility::INVISIBLE,
                     ..Default::default()
                 },
-                #[cfg(not(target_arch = "wasm32"))]
-                Wireframe,
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED.typed()),
             ));
             pathmeshes.set_untracked(HANDLE_TRIMESH_OPTIMIZED, navmesh);
@@ -520,7 +504,6 @@ fn move_object(
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn trigger_navmesh_visibility(
     mut query: Query<(&mut Visibility, &NavMeshDisp)>,
     keyboard_input: ResMut<Input<KeyCode>>,

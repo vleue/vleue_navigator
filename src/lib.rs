@@ -177,7 +177,7 @@ impl PathMesh {
         self.transform = transform;
     }
 
-    /// Creates a [`Mesh`] from this [`PathMesh`], suitable for rendering
+    /// Creates a [`Mesh`] from this [`PathMesh`], suitable for rendering the surface
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList);
         let inverse_transform = self.inverse_transform();
@@ -200,22 +200,32 @@ impl PathMesh {
                 })
                 .collect(),
         )));
+        new_mesh
+    }
+
+    /// Creates a [`Mesh`] from this [`PathMesh`], showing the wireframe of the polygons
+    pub fn to_wireframe_mesh(&self) -> Mesh {
+        let mut new_mesh = Mesh::new(PrimitiveTopology::LineList);
+        let inverse_transform = self.inverse_transform();
         new_mesh.insert_attribute(
-            Mesh::ATTRIBUTE_NORMAL,
-            (0..self.mesh.vertices.len())
-                .into_iter()
-                .map(|_| [0.0, 0.0, 1.0])
-                .map(|coords| inverse_transform.transform_point(coords.into()).into())
-                .collect::<Vec<[f32; 3]>>(),
-        );
-        new_mesh.insert_attribute(
-            Mesh::ATTRIBUTE_UV_0,
+            Mesh::ATTRIBUTE_POSITION,
             self.mesh
                 .vertices
                 .iter()
-                .map(|v| [v.coords.x, v.coords.y])
-                .collect::<Vec<[f32; 2]>>(),
+                .map(|v| [v.coords.x, v.coords.y, 0.0])
+                .map(|coords| inverse_transform.transform_point(coords.into()).into())
+                .collect::<Vec<[f32; 3]>>(),
         );
+        new_mesh.set_indices(Some(Indices::U32(
+            self.mesh
+                .polygons
+                .iter()
+                .flat_map(|p| {
+                    (0..p.vertices.len())
+                        .flat_map(|i| [p.vertices[i], p.vertices[(i + 1) % p.vertices.len()]])
+                })
+                .collect(),
+        )));
         new_mesh
     }
 

@@ -139,10 +139,11 @@ fn on_mesh_change(
     };
     let pathmesh = pathmeshes.get(handle).unwrap();
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
     let window = windows.primary();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
+
     *current_mesh_entity = Some(
         commands
             .spawn(MaterialMesh2dBundle {
@@ -156,10 +157,18 @@ fn on_mesh_change(
                 material: materials.add(ColorMaterial::from(Color::BLUE)),
                 ..default()
             })
+            .with_children(|main_mesh| {
+                main_mesh.spawn(MaterialMesh2dBundle {
+                    mesh: meshes.add(pathmesh.to_wireframe_mesh()).into(),
+                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
+                    material: materials.add(ColorMaterial::from(Color::rgb(0.35, 0.35, 1.0))),
+                    ..default()
+                });
+            })
             .id(),
     );
     if let Ok(entity) = text.get_single() {
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
     let font = asset_server.load("fonts/FiraMono-Medium.ttf");
     commands.spawn(TextBundle {
