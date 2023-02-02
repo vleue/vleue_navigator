@@ -5,10 +5,8 @@ use bevy::{
     pbr::NotShadowCaster,
     prelude::*,
     reflect::TypeUuid,
-    render::mesh::VertexAttributeValues,
 };
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
-use itertools::Itertools;
 use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 
@@ -82,6 +80,7 @@ fn setup(
         ..Default::default()
     });
 
+    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
     commands.spawn(TextBundle {
         style: Style {
             align_self: AlignSelf::FlexStart,
@@ -91,17 +90,33 @@ fn setup(
         text: Text {
             sections: vec![
                 TextSection {
-                    value: "<space> to display the navmesh, ".to_string(),
+                    value: "<space>".to_string(),
                     style: TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font: font.clone_weak(),
+                        font_size: 30.0,
+                        color: Color::GOLD,
+                    },
+                },
+                TextSection {
+                    value: " to display the navmesh, ".to_string(),
+                    style: TextStyle {
+                        font: font.clone_weak(),
                         font_size: 30.0,
                         color: Color::WHITE,
                     },
                 },
                 TextSection {
-                    value: "click to change the destination".to_string(),
+                    value: "click".to_string(),
                     style: TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font: font.clone_weak(),
+                        font_size: 30.0,
+                        color: Color::GOLD,
+                    },
+                },
+                TextSection {
+                    value: " to set the destination".to_string(),
+                    style: TextStyle {
+                        font,
                         font_size: 30.0,
                         color: Color::WHITE,
                     },
@@ -140,73 +155,8 @@ struct Target;
 #[derive(Component)]
 struct Hover(Vec2);
 
-#[derive(Component)]
-struct Waiting(Timer);
-
 #[derive(Component, Clone)]
 struct NavMeshDisp(Handle<PathMesh>);
-
-fn mesh_cleanup_from_blender(mesh: &Mesh) -> PathMesh {
-    let normal = Vec3::Y;
-    let rotation = Quat::from_rotation_arc(normal, Vec3::Z);
-
-    let vertices = match mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap() {
-        VertexAttributeValues::Float32x3(values) => values,
-        // Guaranteed by Bevy
-        _ => unreachable!(),
-    }
-    .iter()
-    .cloned()
-    .map(Vec3::from)
-    .collect::<Vec<_>>();
-
-    let mut merged = vec![];
-    let mut kept = vec![];
-    let mut new_indexes = vec![];
-    for (index, vertice) in vertices.iter().enumerate() {
-        if vertice.y < 0.0 {
-            merged.push(usize::MAX);
-            new_indexes.push(usize::MAX);
-        } else if let Some(close_to) = merged
-            .iter()
-            .filter(|p| **p < usize::MAX)
-            .find(|p| vertice.distance_squared(vertices[**p]) < 0.1)
-        {
-            merged.push(*close_to);
-            new_indexes.push(usize::MAX);
-        } else {
-            merged.push(index);
-            kept.push(index);
-            new_indexes.push(kept.len() - 1);
-        }
-    }
-
-    let triangles: Vec<_> = mesh
-        .indices()
-        .expect("No polygon indices found in mesh")
-        .iter()
-        .tuples::<(_, _, _)>()
-        .map(|t| (merged[t.0], merged[t.1], merged[t.2]))
-        .filter(|t| t.0 < usize::MAX && t.1 < usize::MAX && t.2 < usize::MAX)
-        .map(|i| (new_indexes[i.0], new_indexes[i.1], new_indexes[i.2]))
-        .filter(|(a, b, c)| a != b && a != c && b != c)
-        .map(polyanya::Triangle::from)
-        .collect();
-
-    let vertices: Vec<Vec2> = vertices
-        .into_iter()
-        .enumerate()
-        .filter_map(|(i, p)| kept.contains(&i).then_some(p))
-        .map(|vertex| rotation.mul_vec3(vertex))
-        .map(|coords| coords.xy())
-        .collect();
-
-    let polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
-
-    let mut path_mesh = PathMesh::from_polyanya_mesh(polyanya_mesh);
-    path_mesh.set_transform(Transform::from_rotation(rotation));
-    path_mesh
-}
 
 fn setup_scene(
     mut commands: Commands,
@@ -274,9 +224,8 @@ fn setup_scene(
     }
 
     if let Some(gltf) = gltfs.get(&navmeshes.handle) {
-        // due to how this mesh was built in Blender, it has volume and duplicated vertices
         {
-            let navmesh = mesh_cleanup_from_blender(
+            let navmesh = bevy_pathmesh::PathMesh::from_bevy_mesh(
                 meshes
                     .get(
                         &gltf_meshes
@@ -314,7 +263,6 @@ fn setup_scene(
                 },
                 Object(None),
                 NotShadowCaster,
-                Waiting(Timer::from_seconds(0.25, TimerMode::Once)),
             ))
             .add_children(|object| {
                 object.spawn(PointLightBundle {
@@ -334,18 +282,13 @@ fn setup_scene(
 
 fn give_target_auto(
     mut commands: Commands,
-    mut object_query: Query<(Entity, &Transform, &mut Waiting, &mut Object)>,
+    mut object_query: Query<(Entity, &Transform, &mut Object), Without<Path>>,
     navmeshes: Res<Assets<PathMesh>>,
-    time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,
 ) {
-    for (entity, transform, mut waiting, mut object) in object_query.iter_mut() {
-        if !waiting.0.tick(time.delta()).finished() {
-            break;
-        }
-
+    for (entity, transform, mut object) in object_query.iter_mut() {
         let navmesh = navmeshes.get(&current_mesh.0).unwrap();
         let mut x;
         let mut z;
@@ -392,13 +335,10 @@ fn give_target_auto(
                     });
                 })
                 .id();
-            commands
-                .entity(entity)
-                .insert(Path {
-                    current: first.clone(),
-                    next: remaining,
-                })
-                .remove::<Waiting>();
+            commands.entity(entity).insert(Path {
+                current: first.clone(),
+                next: remaining,
+            });
             object.0 = Some(target_id);
         }
     }
@@ -465,13 +405,10 @@ fn give_target_on_click(
                         });
                     })
                     .id();
-                commands
-                    .entity(entity)
-                    .insert(Path {
-                        current: first.clone(),
-                        next: remaining,
-                    })
-                    .remove::<Waiting>();
+                commands.entity(entity).insert(Path {
+                    current: first.clone(),
+                    next: remaining,
+                });
                 object.0 = Some(target_id);
             }
         }
@@ -493,10 +430,7 @@ fn move_object(
             if let Some(next) = target.next.pop() {
                 target.current = next;
             } else {
-                commands
-                    .entity(entity)
-                    .remove::<Path>()
-                    .insert(Waiting(Timer::from_seconds(0.1, TimerMode::Once)));
+                commands.entity(entity).remove::<Path>();
                 let target_entity = object.0.take().unwrap();
                 commands.entity(target_entity).despawn_recursive();
             }
