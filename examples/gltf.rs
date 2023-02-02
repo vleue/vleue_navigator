@@ -16,8 +16,7 @@ const HANDLE_TRIMESH_OPTIMIZED: HandleUntyped =
 fn main() {
     let mut app = App::new();
     app.insert_resource(Msaa { samples: 4 })
-        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
-        .init_resource::<GltfHandles>();
+        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)));
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         window: WindowDescriptor {
             title: "Navmesh with Polyanya".to_string(),
@@ -49,20 +48,14 @@ enum AppState {
     Playing,
 }
 
-#[derive(Resource, Default)]
-struct GltfHandles {
-    handle: Handle<Gltf>,
-}
+#[derive(Resource, Default, Deref)]
+struct GltfHandle(Handle<Gltf>);
 
 #[derive(Resource)]
 struct CurrentMesh(Handle<PathMesh>);
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut navmeshes: ResMut<GltfHandles>,
-) {
-    navmeshes.handle = asset_server.load("meshes/navmesh.glb");
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(GltfHandle(asset_server.load("meshes/navmesh.glb")));
 
     commands.insert_resource(AmbientLight {
         color: Color::SEA_GREEN,
@@ -132,10 +125,10 @@ fn setup(
 
 fn check_textures(
     mut state: ResMut<State<AppState>>,
-    navmeshes: ResMut<GltfHandles>,
+    gltf: ResMut<GltfHandle>,
     asset_server: Res<AssetServer>,
 ) {
-    if let LoadState::Loaded = asset_server.get_load_state(navmeshes.handle.id()) {
+    if let LoadState::Loaded = asset_server.get_load_state(gltf.id()) {
         state.set(AppState::Playing).unwrap();
     }
 }
@@ -160,7 +153,7 @@ struct NavMeshDisp(Handle<PathMesh>);
 
 fn setup_scene(
     mut commands: Commands,
-    navmeshes: Res<GltfHandles>,
+    gltf: Res<GltfHandle>,
     gltfs: Res<Assets<Gltf>>,
     gltf_meshes: Res<Assets<GltfMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -170,7 +163,7 @@ fn setup_scene(
     let mut material: StandardMaterial = Color::ALICE_BLUE.into();
     material.perceptual_roughness = 1.0;
     let ground_material = materials.add(material);
-    if let Some(gltf) = gltfs.get(&navmeshes.handle) {
+    if let Some(gltf) = gltfs.get(&gltf) {
         let mesh = gltf_meshes.get(&gltf.named_meshes["obstacles"]).unwrap();
         let mut material: StandardMaterial = Color::GRAY.into();
         material.perceptual_roughness = 1.0;
@@ -223,7 +216,7 @@ fn setup_scene(
         }
     }
 
-    if let Some(gltf) = gltfs.get(&navmeshes.handle) {
+    if let Some(gltf) = gltfs.get(&gltf) {
         {
             let navmesh = bevy_pathmesh::PathMesh::from_bevy_mesh(
                 meshes
