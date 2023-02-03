@@ -4,6 +4,13 @@ version = "0.3.0"
 authors = ["François Mockers <mockersf@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
+keywords = ["pathfinding", "bevy", "navmesh"]
+readme = "README.md"
+description = "Navmesh plugin for Bevy"
+repository = "https://github.com/vleue/bevy_pathmesh"
+homepage = "https://github.com/vleue/bevy_pathmesh"
+documentation = "https://docs.rs/bevy_pathmesh"
+categories = ["game-development"]
 
 [dependencies]
 itertools = "0.10.5"
