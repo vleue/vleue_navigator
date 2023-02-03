@@ -1,42 +1,46 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
   pull_request:
 
 jobs:
-  ci:
+  format:
+    name: Format
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - stable
-
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: rustfmt, clippy
+      - uses: dtolnay/rust-toolchain@stable
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --features linuxci
+      - name: Check format
+        run: |
+          cargo fmt --all -- --check
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --features linuxci
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --features linuxci -- -D warnings
+      - name: Run clippy
+        run: |
+          cargo clippy -- -D warnings
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tests
+        run: |
+          cargo test --features linuxci

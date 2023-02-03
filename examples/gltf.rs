@@ -5,15 +5,8 @@ use bevy::{
     pbr::NotShadowCaster,
     prelude::*,
     reflect::TypeUuid,
-    render::mesh::VertexAttributeValues,
-};
-#[cfg(not(target_arch = "wasm32"))]
-use bevy::{
-    pbr::wireframe::{Wireframe, WireframePlugin},
-    render::settings::{WgpuFeatures, WgpuSettings},
 };
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
-use itertools::Itertools;
 use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 
@@ -23,13 +16,7 @@ const HANDLE_TRIMESH_OPTIMIZED: HandleUntyped =
 fn main() {
     let mut app = App::new();
     app.insert_resource(Msaa { samples: 4 })
-        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
-        .init_resource::<GltfHandles>();
-    #[cfg(not(target_arch = "wasm32"))]
-    app.insert_resource(WgpuSettings {
-        features: WgpuFeatures::POLYGON_MODE_LINE,
-        ..default()
-    });
+        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)));
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         window: WindowDescriptor {
             title: "Navmesh with Polyanya".to_string(),
@@ -38,25 +25,19 @@ fn main() {
         },
         ..default()
     }));
-    #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugin(WireframePlugin);
     app.add_plugin(PathMeshPlugin)
         .add_state(AppState::Setup)
         .add_system_set(SystemSet::on_enter(AppState::Setup).with_system(setup))
         .add_system_set(SystemSet::on_update(AppState::Setup).with_system(check_textures))
         .add_system_set(SystemSet::on_exit(AppState::Setup).with_system(setup_scene))
         .add_system_set({
-            let set = SystemSet::on_update(AppState::Playing)
+            SystemSet::on_update(AppState::Playing)
                 .with_system(give_target_auto)
                 .with_system(give_target_on_click)
                 .with_system(move_object)
                 .with_system(move_hover)
-                .with_system(target_activity);
-            #[cfg(not(target_arch = "wasm32"))]
-            let set = set.with_system(trigger_navmesh_visibility);
-            #[cfg(target_arch = "wasm32")]
-            let set = set;
-            set
+                .with_system(target_activity)
+                .with_system(trigger_navmesh_visibility)
         })
         .run();
 }
@@ -67,20 +48,14 @@ enum AppState {
     Playing,
 }
 
-#[derive(Resource, Default)]
-struct GltfHandles {
-    handle: Handle<Gltf>,
-}
+#[derive(Resource, Default, Deref)]
+struct GltfHandle(Handle<Gltf>);
 
 #[derive(Resource)]
 struct CurrentMesh(Handle<PathMesh>);
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut navmeshes: ResMut<GltfHandles>,
-) {
-    navmeshes.handle = asset_server.load("meshes/navmesh.glb");
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(GltfHandle(asset_server.load("meshes/navmesh.glb")));
 
     commands.insert_resource(AmbientLight {
         color: Color::SEA_GREEN,
@@ -98,6 +73,7 @@ fn setup(
         ..Default::default()
     });
 
+    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
     commands.spawn(TextBundle {
         style: Style {
             align_self: AlignSelf::FlexStart,
@@ -106,19 +82,34 @@ fn setup(
         },
         text: Text {
             sections: vec![
-                #[cfg(not(target_arch = "wasm32"))]
                 TextSection {
-                    value: "<space> to display the navmesh, ".to_string(),
+                    value: "<space>".to_string(),
                     style: TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font: font.clone_weak(),
+                        font_size: 30.0,
+                        color: Color::GOLD,
+                    },
+                },
+                TextSection {
+                    value: " to display the navmesh, ".to_string(),
+                    style: TextStyle {
+                        font: font.clone_weak(),
                         font_size: 30.0,
                         color: Color::WHITE,
                     },
                 },
                 TextSection {
-                    value: "click to change the destination".to_string(),
+                    value: "click".to_string(),
                     style: TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font: font.clone_weak(),
+                        font_size: 30.0,
+                        color: Color::GOLD,
+                    },
+                },
+                TextSection {
+                    value: " to set the destination".to_string(),
+                    style: TextStyle {
+                        font,
                         font_size: 30.0,
                         color: Color::WHITE,
                     },
@@ -134,10 +125,10 @@ fn setup(
 
 fn check_textures(
     mut state: ResMut<State<AppState>>,
-    navmeshes: ResMut<GltfHandles>,
+    gltf: ResMut<GltfHandle>,
     asset_server: Res<AssetServer>,
 ) {
-    if let LoadState::Loaded = asset_server.get_load_state(navmeshes.handle.id()) {
+    if let LoadState::Loaded = asset_server.get_load_state(gltf.id()) {
         state.set(AppState::Playing).unwrap();
     }
 }
@@ -157,77 +148,12 @@ struct Target;
 #[derive(Component)]
 struct Hover(Vec2);
 
-#[derive(Component)]
-struct Waiting(Timer);
-
 #[derive(Component, Clone)]
 struct NavMeshDisp(Handle<PathMesh>);
 
-fn mesh_cleanup_from_blender(mesh: &Mesh) -> PathMesh {
-    let normal = Vec3::Y;
-    let rotation = Quat::from_rotation_arc(normal, Vec3::Z);
-
-    let vertices = match mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap() {
-        VertexAttributeValues::Float32x3(values) => values,
-        // Guaranteed by Bevy
-        _ => unreachable!(),
-    }
-    .iter()
-    .cloned()
-    .map(Vec3::from)
-    .collect::<Vec<_>>();
-
-    let mut merged = vec![];
-    let mut kept = vec![];
-    let mut new_indexes = vec![];
-    for (index, vertice) in vertices.iter().enumerate() {
-        if vertice.y < 0.0 {
-            merged.push(usize::MAX);
-            new_indexes.push(usize::MAX);
-        } else if let Some(close_to) = merged
-            .iter()
-            .filter(|p| **p < usize::MAX)
-            .find(|p| vertice.distance_squared(vertices[**p]) < 0.1)
-        {
-            merged.push(*close_to);
-            new_indexes.push(usize::MAX);
-        } else {
-            merged.push(index);
-            kept.push(index);
-            new_indexes.push(kept.len() - 1);
-        }
-    }
-
-    let triangles: Vec<_> = mesh
-        .indices()
-        .expect("No polygon indices found in mesh")
-        .iter()
-        .tuples::<(_, _, _)>()
-        .map(|t| (merged[t.0], merged[t.1], merged[t.2]))
-        .filter(|t| t.0 < usize::MAX && t.1 < usize::MAX && t.2 < usize::MAX)
-        .map(|i| (new_indexes[i.0], new_indexes[i.1], new_indexes[i.2]))
-        .filter(|(a, b, c)| a != b && a != c && b != c)
-        .map(polyanya::Triangle::from)
-        .collect();
-
-    let vertices: Vec<Vec2> = vertices
-        .into_iter()
-        .enumerate()
-        .filter_map(|(i, p)| kept.contains(&i).then_some(p))
-        .map(|vertex| rotation.mul_vec3(vertex))
-        .map(|coords| coords.xy())
-        .collect();
-
-    let polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
-
-    let mut path_mesh = PathMesh::from_polyanya_mesh(polyanya_mesh);
-    path_mesh.set_transform(Transform::from_rotation(rotation));
-    path_mesh
-}
-
 fn setup_scene(
     mut commands: Commands,
-    navmeshes: Res<GltfHandles>,
+    gltf: Res<GltfHandle>,
     gltfs: Res<Assets<Gltf>>,
     gltf_meshes: Res<Assets<GltfMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -237,7 +163,7 @@ fn setup_scene(
     let mut material: StandardMaterial = Color::ALICE_BLUE.into();
     material.perceptual_roughness = 1.0;
     let ground_material = materials.add(material);
-    if let Some(gltf) = gltfs.get(&navmeshes.handle) {
+    if let Some(gltf) = gltfs.get(&gltf) {
         let mesh = gltf_meshes.get(&gltf.named_meshes["obstacles"]).unwrap();
         let mut material: StandardMaterial = Color::GRAY.into();
         material.perceptual_roughness = 1.0;
@@ -290,10 +216,9 @@ fn setup_scene(
         }
     }
 
-    if let Some(gltf) = gltfs.get(&navmeshes.handle) {
-        // due to how this mesh was built in Blender, it has volume and duplicated vertices
+    if let Some(gltf) = gltfs.get(&gltf) {
         {
-            let navmesh = mesh_cleanup_from_blender(
+            let navmesh = bevy_pathmesh::PathMesh::from_bevy_mesh(
                 meshes
                     .get(
                         &gltf_meshes
@@ -305,16 +230,17 @@ fn setup_scene(
                     .unwrap(),
             );
 
+            let mut material: StandardMaterial = Color::ANTIQUE_WHITE.into();
+            material.unlit = true;
+
             commands.spawn((
                 PbrBundle {
-                    mesh: meshes.add(navmesh.to_mesh()),
-                    material: ground_material.clone(),
+                    mesh: meshes.add(navmesh.to_wireframe_mesh()),
+                    material: materials.add(material),
                     transform: Transform::from_xyz(0.0, 0.2, 0.0),
                     visibility: Visibility::INVISIBLE,
                     ..Default::default()
                 },
-                #[cfg(not(target_arch = "wasm32"))]
-                Wireframe,
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED.typed()),
             ));
             pathmeshes.set_untracked(HANDLE_TRIMESH_OPTIMIZED, navmesh);
@@ -330,7 +256,6 @@ fn setup_scene(
                 },
                 Object(None),
                 NotShadowCaster,
-                Waiting(Timer::from_seconds(0.25, TimerMode::Once)),
             ))
             .add_children(|object| {
                 object.spawn(PointLightBundle {
@@ -350,18 +275,13 @@ fn setup_scene(
 
 fn give_target_auto(
     mut commands: Commands,
-    mut object_query: Query<(Entity, &Transform, &mut Waiting, &mut Object)>,
+    mut object_query: Query<(Entity, &Transform, &mut Object), Without<Path>>,
     navmeshes: Res<Assets<PathMesh>>,
-    time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,
 ) {
-    for (entity, transform, mut waiting, mut object) in object_query.iter_mut() {
-        if !waiting.0.tick(time.delta()).finished() {
-            break;
-        }
-
+    for (entity, transform, mut object) in object_query.iter_mut() {
         let navmesh = navmeshes.get(&current_mesh.0).unwrap();
         let mut x;
         let mut z;
@@ -408,13 +328,10 @@ fn give_target_auto(
                     });
                 })
                 .id();
-            commands
-                .entity(entity)
-                .insert(Path {
-                    current: first.clone(),
-                    next: remaining,
-                })
-                .remove::<Waiting>();
+            commands.entity(entity).insert(Path {
+                current: first.clone(),
+                next: remaining,
+            });
             object.0 = Some(target_id);
         }
     }
@@ -481,13 +398,10 @@ fn give_target_on_click(
                         });
                     })
                     .id();
-                commands
-                    .entity(entity)
-                    .insert(Path {
-                        current: first.clone(),
-                        next: remaining,
-                    })
-                    .remove::<Waiting>();
+                commands.entity(entity).insert(Path {
+                    current: first.clone(),
+                    next: remaining,
+                });
                 object.0 = Some(target_id);
             }
         }
@@ -509,10 +423,7 @@ fn move_object(
             if let Some(next) = target.next.pop() {
                 target.current = next;
             } else {
-                commands
-                    .entity(entity)
-                    .remove::<Path>()
-                    .insert(Waiting(Timer::from_seconds(0.1, TimerMode::Once)));
+                commands.entity(entity).remove::<Path>();
                 let target_entity = object.0.take().unwrap();
                 commands.entity(target_entity).despawn_recursive();
             }
@@ -520,7 +431,6 @@ fn move_object(
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn trigger_navmesh_visibility(
     mut query: Query<(&mut Visibility, &NavMeshDisp)>,
     keyboard_input: ResMut<Input<KeyCode>>,
