@@ -16,20 +16,26 @@ categories = ["game-development"]
 itertools = "0.10.5"
 
 [dependencies.polyanya]
-version = "0.2.1"
+# version = "0.2.1"
+path = "D:/programming/polyanya"
 
 [dependencies.bevy]
-version = "0.9.0"
+git = "https://github.com/bevyengine/bevy.git"
+branch = "main"
+# version = "0.9.0"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
 [dev-dependencies]
-bevy_prototype_debug_lines = "0.9"
+# bevy_prototype_debug_lines = "0.9"
+bevy_prototype_debug_lines = { git = "https://github.com/Elabajaba/bevy_debug_lines.git", branch = "bevy_010" }
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.9.0"
-features = ["bevy_ui", "bevy_text", "bevy_winit", "bevy_core_pipeline", "bevy_scene", "bevy_gltf"]
+git = "https://github.com/bevyengine/bevy.git"
+branch = "main"
+# version = "0.9.0"
+features = ["bevy_ui", "bevy_text", "bevy_winit", "bevy_core_pipeline", "bevy_scene", "bevy_gltf", "bevy_pbr", "bevy_sprite"]
 default-features = false
 
 [features]

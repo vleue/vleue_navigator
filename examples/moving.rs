@@ -4,8 +4,11 @@ use std::{
 };
 
 use bevy::{
-    math::Vec3Swizzles, prelude::*, sprite::MaterialMesh2dBundle, tasks::AsyncComputeTaskPool,
-    window::WindowResized,
+    math::Vec3Swizzles,
+    prelude::*,
+    sprite::MaterialMesh2dBundle,
+    tasks::AsyncComputeTaskPool,
+    window::{PrimaryWindow, WindowResized},
 };
 
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
@@ -15,11 +18,11 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+            primary_window: Some(Window {
                 title: "Navmesh with Polyanya".to_string(),
                 fit_canvas_to_parent: true,
                 ..default()
-            },
+            }),
             ..default()
         }))
         .add_plugin(DebugLinesPlugin::default())
@@ -126,7 +129,7 @@ fn on_mesh_change(
     mut materials: ResMut<Assets<ColorMaterial>>,
     path_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     navigator: Query<Entity, With<Navigator>>,
     window_resized: EventReader<WindowResized>,
     asset_server: Res<AssetServer>,
@@ -147,7 +150,7 @@ fn on_mesh_change(
             if let Ok(entity) = navigator.get_single() {
                 commands.entity(entity).despawn();
             }
-            let window = windows.primary();
+            let window = primary_window.single();
             let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
             *current_mesh_entity = Some(
                 commands
@@ -263,7 +266,7 @@ struct Path {
 
 fn on_click(
     mouse_button_input: Res<Input<MouseButton>>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
     mut commands: Commands,
@@ -271,8 +274,9 @@ fn on_click(
     pathmeshes: Res<Assets<PathMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = windows.primary().cursor_position() {
-            let screen = Vec2::new(windows.primary().width(), windows.primary().height());
+        let window = primary_window.single();
+        if let Some(position) = window.cursor_position() {
+            let screen = Vec2::new(window.width(), window.height());
             let factor = (screen.x / mesh.size.x).min(screen.y / mesh.size.y);
 
             let in_mesh = (position - screen / 2.0) / factor + mesh.size / 2.0;
@@ -328,12 +332,12 @@ fn compute_paths(
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
     meshes: Res<Assets<PathMesh>>,
     mesh: Res<MeshDetails>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (entity, target, transform) in &with_target {
-        let window = windows.primary();
-        let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
+    let window = primary_window.single();
+    let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
+    for (entity, target, transform) in &with_target {
         let in_mesh = transform.translation.truncate() / factor + mesh.size / 2.0;
         let mesh = meshes.get(&target.pathmesh).unwrap();
 
@@ -370,11 +374,11 @@ fn poll_path_tasks(mut commands: Commands, computing: Query<(Entity, &FindingPat
 fn move_navigator(
     mut query: Query<(Entity, &mut Transform, &mut Path, &Navigator)>,
     mesh: Res<MeshDetails>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let window = windows.primary();
+    let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
     for (entity, mut transform, mut path, navigator) in &mut query {
         let next = (path.path[0] - mesh.size / 2.0) * factor;
@@ -398,9 +402,9 @@ fn display_path(
     query: Query<(&Transform, &Path)>,
     mut lines: ResMut<DebugLines>,
     mesh: Res<MeshDetails>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = windows.primary();
+    let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     for (transform, path) in &query {

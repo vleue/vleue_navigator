@@ -4,7 +4,7 @@ use bevy::{
     math::Vec3Swizzles,
     pbr::NotShadowCaster,
     prelude::*,
-    reflect::TypeUuid,
+    reflect::TypeUuid, window::PrimaryWindow,
 };
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use rand::Rng;
@@ -15,18 +15,18 @@ const HANDLE_TRIMESH_OPTIMIZED: HandleUntyped =
 
 fn main() {
     let mut app = App::new();
-    app.insert_resource(Msaa { samples: 4 })
+    app.insert_resource(Msaa::default())
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)));
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        window: WindowDescriptor {
+        primary_window: Some(Window {
             title: "Navmesh with Polyanya".to_string(),
             fit_canvas_to_parent: true,
             ..default()
-        },
+        }),
         ..default()
     }));
     app.add_plugin(PathMeshPlugin)
-        .add_state(AppState::Setup)
+        .add_state()
         .add_system_set(SystemSet::on_enter(AppState::Setup).with_system(setup))
         .add_system_set(SystemSet::on_update(AppState::Setup).with_system(check_textures))
         .add_system_set(SystemSet::on_exit(AppState::Setup).with_system(setup_scene))
@@ -346,13 +346,13 @@ fn give_target_on_click(
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,
     mouse_buttons: Res<Input<MouseButton>>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
 ) {
     if mouse_buttons.just_pressed(MouseButton::Left) {
         let navmesh = navmeshes.get(&current_mesh.0).unwrap();
         let Some(target) = (|| {
-            let position = windows.primary().cursor_position()?;
+            let position = primary_window.get_single().cursor_position()?;
             let (camera, transform) = camera.get_single().ok()?;
             let ray = camera.viewport_to_world(transform, position)?;
             let denom = Vec3::Y.dot(ray.direction);

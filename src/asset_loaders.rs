@@ -7,6 +7,7 @@ use bevy::{
     prelude::{Transform, Vec3},
     utils::BoxedFuture,
 };
+use polyanya::PolyanyaFile;
 
 use crate::PathMesh;
 
@@ -24,7 +25,7 @@ impl AssetLoader for PathMeshPolyanyaLoader {
     ) -> BoxedFuture<'a, Result<(), bevy::asset::Error>> {
         Box::pin(async move {
             load_context.set_default_asset(LoadedAsset::new(PathMesh {
-                mesh: Arc::new(polyanya::Mesh::from_bytes(bytes)),
+                mesh: Arc::new(PolyanyaFile::from_bytes(bytes).into()),
                 transform: Transform::from_scale(Vec3::splat(1.)),
             }));
             Ok(())
