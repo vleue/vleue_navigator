@@ -4,7 +4,8 @@ use bevy::{
     math::Vec3Swizzles,
     pbr::NotShadowCaster,
     prelude::*,
-    reflect::TypeUuid, window::PrimaryWindow,
+    reflect::TypeUuid,
+    window::PrimaryWindow,
 };
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use rand::Rng;
@@ -26,24 +27,27 @@ fn main() {
         ..default()
     }));
     app.add_plugin(PathMeshPlugin)
-        .add_state()
-        .add_system_set(SystemSet::on_enter(AppState::Setup).with_system(setup))
-        .add_system_set(SystemSet::on_update(AppState::Setup).with_system(check_textures))
-        .add_system_set(SystemSet::on_exit(AppState::Setup).with_system(setup_scene))
-        .add_system_set({
-            SystemSet::on_update(AppState::Playing)
-                .with_system(give_target_auto)
-                .with_system(give_target_on_click)
-                .with_system(move_object)
-                .with_system(move_hover)
-                .with_system(target_activity)
-                .with_system(trigger_navmesh_visibility)
-        })
+        .add_state::<AppState>()
+        .add_system(setup.in_schedule(OnEnter(AppState::Setup)))
+        .add_system(check_textures.in_set(OnUpdate(AppState::Setup)))
+        .add_system(setup_scene.in_schedule(OnExit(AppState::Setup)))
+        .add_systems(
+            (
+                give_target_auto,
+                give_target_on_click,
+                move_object,
+                move_hover,
+                target_activity,
+                trigger_navmesh_visibility,
+            )
+                .in_set(OnUpdate(AppState::Playing)),
+        )
         .run();
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, States, Default)]
 enum AppState {
+    #[default]
     Setup,
     Playing,
 }
@@ -124,12 +128,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn check_textures(
-    mut state: ResMut<State<AppState>>,
+    mut next_state: ResMut<NextState<AppState>>,
     gltf: ResMut<GltfHandle>,
     asset_server: Res<AssetServer>,
 ) {
     if let LoadState::Loaded = asset_server.get_load_state(gltf.id()) {
-        state.set(AppState::Playing).unwrap();
+        next_state.set(AppState::Playing);
     }
 }
 
@@ -238,7 +242,7 @@ fn setup_scene(
                     mesh: meshes.add(navmesh.to_wireframe_mesh()),
                     material: materials.add(material),
                     transform: Transform::from_xyz(0.0, 0.2, 0.0),
-                    visibility: Visibility::INVISIBLE,
+                    visibility: Visibility::Hidden,
                     ..Default::default()
                 },
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED.typed()),
@@ -257,7 +261,7 @@ fn setup_scene(
                 Object(None),
                 NotShadowCaster,
             ))
-            .add_children(|object| {
+            .with_children(|object| {
                 object.spawn(PointLightBundle {
                     point_light: PointLight {
                         color: Color::BLUE,
@@ -352,7 +356,7 @@ fn give_target_on_click(
     if mouse_buttons.just_pressed(MouseButton::Left) {
         let navmesh = navmeshes.get(&current_mesh.0).unwrap();
         let Some(target) = (|| {
-            let position = primary_window.get_single().cursor_position()?;
+            let position = primary_window.single().cursor_position()?;
             let (camera, transform) = camera.get_single().ok()?;
             let ray = camera.viewport_to_world(transform, position)?;
             let denom = Vec3::Y.dot(ray.direction);
@@ -439,7 +443,11 @@ fn trigger_navmesh_visibility(
     if keyboard_input.just_pressed(KeyCode::Space) {
         for (mut visible, nav) in query.iter_mut() {
             if nav.0 == current_mesh.0 {
-                visible.is_visible = !visible.is_visible;
+                match *visible {
+                    Visibility::Visible => *visible = Visibility::Hidden,
+                    Visibility::Hidden => *visible = Visibility::Visible,
+                    Visibility::Inherited => *visible = Visibility::Inherited,
+                }
             }
         }
     }

@@ -11,9 +11,8 @@ use bevy::{
     prelude::*,
     sprite::MaterialMesh2dBundle,
     tasks::AsyncComputeTaskPool,
-    // time::fixed_timestep,
     utils::Instant,
-    window::{PrimaryWindow, WindowResized},
+    window::{PresentMode, PrimaryWindow, WindowResized},
 };
 use rand::prelude::*;
 
@@ -29,12 +28,13 @@ fn main() {
                     primary_window: Some(Window {
                         title: "Navmesh with Polyanya".to_string(),
                         fit_canvas_to_parent: true,
+                        present_mode: PresentMode::AutoNoVsync,
                         ..default()
                     }),
                     ..default()
                 })
                 // This example will be async heavy, increase the default threadpool
-                .set(CorePlugin {
+                .set(TaskPoolPlugin {
                     task_pool_options: TaskPoolOptions {
                         async_compute: TaskPoolThreadAssignmentPolicy {
                             min_threads: 1,
@@ -60,12 +60,8 @@ fn main() {
         .add_system(move_navigator)
         .add_system(display_path)
         .add_system(mode_change)
-        .add_system_set(
-            SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(0.1))
-                .with_system(spawn)
-                .with_system(update_ui),
-        )
+        .add_systems((spawn, update_ui).in_schedule(CoreSchedule::FixedUpdate))
+        .insert_resource(FixedTime::new_from_secs(0.1))
         .run();
 }
 
@@ -275,36 +271,38 @@ fn spawn(
         let screen = Vec2::new(window.width(), window.height());
         let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
-        let in_mesh = *[
-            Vec2::new(575.0, 410.0),
-            Vec2::new(387.0, 524.0),
-            Vec2::new(762.0, 692.0),
-            Vec2::new(991.0, 426.0),
-            Vec2::new(746.0, 241.0),
-            Vec2::new(391.0, 231.0),
-            Vec2::new(25.0, 433.0),
-            Vec2::new(300.0, 679.0),
-        ]
-        .choose(&mut rng)
-        .unwrap();
-        let position = (in_mesh - MESH_SIZE / 2.0) * factor;
-        let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
-        commands.spawn((
-            SpriteBundle {
-                sprite: Sprite {
-                    color,
-                    custom_size: Some(Vec2::ONE),
+        for _ in 0..100 {
+            let in_mesh = *[
+                Vec2::new(575.0, 410.0),
+                Vec2::new(387.0, 524.0),
+                Vec2::new(762.0, 692.0),
+                Vec2::new(991.0, 426.0),
+                Vec2::new(746.0, 241.0),
+                Vec2::new(391.0, 231.0),
+                Vec2::new(25.0, 433.0),
+                Vec2::new(300.0, 679.0),
+            ]
+            .choose(&mut rng)
+            .unwrap();
+            let position = (in_mesh - MESH_SIZE / 2.0) * factor;
+            let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
+            commands.spawn((
+                SpriteBundle {
+                    sprite: Sprite {
+                        color,
+                        custom_size: Some(Vec2::ONE),
+                        ..default()
+                    },
+                    transform: Transform::from_translation(position.extend(1.0))
+                        .with_scale(Vec3::splat(5.0)),
                     ..default()
                 },
-                transform: Transform::from_translation(position.extend(1.0))
-                    .with_scale(Vec3::splat(5.0)),
-                ..default()
-            },
-            Navigator {
-                speed: rng.gen_range(50.0..100.0),
-                color,
-            },
-        ));
+                Navigator {
+                    speed: rng.gen_range(50.0..100.0),
+                    color,
+                },
+            ));
+        }
     }
 }
 
