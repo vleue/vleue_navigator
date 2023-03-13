@@ -45,6 +45,7 @@ pub struct TransformedPath {
 }
 
 pub use polyanya::Path;
+use polyanya::Trimesh;
 
 /// A navigation mesh
 #[derive(Debug, TypeUuid, Clone)]
@@ -85,10 +86,14 @@ impl PathMesh {
             .expect("No polygon indices found in mesh")
             .iter()
             .tuples::<(_, _, _)>()
-            .map(polyanya::Triangle::from)
+            .map(|(a, b, c)| [a, b, c])
             .collect();
 
-        let mut polyanya_mesh = polyanya::Mesh::from_trimesh(vertices, triangles);
+        let mut polyanya_mesh = Trimesh {
+            vertices,
+            triangles,
+        }
+        .into();
         callback(&mut polyanya_mesh);
 
         let mut path_mesh = Self::from_polyanya_mesh(polyanya_mesh);
@@ -255,27 +260,26 @@ fn get_vectors(
 
 #[cfg(test)]
 mod tests {
+    use polyanya::Trimesh;
+
     use super::*;
 
     #[test]
     fn generating_from_existing_path_mesh_results_in_same_path_mesh() {
-        let expected_path_mesh = PathMesh::from_polyanya_mesh(polyanya::Mesh::from_trimesh(
-            vec![
-                Vec2::new(1., 1.),
-                Vec2::new(5., 1.),
-                Vec2::new(5., 4.),
-                Vec2::new(1., 4.),
-                Vec2::new(2., 2.),
-                Vec2::new(4., 3.),
-            ],
-            vec![
-                (0, 1, 4).into(),
-                (1, 2, 5).into(),
-                (5, 2, 3).into(),
-                (1, 5, 3).into(),
-                (0, 4, 3).into(),
-            ],
-        ));
+        let expected_path_mesh = PathMesh::from_polyanya_mesh(
+            Trimesh {
+                vertices: vec![
+                    Vec2::new(1., 1.),
+                    Vec2::new(5., 1.),
+                    Vec2::new(5., 4.),
+                    Vec2::new(1., 4.),
+                    Vec2::new(2., 2.),
+                    Vec2::new(4., 3.),
+                ],
+                triangles: vec![[0, 1, 4], [1, 2, 5], [5, 2, 3], [1, 5, 3], [0, 4, 3]],
+            }
+            .into(),
+        );
         let mut bevy_mesh = expected_path_mesh.to_mesh();
         // Add back normals as they are used to determine where is up in the mesh
         bevy_mesh.insert_attribute(
@@ -289,15 +293,18 @@ mod tests {
 
     #[test]
     fn rotated_mesh_generates_expected_path_mesh() {
-        let expected_path_mesh = PathMesh::from_polyanya_mesh(polyanya::Mesh::from_trimesh(
-            vec![
-                Vec2::new(-1., -1.),
-                Vec2::new(1., -1.),
-                Vec2::new(-1., 1.),
-                Vec2::new(1., 1.),
-            ],
-            vec![(0, 1, 3).into(), (0, 3, 2).into()],
-        ));
+        let expected_path_mesh = PathMesh::from_polyanya_mesh(
+            Trimesh {
+                vertices: vec![
+                    Vec2::new(-1., -1.),
+                    Vec2::new(1., -1.),
+                    Vec2::new(-1., 1.),
+                    Vec2::new(1., 1.),
+                ],
+                triangles: vec![[0, 1, 3], [0, 3, 2]],
+            }
+            .into(),
+        );
         let mut bevy_mesh = Mesh::new(PrimitiveTopology::TriangleList);
         bevy_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,

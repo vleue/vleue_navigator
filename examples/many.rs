@@ -11,9 +11,8 @@ use bevy::{
     prelude::*,
     sprite::MaterialMesh2dBundle,
     tasks::AsyncComputeTaskPool,
-    time::FixedTimestep,
     utils::Instant,
-    window::WindowResized,
+    window::{PresentMode, PrimaryWindow, WindowResized},
 };
 use rand::prelude::*;
 
@@ -26,15 +25,16 @@ fn main() {
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
-                    window: WindowDescriptor {
+                    primary_window: Some(Window {
                         title: "Navmesh with Polyanya".to_string(),
                         fit_canvas_to_parent: true,
+                        present_mode: PresentMode::AutoNoVsync,
                         ..default()
-                    },
+                    }),
                     ..default()
                 })
                 // This example will be async heavy, increase the default threadpool
-                .set(CorePlugin {
+                .set(TaskPoolPlugin {
                     task_pool_options: TaskPoolOptions {
                         async_compute: TaskPoolThreadAssignmentPolicy {
                             min_threads: 1,
@@ -60,12 +60,8 @@ fn main() {
         .add_system(move_navigator)
         .add_system(display_path)
         .add_system(mode_change)
-        .add_system_set(
-            SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(0.1))
-                .with_system(spawn)
-                .with_system(update_ui),
-        )
+        .add_systems((spawn, update_ui).in_schedule(CoreSchedule::FixedUpdate))
+        .insert_resource(FixedTime::new_from_secs(0.1))
         .run();
 }
 
@@ -213,7 +209,7 @@ fn on_mesh_change(
     mut materials: ResMut<Assets<ColorMaterial>>,
     path_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     mut wait_for_mesh: Local<bool>,
 ) {
@@ -224,7 +220,7 @@ fn on_mesh_change(
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
             }
-            let window = windows.primary();
+            let window = primary_window.single();
             let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
             *current_mesh_entity = Some(
                 commands
@@ -264,46 +260,49 @@ struct Path {
 }
 
 fn spawn(
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     mut commands: Commands,
     pathmeshes: Res<Assets<PathMesh>>,
     path_meshes: Res<Meshes>,
 ) {
     if pathmeshes.contains(&path_meshes.aurora) {
+        let window = primary_window.single();
         let mut rng = rand::thread_rng();
-        let screen = Vec2::new(windows.primary().width(), windows.primary().height());
+        let screen = Vec2::new(window.width(), window.height());
         let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
-        let in_mesh = *[
-            Vec2::new(575.0, 410.0),
-            Vec2::new(387.0, 524.0),
-            Vec2::new(762.0, 692.0),
-            Vec2::new(991.0, 426.0),
-            Vec2::new(746.0, 241.0),
-            Vec2::new(391.0, 231.0),
-            Vec2::new(25.0, 433.0),
-            Vec2::new(300.0, 679.0),
-        ]
-        .choose(&mut rng)
-        .unwrap();
-        let position = (in_mesh - MESH_SIZE / 2.0) * factor;
-        let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
-        commands.spawn((
-            SpriteBundle {
-                sprite: Sprite {
-                    color,
-                    custom_size: Some(Vec2::ONE),
+        for _ in 0..100 {
+            let in_mesh = *[
+                Vec2::new(575.0, 410.0),
+                Vec2::new(387.0, 524.0),
+                Vec2::new(762.0, 692.0),
+                Vec2::new(991.0, 426.0),
+                Vec2::new(746.0, 241.0),
+                Vec2::new(391.0, 231.0),
+                Vec2::new(25.0, 433.0),
+                Vec2::new(300.0, 679.0),
+            ]
+            .choose(&mut rng)
+            .unwrap();
+            let position = (in_mesh - MESH_SIZE / 2.0) * factor;
+            let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
+            commands.spawn((
+                SpriteBundle {
+                    sprite: Sprite {
+                        color,
+                        custom_size: Some(Vec2::ONE),
+                        ..default()
+                    },
+                    transform: Transform::from_translation(position.extend(1.0))
+                        .with_scale(Vec3::splat(5.0)),
                     ..default()
                 },
-                transform: Transform::from_translation(position.extend(1.0))
-                    .with_scale(Vec3::splat(5.0)),
-                ..default()
-            },
-            Navigator {
-                speed: rng.gen_range(50.0..100.0),
-                color,
-            },
-        ));
+                Navigator {
+                    speed: rng.gen_range(50.0..100.0),
+                    color,
+                },
+            ));
+        }
     }
 }
 
@@ -322,7 +321,7 @@ fn compute_paths(
     mut commands: Commands,
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
     meshes: Res<Assets<PathMesh>>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     task_mode: Res<TaskMode>,
     mesh: Res<Meshes>,
 ) {
@@ -332,7 +331,7 @@ fn compute_paths(
         return;
     };
     for (entity, target, transform) in &with_target {
-        let window = windows.primary();
+        let window = primary_window.single();
         let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
         let in_mesh = transform.translation.truncate() / factor + MESH_SIZE / 2.0;
@@ -375,7 +374,7 @@ fn poll_path_tasks(
     mut stats: ResMut<Stats>,
     pathmeshes: Res<Assets<PathMesh>>,
     meshes: Res<Meshes>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
     for (entity, task, transform) in &computing {
         let mut task = task.0.write().unwrap();
@@ -390,7 +389,8 @@ fn poll_path_tasks(
                     .insert(Path { path: path.path })
                     .remove::<FindingPath>();
             } else {
-                let screen = Vec2::new(windows.primary().width(), windows.primary().height());
+                let window = primary_window.single();
+                let screen = Vec2::new(window.width(), window.height());
                 let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
                 if !pathmeshes
@@ -412,11 +412,11 @@ fn poll_path_tasks(
 
 fn move_navigator(
     mut query: Query<(Entity, &mut Transform, &mut Path, &Navigator)>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let window = windows.primary();
+    let window = primary_window.single();
     let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
     for (entity, mut transform, mut path, navigator) in &mut query {
         let next = (path.path[0] - MESH_SIZE / 2.0) * factor;
@@ -436,11 +436,11 @@ fn move_navigator(
 fn display_path(
     query: Query<(&Transform, &Path, &Navigator)>,
     mut lines: ResMut<DebugLines>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     display_mode: Res<DisplayMode>,
 ) {
     if *display_mode == DisplayMode::Line {
-        let window = windows.primary();
+        let window = primary_window.single();
         let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
         for (transform, path, navigator) in &query {

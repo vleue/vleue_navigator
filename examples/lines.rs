@@ -1,4 +1,8 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle, window::WindowResized};
+use bevy::{
+    prelude::*,
+    sprite::MaterialMesh2dBundle,
+    window::{PrimaryWindow, WindowResized},
+};
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
@@ -6,11 +10,11 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+            primary_window: Some(Window {
                 title: "Navmesh with Polyanya".to_string(),
                 fit_canvas_to_parent: true,
                 ..default()
-            },
+            }),
             ..default()
         }))
         .add_plugin(DebugLinesPlugin::default())
@@ -123,7 +127,7 @@ fn on_mesh_change(
     mut materials: ResMut<Assets<ColorMaterial>>,
     path_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     asset_server: Res<AssetServer>,
     text: Query<Entity, With<Text>>,
@@ -141,7 +145,7 @@ fn on_mesh_change(
     if let Some(entity) = *current_mesh_entity {
         commands.entity(entity).despawn_recursive();
     }
-    let window = windows.primary();
+    let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     *current_mesh_entity = Some(
@@ -230,14 +234,15 @@ struct NewPathStepEvent(Vec2);
 fn on_click(
     mut path_step_event: EventWriter<NewPathStepEvent>,
     mouse_button_input: Res<Input<MouseButton>>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
     pathmeshes: Res<Assets<PathMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = windows.primary().cursor_position() {
-            let screen = Vec2::new(windows.primary().width(), windows.primary().height());
+        let window = primary_window.single();
+        if let Some(position) = window.cursor_position() {
+            let screen = Vec2::new(window.width(), window.height());
             let factor = (screen.x / mesh.size.x).min(screen.y / mesh.size.y);
 
             let in_mesh = (position - screen / 2.0) / factor + mesh.size / 2.0;
@@ -293,9 +298,9 @@ fn update_path_display(
     path_to_display: Res<PathToDisplay>,
     mut lines: ResMut<DebugLines>,
     mesh: Res<MeshDetails>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = windows.primary();
+    let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     (1..path_to_display.steps.len()).for_each(|i| {
