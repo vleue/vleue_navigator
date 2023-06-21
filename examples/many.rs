@@ -6,7 +6,7 @@ use std::{
 
 use bevy::{
     core::TaskPoolThreadAssignmentPolicy,
-    diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::Vec3Swizzles,
     prelude::*,
     sprite::MaterialMesh2dBundle,
@@ -17,7 +17,6 @@ use bevy::{
 use rand::prelude::*;
 
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
-use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
@@ -45,22 +44,26 @@ fn main() {
                     },
                 }),
         )
-        .add_plugin(DebugLinesPlugin::default())
         .add_plugin(PathMeshPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .init_resource::<Stats>()
         .insert_resource(TaskMode::Blocking)
         .insert_resource(DisplayMode::Line)
-        .add_startup_system(setup)
-        .add_system(on_mesh_change)
-        .add_system(go_somewhere)
-        .add_system(compute_paths)
-        .add_system(poll_path_tasks)
-        .add_system(move_navigator)
-        .add_system(display_path)
-        .add_system(mode_change)
-        .add_systems((spawn, update_ui).in_schedule(CoreSchedule::FixedUpdate))
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (
+                on_mesh_change,
+                go_somewhere,
+                compute_paths,
+                poll_path_tasks,
+                move_navigator,
+                display_path,
+                mode_change,
+            ),
+        )
+        .add_systems(FixedUpdate, (spawn, update_ui))
         .insert_resource(FixedTime::new_from_secs(0.1))
         .run();
 }
@@ -191,7 +194,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ]),
         style: Style {
             position_type: PositionType::Absolute,
-            position: UiRect {
+            margin: UiRect {
                 top: Val::Px(5.0),
                 left: Val::Px(5.0),
                 ..default()
@@ -435,7 +438,7 @@ fn move_navigator(
 
 fn display_path(
     query: Query<(&Transform, &Path, &Navigator)>,
-    mut lines: ResMut<DebugLines>,
+    mut gizmos: Gizmos,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     display_mode: Res<DisplayMode>,
 ) {
@@ -444,22 +447,24 @@ fn display_path(
         let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
         for (transform, path, navigator) in &query {
-            (1..path.path.len()).for_each(|i| {
-                lines.line_colored(
-                    ((path.path[i - 1] - MESH_SIZE / 2.0) * factor).extend(0f32),
-                    ((path.path[i] - MESH_SIZE / 2.0) * factor).extend(0f32),
-                    0f32,
-                    navigator.color,
-                );
-            });
-            if let Some(next) = path.path.first() {
-                lines.line_colored(
-                    transform.translation,
-                    ((*next - MESH_SIZE / 2.0) * factor).extend(0f32),
-                    0f32,
-                    navigator.color,
-                );
-            }
+            let mut p = Vec::with_capacity(path.path.len());
+            p.push(transform.translation.truncate());
+            p.extend(path.path.iter().map(|p| (*p - MESH_SIZE / 2.0) * factor));
+            gizmos.linestrip_2d(p, navigator.color);
+            // (1..path.path.len()).for_each(|i| {
+            //     gizmos.line_2d(
+            //         (path.path[i - 1] - MESH_SIZE / 2.0) * factor,
+            //         (path.path[i] - MESH_SIZE / 2.0) * factor,
+            //         navigator.color,
+            //     );
+            // });
+            // if let Some(next) = path.path.first() {
+            //     gizmos.line_2d(
+            //         transform.translation.truncate(),
+            //         (*next - MESH_SIZE / 2.0) * factor,
+            //         navigator.color,
+            //     );
+            // }
         }
     }
 }
@@ -491,7 +496,7 @@ fn update_ui(
     agents: Query<&Navigator>,
     mut count: Local<usize>,
     stats: Res<Stats>,
-    diagnostics: Res<Diagnostics>,
+    diagnostics: Res<DiagnosticsStore>,
     task_mode: Res<TaskMode>,
     display_mode: Res<DisplayMode>,
 ) {

@@ -12,7 +12,6 @@ use bevy::{
 };
 
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
-use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
@@ -25,16 +24,20 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugin(DebugLinesPlugin::default())
         .add_plugin(PathMeshPlugin)
-        .add_startup_system(setup)
-        .add_system(on_mesh_change)
-        .add_system(mesh_change)
-        .add_system(on_click)
-        .add_system(compute_paths)
-        .add_system(poll_path_tasks)
-        .add_system(move_navigator)
-        .add_system(display_path)
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (
+                on_mesh_change,
+                mesh_change,
+                on_click,
+                compute_paths,
+                poll_path_tasks,
+                move_navigator,
+                display_path,
+            ),
+        )
         .run();
 }
 
@@ -204,7 +207,7 @@ fn on_mesh_change(
                 ]),
                 style: Style {
                     position_type: PositionType::Absolute,
-                    position: UiRect {
+                    margin: UiRect {
                         top: Val::Px(5.0),
                         left: Val::Px(5.0),
                         ..default()
@@ -267,6 +270,7 @@ struct Path {
 fn on_click(
     mouse_button_input: Res<Input<MouseButton>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
+    camera_q: Query<(&Camera, &GlobalTransform)>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
     mut commands: Commands,
@@ -274,12 +278,16 @@ fn on_click(
     pathmeshes: Res<Assets<PathMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
+        let (camera, camera_transform) = camera_q.single();
         let window = primary_window.single();
-        if let Some(position) = window.cursor_position() {
+        if let Some(position) = window
+            .cursor_position()
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .map(|ray| ray.origin.truncate())
+        {
             let screen = Vec2::new(window.width(), window.height());
             let factor = (screen.x / mesh.size.x).min(screen.y / mesh.size.y);
-
-            let in_mesh = (position - screen / 2.0) / factor + mesh.size / 2.0;
+            let in_mesh = position / factor + mesh.size / 2.0;
             if pathmeshes
                 .get(match mesh.mesh {
                     CurrentMesh::Simple => &meshes.simple,
@@ -309,7 +317,8 @@ fn on_click(
                                 ..default()
                             },
                             transform: Transform::from_translation(
-                                (position - screen / 2.0).extend(1.0),
+                                position.extend(1.0),
+                                // (position - screen / 2.0).extend(1.0),
                             )
                             .with_scale(Vec3::splat(5.0)),
                             ..default()
@@ -400,7 +409,7 @@ fn move_navigator(
 
 fn display_path(
     query: Query<(&Transform, &Path)>,
-    mut lines: ResMut<DebugLines>,
+    mut gizmos: Gizmos,
     mesh: Res<MeshDetails>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -408,18 +417,16 @@ fn display_path(
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     for (transform, path) in &query {
-        (1..path.path.len()).for_each(|i| {
-            lines.line(
-                ((path.path[i - 1] - mesh.size / 2.0) * factor).extend(0f32),
-                ((path.path[i] - mesh.size / 2.0) * factor).extend(0f32),
-                0f32,
-            );
-        });
+        gizmos.linestrip_2d(
+            path.path.iter().map(|p| (*p - mesh.size / 2.0) * factor),
+            Color::ORANGE,
+        );
+
         if let Some(next) = path.path.first() {
-            lines.line(
-                transform.translation,
-                ((*next - mesh.size / 2.0) * factor).extend(0f32),
-                0f32,
+            gizmos.line_2d(
+                transform.translation.truncate(),
+                (*next - mesh.size / 2.0) * factor,
+                Color::YELLOW,
             );
         }
     }

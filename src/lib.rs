@@ -14,6 +14,7 @@
 use std::sync::Arc;
 
 use bevy::math::Vec3Swizzles;
+use bevy::reflect::TypePath;
 use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
 use bevy::{
     prelude::*,
@@ -48,7 +49,7 @@ pub use polyanya::Path;
 use polyanya::Trimesh;
 
 /// A navigation mesh
-#[derive(Debug, TypeUuid, Clone)]
+#[derive(Debug, TypePath, TypeUuid, Clone)]
 #[uuid = "807C7A31-EA06-4A3B-821B-6E91ADB95734"]
 pub struct PathMesh {
     mesh: Arc<polyanya::Mesh>,
