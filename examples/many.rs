@@ -451,20 +451,6 @@ fn display_path(
             p.push(transform.translation.truncate());
             p.extend(path.path.iter().map(|p| (*p - MESH_SIZE / 2.0) * factor));
             gizmos.linestrip_2d(p, navigator.color);
-            // (1..path.path.len()).for_each(|i| {
-            //     gizmos.line_2d(
-            //         (path.path[i - 1] - MESH_SIZE / 2.0) * factor,
-            //         (path.path[i] - MESH_SIZE / 2.0) * factor,
-            //         navigator.color,
-            //     );
-            // });
-            // if let Some(next) = path.path.first() {
-            //     gizmos.line_2d(
-            //         transform.translation.truncate(),
-            //         (*next - MESH_SIZE / 2.0) * factor,
-            //         navigator.color,
-            //     );
-            // }
         }
     }
 }
