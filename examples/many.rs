@@ -21,7 +21,7 @@ use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
-        .add_plugins(
+        .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
@@ -43,10 +43,10 @@ fn main() {
                         ..default()
                     },
                 }),
-        )
-        .add_plugin(PathMeshPlugin)
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin::default())
+            FrameTimeDiagnosticsPlugin::default(),
+            LogDiagnosticsPlugin::default(),
+            PathMeshPlugin,
+        ))
         .init_resource::<Stats>()
         .insert_resource(TaskMode::Blocking)
         .insert_resource(DisplayMode::Line)

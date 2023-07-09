@@ -15,18 +15,20 @@ const HANDLE_TRIMESH_OPTIMIZED: HandleUntyped =
     HandleUntyped::weak_from_u64(PathMesh::TYPE_UUID, 0);
 
 fn main() {
-    let mut app = App::new();
-    app.insert_resource(Msaa::default())
-        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)));
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Navmesh with Polyanya".to_string(),
-            fit_canvas_to_parent: true,
-            ..default()
-        }),
-        ..default()
-    }));
-    app.add_plugin(PathMeshPlugin)
+    App::new()
+        .insert_resource(Msaa::default())
+        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
+                ..default()
+            }),
+            PathMeshPlugin,
+        ))
         .add_state::<AppState>()
         .add_systems(OnEnter(AppState::Setup), setup)
         .add_systems(Update, check_textures.run_if(in_state(AppState::Setup)))

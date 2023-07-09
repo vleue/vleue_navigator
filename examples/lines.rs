@@ -8,15 +8,17 @@ use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Navmesh with Polyanya".to_string(),
-                fit_canvas_to_parent: true,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(PathMeshPlugin)
+            PathMeshPlugin,
+        ))
         .add_event::<NewPathStepEvent>()
         .insert_resource(PathToDisplay::default())
         .add_systems(Startup, setup)
