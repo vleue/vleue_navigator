@@ -447,6 +447,9 @@ fn display_path(
         let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
         for (transform, path, navigator) in &query {
+            if path.path.is_empty() {
+                continue;
+            }
             let mut p = Vec::with_capacity(path.path.len());
             p.push(transform.translation.truncate());
             p.extend(path.path.iter().map(|p| (*p - MESH_SIZE / 2.0) * factor));

@@ -320,5 +320,7 @@ fn update_path_display(
         .iter()
         .map(|p| (*p - mesh.size / 2.0) * factor);
 
-    gizmos.linestrip_2d(path, Color::YELLOW);
+    if path.len() >= 1 {
+        gizmos.linestrip_2d(path, Color::YELLOW);
+    }
 }

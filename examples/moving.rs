@@ -419,6 +419,9 @@ fn display_path(
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     for (transform, path) in &query {
+        if path.path.is_empty() {
+            continue;
+        }
         gizmos.linestrip_2d(
             path.path.iter().map(|p| (*p - mesh.size / 2.0) * factor),
             Color::ORANGE,
