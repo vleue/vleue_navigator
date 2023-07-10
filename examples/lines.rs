@@ -4,29 +4,34 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
-use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Navmesh with Polyanya".to_string(),
-                fit_canvas_to_parent: true,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(DebugLinesPlugin::default())
-        .add_plugin(PathMeshPlugin)
+            PathMeshPlugin,
+        ))
         .add_event::<NewPathStepEvent>()
         .insert_resource(PathToDisplay::default())
-        .add_startup_system(setup)
-        .add_system(on_mesh_change)
-        .add_system(mesh_change)
-        .add_system(on_click)
-        .add_system(compute_paths)
-        .add_system(update_path_display)
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (
+                on_mesh_change,
+                mesh_change,
+                on_click,
+                compute_paths,
+                update_path_display,
+            ),
+        )
         .run();
 }
 
@@ -208,7 +213,7 @@ fn on_mesh_change(
         ]),
         style: Style {
             position_type: PositionType::Absolute,
-            position: UiRect {
+            margin: UiRect {
                 top: Val::Px(5.0),
                 left: Val::Px(5.0),
                 ..default()
@@ -229,23 +234,30 @@ fn mesh_change(mut mesh: ResMut<MeshDetails>, keyboard_input: Res<Input<KeyCode>
     }
 }
 
+#[derive(Event)]
 struct NewPathStepEvent(Vec2);
 
 fn on_click(
     mut path_step_event: EventWriter<NewPathStepEvent>,
     mouse_button_input: Res<Input<MouseButton>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
+    camera_q: Query<(&Camera, &GlobalTransform)>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
     pathmeshes: Res<Assets<PathMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
+        let (camera, camera_transform) = camera_q.single();
         let window = primary_window.single();
-        if let Some(position) = window.cursor_position() {
+        if let Some(position) = window
+            .cursor_position()
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .map(|ray| ray.origin.truncate())
+        {
             let screen = Vec2::new(window.width(), window.height());
             let factor = (screen.x / mesh.size.x).min(screen.y / mesh.size.y);
 
-            let in_mesh = (position - screen / 2.0) / factor + mesh.size / 2.0;
+            let in_mesh = position / factor + mesh.size / 2.0;
             if pathmeshes
                 .get(match mesh.mesh {
                     CurrentMesh::Simple => &meshes.simple,
@@ -296,18 +308,19 @@ fn compute_paths(
 
 fn update_path_display(
     path_to_display: Res<PathToDisplay>,
-    mut lines: ResMut<DebugLines>,
+    mut gizmos: Gizmos,
     mesh: Res<MeshDetails>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
     let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
-    (1..path_to_display.steps.len()).for_each(|i| {
-        lines.line(
-            ((path_to_display.steps[i - 1] - mesh.size / 2.0) * factor).extend(0f32),
-            ((path_to_display.steps[i] - mesh.size / 2.0) * factor).extend(0f32),
-            0f32,
-        );
-    });
+    let path = path_to_display
+        .steps
+        .iter()
+        .map(|p| (*p - mesh.size / 2.0) * factor);
+
+    if path.len() >= 1 {
+        gizmos.linestrip_2d(path, Color::YELLOW);
+    }
 }

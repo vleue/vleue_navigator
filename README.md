@@ -25,10 +25,9 @@ use rand::Rng;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(PathMeshPlugin)
-        .add_startup_system(load)
-        .add_system(get_path)
+        .add_plugins((DefaultPlugins, PathMeshPlugin))
+        .add_systems(Startup, load)
+        .add_systems(Update, get_path)
         .run()
 }
 

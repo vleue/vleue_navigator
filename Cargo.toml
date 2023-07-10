@@ -13,22 +13,21 @@ documentation = "https://docs.rs/bevy_pathmesh"
 categories = ["game-development"]
 
 [dependencies]
-itertools = "0.10.5"
+itertools = "0.11"
 
 [dependencies.polyanya]
-version = "0.3"
+version = "0.4"
 
 [dependencies.bevy]
-version = "0.10"
+version = "0.11"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
 [dev-dependencies]
-bevy_prototype_debug_lines = "0.10"
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.10"
+version = "0.11"
 features = [
     "bevy_ui",
     "bevy_text",
@@ -38,6 +37,11 @@ features = [
     "bevy_gltf",
     "bevy_pbr",
     "bevy_sprite",
+    "bevy_gizmos",
+    # Required for TonyMcMapface
+    "tonemapping_luts",
+    "ktx2",
+    "zstd",
 ]
 default-features = false
 

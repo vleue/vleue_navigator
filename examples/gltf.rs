@@ -15,23 +15,26 @@ const HANDLE_TRIMESH_OPTIMIZED: HandleUntyped =
     HandleUntyped::weak_from_u64(PathMesh::TYPE_UUID, 0);
 
 fn main() {
-    let mut app = App::new();
-    app.insert_resource(Msaa::default())
-        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)));
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Navmesh with Polyanya".to_string(),
-            fit_canvas_to_parent: true,
-            ..default()
-        }),
-        ..default()
-    }));
-    app.add_plugin(PathMeshPlugin)
+    App::new()
+        .insert_resource(Msaa::default())
+        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
+                ..default()
+            }),
+            PathMeshPlugin,
+        ))
         .add_state::<AppState>()
-        .add_system(setup.in_schedule(OnEnter(AppState::Setup)))
-        .add_system(check_textures.in_set(OnUpdate(AppState::Setup)))
-        .add_system(setup_scene.in_schedule(OnExit(AppState::Setup)))
+        .add_systems(OnEnter(AppState::Setup), setup)
+        .add_systems(Update, check_textures.run_if(in_state(AppState::Setup)))
+        .add_systems(OnExit(AppState::Setup), setup_scene)
         .add_systems(
+            Update,
             (
                 give_target_auto,
                 give_target_on_click,
@@ -40,7 +43,7 @@ fn main() {
                 target_activity,
                 trigger_navmesh_visibility,
             )
-                .in_set(OnUpdate(AppState::Playing)),
+                .run_if(in_state(AppState::Playing)),
         )
         .run();
 }
