@@ -4,7 +4,7 @@ use std::{
 };
 
 use bevy::{
-    math::Vec3Swizzles,
+    math::{vec2, Vec3Swizzles},
     prelude::*,
     sprite::MaterialMesh2dBundle,
     tasks::AsyncComputeTaskPool,
@@ -46,13 +46,17 @@ fn main() {
 #[derive(Resource)]
 struct Meshes {
     simple: Handle<PathMesh>,
+    simple_triangulation: Handle<PathMesh>,
     arena: Handle<PathMesh>,
+    arena_triangulation: Handle<PathMesh>,
     aurora: Handle<PathMesh>,
 }
 
 enum CurrentMesh {
     Simple,
+    SimpleTriangulation,
     Arena,
+    ArenaTriangulation,
     Aurora,
 }
 
@@ -60,21 +64,40 @@ enum CurrentMesh {
 struct MeshDetails {
     mesh: CurrentMesh,
     size: Vec2,
+    with_wireframe: bool,
 }
+
+#[derive(Component)]
+pub struct WireframeMesh;
 
 const SIMPLE: MeshDetails = MeshDetails {
     mesh: CurrentMesh::Simple,
     size: Vec2::new(13.0, 8.0),
+    with_wireframe: false,
+};
+
+const SIMPLE_TRIANGULATION: MeshDetails = MeshDetails {
+    mesh: CurrentMesh::SimpleTriangulation,
+    size: Vec2::new(13.0, 8.0),
+    with_wireframe: false,
 };
 
 const ARENA: MeshDetails = MeshDetails {
     mesh: CurrentMesh::Arena,
     size: Vec2::new(49.0, 49.0),
+    with_wireframe: false,
+};
+
+const ARENA_TRIANGULATION: MeshDetails = MeshDetails {
+    mesh: CurrentMesh::ArenaTriangulation,
+    size: Vec2::new(49.0, 49.0),
+    with_wireframe: false,
 };
 
 const AURORA: MeshDetails = MeshDetails {
     mesh: CurrentMesh::Aurora,
     size: Vec2::new(1024.0, 768.0),
+    with_wireframe: false,
 };
 
 fn setup(
@@ -120,7 +143,164 @@ fn setup(
                 polyanya::Polygon::new(vec![11, 17, 20, 21], true),
             ],
         ))),
+        simple_triangulation: pathmeshes.add({
+            bevy_pathmesh::PathMesh::from_edge(vec![
+                vec2(0., 6.),
+                vec2(2., 5.),
+                vec2(2., 4.),
+                vec2(1., 4.),
+                vec2(1., 3.),
+                vec2(2., 1.),
+                vec2(4., 1.),
+                vec2(4., 2.),
+                vec2(7., 4.),
+                vec2(7., 0.),
+                vec2(12., 0.),
+                vec2(12., 3.),
+                vec2(11., 3.),
+                vec2(11., 5.),
+                vec2(13., 5.),
+                vec2(13., 7.),
+                vec2(10., 7.),
+                vec2(11., 8.),
+                vec2(7., 8.),
+                vec2(7., 7.),
+                vec2(5., 7.),
+                vec2(5., 8.),
+                vec2(0., 8.),
+            ])
+        }),
         arena: asset_server.load("arena-merged.polyanya.mesh"),
+        arena_triangulation: pathmeshes.add({
+            bevy_pathmesh::PathMesh::from_edge_and_obstacles(
+                vec![
+                    vec2(1., 3.),
+                    vec2(2., 3.),
+                    vec2(2., 2.),
+                    vec2(3., 2.),
+                    vec2(3., 1.),
+                    vec2(15., 1.),
+                    vec2(15., 3.),
+                    vec2(18., 3.),
+                    vec2(18., 2.),
+                    vec2(19., 2.),
+                    vec2(19., 1.),
+                    vec2(20., 1.),
+                    vec2(20., 2.),
+                    vec2(23., 2.),
+                    vec2(23., 1.),
+                    vec2(26., 1.),
+                    vec2(26., 3.),
+                    vec2(29., 3.),
+                    vec2(29., 2.),
+                    vec2(30., 2.),
+                    vec2(30., 1.),
+                    vec2(31., 1.),
+                    vec2(31., 3.),
+                    vec2(34., 3.),
+                    vec2(34., 2.),
+                    vec2(35., 2.),
+                    vec2(35., 1.),
+                    vec2(47., 1.),
+                    vec2(47., 3.),
+                    vec2(48., 3.),
+                    vec2(48., 15.),
+                    vec2(47., 15.),
+                    vec2(47., 19.),
+                    vec2(48., 19.),
+                    vec2(48., 31.),
+                    vec2(47., 31.),
+                    vec2(47., 35.),
+                    vec2(48., 35.),
+                    vec2(48., 47.),
+                    vec2(47., 47.),
+                    vec2(47., 48.),
+                    vec2(35., 48.),
+                    vec2(35., 47.),
+                    vec2(31., 47.),
+                    vec2(31., 48.),
+                    vec2(30., 48.),
+                    vec2(30., 47.),
+                    vec2(29., 47.),
+                    vec2(29., 46.),
+                    vec2(26., 46.),
+                    vec2(26., 48.),
+                    vec2(24., 48.),
+                    vec2(24., 47.),
+                    vec2(23., 47.),
+                    vec2(23., 46.),
+                    vec2(20., 46.),
+                    vec2(20., 48.),
+                    vec2(19., 48.),
+                    vec2(19., 47.),
+                    vec2(15., 47.),
+                    vec2(15., 48.),
+                    vec2(3., 48.),
+                    vec2(3., 47.),
+                    vec2(1., 47.),
+                    vec2(1., 35.),
+                    vec2(2., 35.),
+                    vec2(2., 34.),
+                    vec2(3., 34.),
+                    vec2(3., 31.),
+                    vec2(1., 31.),
+                    vec2(1., 30.),
+                    vec2(3., 30.),
+                    vec2(3., 27.),
+                    vec2(2., 27.),
+                    vec2(2., 26.),
+                    vec2(1., 26.),
+                    vec2(1., 23.),
+                    vec2(2., 23.),
+                    vec2(2., 18.),
+                    vec2(3., 18.),
+                    vec2(3., 15.),
+                    vec2(1., 15.),
+                ],
+                vec![
+                    vec![
+                        vec2(15., 15.),
+                        vec2(19., 15.),
+                        vec2(19., 18.),
+                        vec2(18., 18.),
+                        vec2(18., 19.),
+                        vec2(15., 19.),
+                    ],
+                    vec![
+                        vec2(31., 15.),
+                        vec2(35., 15.),
+                        vec2(35., 18.),
+                        vec2(34., 18.),
+                        vec2(34., 19.),
+                        vec2(31., 19.),
+                    ],
+                    vec![
+                        vec2(15., 31.),
+                        vec2(19., 31.),
+                        vec2(19., 34.),
+                        vec2(18., 34.),
+                        vec2(18., 35.),
+                        vec2(15., 35.),
+                    ],
+                    vec![
+                        vec2(31., 31.),
+                        vec2(35., 31.),
+                        vec2(35., 34.),
+                        vec2(34., 34.),
+                        vec2(34., 35.),
+                        vec2(31., 35.),
+                    ],
+                    vec![
+                        vec2(23., 10.),
+                        vec2(23., 8.),
+                        vec2(24., 8.),
+                        vec2(24., 7.),
+                        vec2(26., 7.),
+                        vec2(26., 10.),
+                    ],
+                ],
+            )
+        }),
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
     commands.insert_resource(AURORA);
@@ -139,12 +319,15 @@ fn on_mesh_change(
     window_resized: EventReader<WindowResized>,
     asset_server: Res<AssetServer>,
     text: Query<Entity, With<Text>>,
+    wireframe: Query<Entity, With<WireframeMesh>>,
     mut wait_for_mesh: Local<bool>,
 ) {
     if mesh.is_changed() || !window_resized.is_empty() || *wait_for_mesh {
         let handle = match mesh.mesh {
             CurrentMesh::Simple => &path_meshes.simple,
+            CurrentMesh::SimpleTriangulation => &path_meshes.simple_triangulation,
             CurrentMesh::Arena => &path_meshes.arena,
+            CurrentMesh::ArenaTriangulation => &path_meshes.arena_triangulation,
             CurrentMesh::Aurora => &path_meshes.aurora,
         };
         if let Some(pathmesh) = pathmeshes.get(handle) {
@@ -172,6 +355,25 @@ fn on_mesh_change(
                     })
                     .id(),
             );
+            if mesh.with_wireframe {
+                commands.spawn((
+                    MaterialMesh2dBundle {
+                        mesh: meshes.add(pathmesh.to_wireframe_mesh()).into(),
+                        transform: Transform::from_translation(Vec3::new(
+                            -mesh.size.x / 2.0 * factor,
+                            -mesh.size.y / 2.0 * factor,
+                            1.0,
+                        ))
+                        .with_scale(Vec3::splat(factor)),
+                        material: materials.add(ColorMaterial::from(Color::WHITE)),
+                        ..default()
+                    },
+                    WireframeMesh,
+                ));
+            }
+            if let Ok(wireframe_entity) = wireframe.get_single() {
+                commands.entity(wireframe_entity).despawn();
+            }
             if let Ok(entity) = text.get_single() {
                 commands.entity(entity).despawn();
             }
@@ -181,12 +383,36 @@ fn on_mesh_change(
                     TextSection::new(
                         match mesh.mesh {
                             CurrentMesh::Simple => "Simple\n",
+                            CurrentMesh::SimpleTriangulation => "Triangulation from outer edge\n",
                             CurrentMesh::Arena => "Arena\n",
+                            CurrentMesh::ArenaTriangulation => {
+                                "Triangulation from outer edge and obstacles\n"
+                            }
                             CurrentMesh::Aurora => "Aurora\n",
                         },
                         TextStyle {
                             font: font.clone_weak(),
                             font_size: 30.0,
+                            color: Color::WHITE,
+                        },
+                    ),
+                    TextSection::new(
+                        match mesh.mesh {
+                            CurrentMesh::Simple => {
+                                "This mesh is built by providing all the needed data for it\n"
+                            }
+                            CurrentMesh::SimpleTriangulation => {
+                                "This mesh is built from the list of points on the outer edge\n"
+                            }
+                            CurrentMesh::Arena => "This mesh is loaded from a file\n",
+                            CurrentMesh::ArenaTriangulation => {
+                                "This mesh is built from the list of points on the outer edge and on obstacles\n"
+                            }
+                            CurrentMesh::Aurora => "This mesh is loaded from a file\n",
+                        },
+                        TextStyle {
+                            font: font.clone_weak(),
+                            font_size: 20.0,
                             color: Color::WHITE,
                         },
                     ),
@@ -246,10 +472,15 @@ fn mesh_change(
     }
     if keyboard_input.just_pressed(KeyCode::Space) || touch_triggered {
         match mesh.mesh {
-            CurrentMesh::Simple => *mesh = ARENA,
-            CurrentMesh::Arena => *mesh = AURORA,
+            CurrentMesh::Simple => *mesh = SIMPLE_TRIANGULATION,
+            CurrentMesh::SimpleTriangulation => *mesh = ARENA,
+            CurrentMesh::Arena => *mesh = ARENA_TRIANGULATION,
+            CurrentMesh::ArenaTriangulation => *mesh = AURORA,
             CurrentMesh::Aurora => *mesh = SIMPLE,
         }
+    }
+    if keyboard_input.just_pressed(KeyCode::Return) {
+        mesh.with_wireframe = !mesh.with_wireframe;
     }
 }
 
@@ -293,7 +524,9 @@ fn on_click(
             if pathmeshes
                 .get(match mesh.mesh {
                     CurrentMesh::Simple => &meshes.simple,
+                    CurrentMesh::SimpleTriangulation => &meshes.simple_triangulation,
                     CurrentMesh::Arena => &meshes.arena,
+                    CurrentMesh::ArenaTriangulation => &meshes.arena_triangulation,
                     CurrentMesh::Aurora => &meshes.aurora,
                 })
                 .map(|mesh| mesh.is_in_mesh(in_mesh))
@@ -305,7 +538,13 @@ fn on_click(
                         target: in_mesh,
                         pathmesh: match mesh.mesh {
                             CurrentMesh::Simple => meshes.simple.clone_weak(),
+                            CurrentMesh::SimpleTriangulation => {
+                                meshes.simple_triangulation.clone_weak()
+                            }
                             CurrentMesh::Arena => meshes.arena.clone_weak(),
+                            CurrentMesh::ArenaTriangulation => {
+                                meshes.arena_triangulation.clone_weak()
+                            }
                             CurrentMesh::Aurora => meshes.aurora.clone_weak(),
                         },
                     });
