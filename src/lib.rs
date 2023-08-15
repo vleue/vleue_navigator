@@ -13,17 +13,26 @@
 
 use std::sync::Arc;
 
-use bevy::math::Vec3Swizzles;
-use bevy::reflect::TypePath;
-use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
-use bevy::render::render_asset::RenderAssetUsages;
+#[cfg(feature = "tracing")]
+use tracing::instrument;
+
 use bevy::{
+    math::Vec3Swizzles,
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
+    reflect::TypePath,
+    reflect::TypeUuid,
+    render::{
+        render_asset::RenderAssetUsages
+        mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
+        render_resource::PrimitiveTopology,
+    },
 };
+
 use itertools::Itertools;
 
 pub mod asset_loaders;
+pub mod updater;
 
 /// Bevy plugin to add support for the [`NavMesh`] asset type.
 #[derive(Debug, Clone, Copy)]
@@ -45,7 +54,9 @@ pub struct TransformedPath {
     pub path: Vec<Vec3>,
 }
 
+pub use polyanya::Mesh as PolyanyaNavMesh;
 pub use polyanya::Path;
+pub use polyanya::Triangulation as PolyanyaTriangulation;
 use polyanya::Trimesh;
 
 /// A navigation mesh
@@ -56,8 +67,8 @@ pub struct NavMesh {
 }
 
 impl NavMesh {
-    /// Builds a [`NavMesh`] from a Polyanya [`Mesh`](polyanya::Mesh)
-    pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> NavMesh {
+    /// Builds a [`PathMesh`] from a Polyanya [`Mesh`](polyanya::Mesh)
+    pub fn from_polyanya_mesh(mesh: PolyanyaNavMesh) -> PathMesh {
         NavMesh {
             mesh: Arc::new(mesh),
             transform: Transform::IDENTITY,
@@ -69,7 +80,10 @@ impl NavMesh {
     /// The [`polyanya::Mesh`] generated in the process can be modified via `callback`.
     ///
     /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
-    pub fn from_bevy_mesh_and_then(mesh: &Mesh, callback: impl Fn(&mut polyanya::Mesh)) -> NavMesh {
+    pub fn from_bevy_mesh_and_then(
+        mesh: &Mesh,
+        callback: impl Fn(&mut PolyanyaNavMesh),
+    ) -> NavMesh {
         let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).next().unwrap();
         let rotation = Quat::from_rotation_arc(normal, Vec3::Z);
 
@@ -106,12 +120,51 @@ impl NavMesh {
         Self::from_bevy_mesh_and_then(mesh, |_| {})
     }
 
+    /// zut
+    pub fn from_edge(edges: Vec<Vec2>) -> PathMesh {
+        let triangulation = polyanya::Triangulation::from_outer_edges(&edges);
+        Self::from_polyanya_mesh(triangulation.as_navmesh().unwrap())
+    }
+
+    /// zut
+    pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> PathMesh {
+        let mut triangulation = polyanya::Triangulation::from_outer_edges(&edges);
+        for obstacle in obstacles {
+            triangulation.add_obstacle(obstacle);
+        }
+
+        triangulation.simplify(0.1);
+        let mut mesh: polyanya::Mesh = triangulation.as_navmesh().unwrap();
+        // mesh.set_delta(target_delta.sqrt());
+        mesh.set_delta(0.01);
+
+        Self::from_polyanya_mesh(mesh)
+    }
+
     /// Get the underlying Polyanya navigation mesh
-    pub fn get(&self) -> Arc<polyanya::Mesh> {
+    pub fn get(&self) -> Arc<PolyanyaNavMesh> {
         self.mesh.clone()
     }
 
-    /// Get a path between two points, in an async way
+    /// zut
+    pub fn set_delta(&mut self, delta: f32) -> bool {
+        if let Some(mesh) = Arc::get_mut(&mut self.mesh) {
+            debug!("setting mesh delta to {}", delta);
+            mesh.set_delta(delta);
+            true
+        } else {
+            warn!("failed setting mesh delta to {}", delta);
+            false
+        }
+    }
+
+    /// zut   
+    pub fn delta(&self) -> f32 {
+        self.mesh.delta()
+    }
+
+    /// Get a path between two points, in an async way.
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     #[inline]
     pub async fn get_path(&self, from: Vec2, to: Vec2) -> Option<Path> {
         self.mesh.get_path(from, to).await
@@ -120,6 +173,7 @@ impl NavMesh {
     /// Get a path between two points, in an async way.
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub async fn get_transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
         let inner_from = self.transform.transform_point(from).xy();
         let inner_to = self.transform.transform_point(to).xy();
@@ -127,15 +181,17 @@ impl NavMesh {
         path.map(|path| self.transform_path(path, from, to))
     }
 
-    /// Get a path between two points
+    /// Get a path between two points.
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     #[inline]
     pub fn path(&self, from: Vec2, to: Vec2) -> Option<Path> {
         self.mesh.path(from, to)
     }
 
-    /// Get a path between two points, in an async way.
+    /// Get a path between two points.
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
         let inner_from = self.transform.transform_point(from).xy();
         let inner_to = self.transform.transform_point(to).xy();
@@ -143,6 +199,7 @@ impl NavMesh {
         path.map(|path| self.transform_path(path, from, to))
     }
 
+    #[inline]
     fn transform_path(&self, path: Path, from: Vec3, to: Vec3) -> TransformedPath {
         let inverse_transform = self.inverse_transform();
         TransformedPath {
@@ -156,12 +213,14 @@ impl NavMesh {
     }
 
     /// Check if a 3d point is in a navigationable part of the mesh, using the [`Mesh::transform`]
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub fn transformed_is_in_mesh(&self, point: Vec3) -> bool {
         let point = self.transform.transform_point(point).xy();
         self.mesh.point_in_mesh(point)
     }
 
     /// Check if a point is in a navigationable part of the mesh
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub fn is_in_mesh(&self, point: Vec2) -> bool {
         self.mesh.point_in_mesh(point)
     }
@@ -180,6 +239,7 @@ impl NavMesh {
     }
 
     /// Creates a [`Mesh`] from this [`NavMesh`], suitable for rendering the surface
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
         let inverse_transform = self.inverse_transform();
@@ -190,6 +250,14 @@ impl NavMesh {
                 .iter()
                 .map(|v| [v.coords.x, v.coords.y, 0.0])
                 .map(|coords| inverse_transform.transform_point(coords.into()).into())
+                .collect::<Vec<[f32; 3]>>(),
+        );
+        new_mesh.insert_attribute(
+            Mesh::ATTRIBUTE_NORMAL,
+            self.mesh
+                .vertices
+                .iter()
+                .map(|_| [0.0, 1.0, 0.0])
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(
@@ -206,6 +274,7 @@ impl NavMesh {
     }
 
     /// Creates a [`Mesh`] from this [`NavMesh`], showing the wireframe of the polygons
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub fn to_wireframe_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::all());
         let inverse_transform = self.inverse_transform();
@@ -216,6 +285,14 @@ impl NavMesh {
                 .iter()
                 .map(|v| [v.coords.x, v.coords.y, 0.0])
                 .map(|coords| inverse_transform.transform_point(coords.into()).into())
+                .collect::<Vec<[f32; 3]>>(),
+        );
+        new_mesh.insert_attribute(
+            Mesh::ATTRIBUTE_NORMAL,
+            self.mesh
+                .vertices
+                .iter()
+                .map(|_| [0.0, 1.0, 0.0])
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(

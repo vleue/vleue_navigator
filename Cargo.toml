@@ -14,9 +14,13 @@ categories = ["game-development"]
 
 [dependencies]
 itertools = "0.12"
+tracing = { version = "0.1", optional = true }
 
 [dependencies.polyanya]
 version = "0.5"
+# path = "../polyanya"
+git = "https://github.com/vleue/polyanya"
+branch = "merge-polygons"
 
 [dependencies.bevy]
 version = "0.13"
@@ -52,3 +56,6 @@ linuxci = ["bevy/x11"]
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[workspace]
+members = ["examples/interactive"]

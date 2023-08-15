@@ -1,0 +1,38 @@
+[package]
+name = "interactive"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[dependencies.bevy]
+version = "0.11"
+default-features = false
+features = [
+    "bevy_asset",
+    "bevy_winit",
+    "bevy_core_pipeline",
+    "bevy_gizmos",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_sprite",
+    "bevy_text",
+    "bevy_ui",
+    "png",
+    "hdr",
+    "default_font",
+    "tonemapping_luts",
+    "ktx2",
+    "zstd",
+]
+
+[dependencies]
+bevy_pathmesh = { path = "../../" }
+bevy_transform_gizmo = { git = "https://github.com/mockersf/bevy_transform_gizmo", branch = "0.8-themed" }
+bevy_mod_picking = { version = "0.15", default-features = false, features = [
+    "backend_raycast",
+    "selection",
+    "highlight",
+] }
+rand = "0.8"
+bevy_vector_shapes = "0.5"
