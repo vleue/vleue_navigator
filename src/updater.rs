@@ -1,3 +1,5 @@
+//! zut
+
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
@@ -129,19 +131,23 @@ fn build_pathmesh<T: ObstacleSource>(
 #[derive(Component)]
 struct NavmeshUpdateTask(Arc<RwLock<Option<Result<PathMesh, ()>>>>);
 
+type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c> = Query<
+    'world,
+    'state,
+    (
+        Entity,
+        Ref<'a, NavMeshSettings>,
+        Ref<'b, Transform>,
+        &'c NavMeshUpdateMode,
+    ),
+    Without<NavmeshUpdateTask>,
+>;
+
 fn update_navmesh<Marker: Component, Obstacle: ObstacleSource>(
     mut commands: Commands,
     obstacles: Query<(Ref<GlobalTransform>, &Obstacle), With<Marker>>,
     removed_obstacles: RemovedComponents<Marker>,
-    navmeshes: Query<
-        (
-            Entity,
-            Ref<NavMeshSettings>,
-            Ref<Transform>,
-            &NavMeshUpdateMode,
-        ),
-        Without<NavmeshUpdateTask>,
-    >,
+    navmeshes: NavMeshToUpdateQuery,
     time: Res<Time>,
     mut ready_to_update: Local<HashMap<Entity, (f32, bool)>>,
 ) {
