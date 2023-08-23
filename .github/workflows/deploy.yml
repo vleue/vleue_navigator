@@ -44,7 +44,7 @@ jobs:
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/gltf.wasm
 
           cargo build --target wasm32-unknown-unknown --release --package interactive --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/interactive.wasm
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/interactive.wasm
 
       - name: Copy Assets
         run: cp -r assets wasm/
