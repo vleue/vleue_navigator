@@ -46,8 +46,8 @@ jobs:
           cargo build --target wasm32-unknown-unknown --release --package interactive --features bevy/webgl2
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/interactive.wasm
 
-          cargo build --target wasm32-unknown-unknown --release --package bevy_xpbd --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/bevy_xpbd.wasm
+          cargo build --target wasm32-unknown-unknown --release --package physics_xpbd --features bevy/webgl2
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/physics_xpbd.wasm
 
       - name: Copy Assets
         run: cp -r assets wasm/
