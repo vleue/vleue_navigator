@@ -58,4 +58,4 @@ linuxci = ["bevy/x11"]
 opt-level = 3
 
 [workspace]
-members = ["examples/interactive"]
+members = ["examples/interactive", "examples/physics_xpbd"]

@@ -110,6 +110,7 @@ fn build_pathmesh<T: ObstacleSource>(
     let obstacle_aabbs = obstacles
         .iter()
         .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform))
+        .filter(|polygon| !polygon.is_empty())
         .collect::<Vec<_>>();
     let mut triangulation = settings.fixed.clone();
     triangulation.add_obstacles(obstacle_aabbs);
