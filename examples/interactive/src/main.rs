@@ -98,8 +98,8 @@ fn setup(
     materials.set_untracked(
         HANDLE_OBSTACLE_MATERIAL,
         StandardMaterial {
-            base_color: Color::NONE,
-            alpha_mode: AlphaMode::Blend,
+            base_color: Color::RED,
+            // alpha_mode: AlphaMode::Blend,
             ..default()
         },
     );
@@ -126,23 +126,28 @@ fn setup(
     pathmesh.set_transform(Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)));
     meshes.set_untracked(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
     meshes.set_untracked(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
-    commands.spawn(NavMeshBundle {
-        settings: NavMeshSettings {
-            simplify: 0.0,
-            merge_steps: 0,
-            default_delta: 0.01,
-            fixed: PolyanyaTriangulation::from_outer_edges(&vec![
-                vec2(-5., -5.),
-                vec2(5., -5.),
-                vec2(5., 5.),
-                vec2(-5., 5.),
-            ]),
+    commands.spawn((
+        NavMeshBundle {
+            settings: NavMeshSettings {
+                simplify: 0.0,
+                merge_steps: 0,
+                unit_radius: 0.0,
+                default_delta: 0.01,
+                fixed: PolyanyaTriangulation::from_outer_edges(&vec![
+                    vec2(-5., -5.),
+                    vec2(5., -5.),
+                    vec2(5., 5.),
+                    vec2(-5., 5.),
+                ]),
+            },
+            status: NavMeshStatus::Building,
+            handle: pathmeshes.add(pathmesh),
+            transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+            update_mode: NavMeshUpdateMode::Debounced(0.025),
+            // update_mode: NavMeshUpdateMode::Direct,
         },
-        status: NavMeshStatus::Building,
-        handle: pathmeshes.add(pathmesh),
-        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-        update_mode: NavMeshUpdateMode::Debounced(0.025),
-    });
+        // NavMeshUpdateModeBlocking,
+    ));
     commands.spawn((
         PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Plane {
@@ -293,10 +298,9 @@ fn find_path_to_target(
         let Ok(target) = targets.get(agent.target.unwrap()) else {
             continue;
         };
-        let Some(path) = navmesh.transformed_path(from.translation, target.translation)
-        else {
+        let Some(path) = navmesh.transformed_path(from.translation, target.translation) else {
             has_unreachable = true;
-            continue
+            continue;
         };
         if let Some((first, remaining)) = path.path.split_first() {
             let mut remaining = remaining.to_vec();
