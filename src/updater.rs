@@ -138,7 +138,8 @@ fn build_pathmesh<T: ObstacleSource>(
     }
 }
 
-#[derive(Component)]
+/// Zut
+#[derive(Component, Debug, Clone)]
 pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<PathMesh, ()>>>>);
 
 type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
@@ -188,7 +189,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                 None
             }
         })
-        .chain(retrigger.into_iter())
+        .chain(retrigger)
         .collect::<Vec<_>>();
     to_check.sort_unstable();
     to_check.dedup();
