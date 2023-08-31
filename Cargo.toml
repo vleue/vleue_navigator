@@ -20,7 +20,7 @@ tracing = { version = "0.1", optional = true }
 version = "0.5"
 # path = "../polyanya"
 git = "https://github.com/vleue/polyanya"
-branch = "merge-polygons"
+branch = "radius-baking"
 
 [dependencies.bevy]
 version = "0.13"

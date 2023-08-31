@@ -41,6 +41,8 @@ pub struct NavMeshSettings {
     pub simplify: f32,
     /// Number of times to merge polygons
     pub merge_steps: usize,
+    /// zut
+    pub unit_radius: f32,
     /// Default delta use for the navmesh during pathing
     pub default_delta: f32,
     /// Fixed edges and obstacles of the mesh
@@ -68,6 +70,11 @@ pub enum NavMeshUpdateMode {
     /// On demand, set it to `true` to trigger an update
     OnDemand(bool),
 }
+
+/// If this component is added to an entity with the `NavMeshBundle`, updating the navmesh will be blocking. Otherwise
+/// it will be async and happen on the [`AsyncComputeTaskPool`].
+#[derive(Component, Debug, Copy, Clone)]
+pub struct NavMeshUpdateModeBlocking;
 
 /// Trait to mark a component as the source of position and shape of an obstacle.
 pub trait ObstacleSource: Component + Clone {
@@ -113,6 +120,7 @@ fn build_pathmesh<T: ObstacleSource>(
         .filter(|polygon| !polygon.is_empty())
         .collect::<Vec<_>>();
     let mut triangulation = settings.fixed.clone();
+    triangulation.set_unit_radius(settings.unit_radius);
     triangulation.add_obstacles(obstacle_aabbs);
     triangulation.merge_overlapping_obstacles();
     triangulation.simplify(settings.simplify);
@@ -120,6 +128,7 @@ fn build_pathmesh<T: ObstacleSource>(
         for _ in 0..settings.merge_steps {
             navmesh.merge_polygons();
         }
+        navmesh.bake();
         navmesh.set_delta(settings.default_delta);
         let mut pathmesh = PathMesh::from_polyanya_mesh(navmesh);
         pathmesh.set_transform(mesh_transform);
@@ -130,9 +139,9 @@ fn build_pathmesh<T: ObstacleSource>(
 }
 
 #[derive(Component)]
-struct NavmeshUpdateTask(Arc<RwLock<Option<Result<PathMesh, ()>>>>);
+pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<PathMesh, ()>>>>);
 
-type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c> = Query<
+type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
     'world,
     'state,
     (
@@ -140,11 +149,12 @@ type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c> = Query<
         Ref<'a, NavMeshSettings>,
         Ref<'b, Transform>,
         &'c NavMeshUpdateMode,
+        Option<&'d NavMeshUpdateModeBlocking>,
+        Option<&'e NavmeshUpdateTask>,
     ),
-    Without<NavmeshUpdateTask>,
 >;
 
-fn update_navmesh<Marker: Component, Obstacle: ObstacleSource>(
+fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     mut commands: Commands,
     obstacles: Query<(Ref<GlobalTransform>, &Obstacle), With<Marker>>,
     removed_obstacles: RemovedComponents<Marker>,
@@ -167,7 +177,7 @@ fn update_navmesh<Marker: Component, Obstacle: ObstacleSource>(
     let has_removed_obstacles = !removed_obstacles.is_empty();
     let mut to_check = navmeshes
         .iter()
-        .filter_map(|(entity, settings, _, mode)| {
+        .filter_map(|(entity, settings, _, mode, _, _)| {
             if obstacles.iter().any(|(t, _)| t.is_changed())
                 || settings.is_changed()
                 || has_removed_obstacles
@@ -183,7 +193,9 @@ fn update_navmesh<Marker: Component, Obstacle: ObstacleSource>(
     to_check.sort_unstable();
     to_check.dedup();
     for entity in to_check.into_iter() {
-        if let Ok((entity, settings, transform, update_mode)) = navmeshes.get(entity) {
+        if let Ok((entity, settings, transform, update_mode, is_blocking, updating)) =
+            navmeshes.get(entity)
+        {
             if let Some(val) = ready_to_update.get_mut(&entity) {
                 val.1 = true;
                 continue;
@@ -202,6 +214,9 @@ fn update_navmesh<Marker: Component, Obstacle: ObstacleSource>(
                 }
                 _ => (),
             };
+            if updating.is_some() {
+                continue;
+            }
             let obstacles_local = obstacles
                 .iter()
                 .map(|(t, o)| (*t, o.clone()))
@@ -212,18 +227,24 @@ fn update_navmesh<Marker: Component, Obstacle: ObstacleSource>(
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
 
-            AsyncComputeTaskPool::get()
-                .spawn(async move {
-                    let pathmesh = build_pathmesh(obstacles_local, settings_local, transform_local);
-                    *writer.write().unwrap() = Some(pathmesh);
-                })
-                .detach();
+            if is_blocking.is_some() {
+                let pathmesh = build_pathmesh(obstacles_local, settings_local, transform_local);
+                *writer.write().unwrap() = Some(pathmesh);
+            } else {
+                AsyncComputeTaskPool::get()
+                    .spawn(async move {
+                        let pathmesh =
+                            build_pathmesh(obstacles_local, settings_local, transform_local);
+                        *writer.write().unwrap() = Some(pathmesh);
+                    })
+                    .detach();
+            }
             commands.entity(entity).insert(updating);
         }
     }
 }
 
-fn update_navmesh2(
+fn update_navmesh_asset(
     mut commands: Commands,
     mut navmeshes: Query<(
         Entity,
@@ -278,9 +299,7 @@ impl<Marker: Component, Obstacle: ObstacleSource> Plugin
     for NavmeshUpdaterPlugin<Marker, Obstacle>
 {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            PostUpdate,
-            (update_navmesh::<Marker, Obstacle>, update_navmesh2),
-        );
+        app.add_systems(PostUpdate, trigger_navmesh_build::<Marker, Obstacle>)
+            .add_systems(PreUpdate, update_navmesh_asset);
     }
 }

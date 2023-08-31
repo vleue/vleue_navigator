@@ -362,6 +362,61 @@ fn setup(mut commands: Commands) {
                             ));
                         });
                     }
+                    {
+                        parent.spawn(TextBundle::from_sections(vec![
+                            TextSection {
+                                value: "unit radius\n".to_string(),
+                                style: TextStyle {
+                                    font_size: info_text_size,
+                                    color: Color::rgb(0.9, 0.9, 0.9),
+                                    ..default()
+                                },
+                            },
+                        ])
+                        .with_text_alignment(TextAlignment::Right)
+                        .with_style(Style {
+                            margin: UiRect::all(Val::Px(10.0)),
+                            ..default()
+                        }));
+
+                        parent.spawn(NodeBundle::default()).with_children(|parent| {
+                            parent.spawn((
+                                UiButton::UnitRadius,
+                                ButtonBundle {
+                                    background_color: BackgroundColor(Color::NONE),
+                                    style: Style {
+                                        width: Val::Px(200.0),
+                                        height: Val::Px(30.0),
+                                        ..default()
+                                    },
+                                    ..default()
+                                },
+                                Slider {
+                                    value: 0.0,
+                                    line_color: Color::GREEN,
+                                    border_width: 5.0,
+                                    z: 10.0,
+                                },
+                                RelativeCursorPosition::default(),
+                            ));
+                            parent.spawn((
+                                TextBundle::from_sections(vec![TextSection {
+                                    value: "0.001".to_string(),
+                                    style: TextStyle {
+                                        font_size: info_text_size,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                        ..default()
+                                    },
+                                }])
+                                .with_text_alignment(TextAlignment::Right)
+                                .with_style(Style {
+                                    margin: UiRect::horizontal(Val::Px(10.0)),
+                                    ..default()
+                                }),
+                                UiInfo::UnitRadius,
+                            ));
+                        });
+                    }
 
                     parent.spawn(NodeBundle{
                         style: Style {
@@ -462,6 +517,7 @@ pub enum UiButton {
     ClearAgents,
     Simplification,
     MergeSteps,
+    UnitRadius,
 }
 
 #[derive(Component)]
@@ -471,6 +527,7 @@ pub enum UiInfo {
     AgentCount,
     Simplification,
     MergeSteps,
+    UnitRadius,
 }
 
 fn button_system(
@@ -634,6 +691,19 @@ fn button_system(
                     settings.merge_steps = value;
                 }
             }
+            (Interaction::Pressed, _, UiButton::UnitRadius) => {
+                let mut value = ((relative_position.unwrap().normalized.unwrap().x - 0.5)
+                    / SLIDER_WIDTH_RATIO
+                    + 0.5)
+                    .clamp(0.0, 1.0)
+                    / 10.0;
+                if value < 0.001 {
+                    value = 0.0;
+                }
+                if settings.unit_radius != value {
+                    settings.unit_radius = value;
+                }
+            }
 
             _ => (),
         }
@@ -703,6 +773,9 @@ fn show_settings(
                 UiInfo::MergeSteps => {
                     text.sections[0].value = format!("{}    ", settings.merge_steps)
                 }
+                UiInfo::UnitRadius => {
+                    text.sections[0].value = format!("{:.3}", settings.unit_radius)
+                }
                 _ => (),
             }
         }
@@ -710,6 +783,7 @@ fn show_settings(
             match button {
                 UiButton::Simplification => slider.value = settings.simplify * 25.0,
                 UiButton::MergeSteps => slider.value = settings.merge_steps as f32 / 4.0,
+                UiButton::UnitRadius => slider.value = settings.unit_radius * 10.0,
                 _ => (),
             }
         }
