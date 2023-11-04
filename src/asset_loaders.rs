@@ -3,9 +3,9 @@
 use std::sync::Arc;
 
 use bevy::{
-    asset::{AssetLoader, LoadContext, LoadedAsset},
+    asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
     prelude::{Transform, Vec3},
-    utils::BoxedFuture,
+    utils::{thiserror, BoxedFuture},
 };
 use polyanya::PolyanyaFile;
 
@@ -17,18 +17,35 @@ use crate::PathMesh;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct PathMeshPolyanyaLoader;
 
+/// Error type for [`PathMeshPolyanyaLoader`]
+#[non_exhaustive]
+#[derive(thiserror::Error, Debug)]
+pub enum PathMeshPolyanyaLoaderError {
+    /// An [IO](std::io) Error
+    #[error("Couldn't load polyanya file: {0}")]
+    Io(#[from] std::io::Error),
+}
+
 impl AssetLoader for PathMeshPolyanyaLoader {
+    type Asset = PathMesh;
+    type Settings = ();
+    type Error = PathMeshPolyanyaLoaderError;
+
     fn load<'a>(
         &'a self,
-        bytes: &'a [u8],
-        load_context: &'a mut LoadContext,
-    ) -> BoxedFuture<'a, Result<(), bevy::asset::Error>> {
+        reader: &'a mut Reader,
+        _settings: &'a (),
+        _load_context: &'a mut LoadContext,
+    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
-            load_context.set_default_asset(LoadedAsset::new(PathMesh {
-                mesh: Arc::new(PolyanyaFile::from_bytes(bytes).into()),
+            let mut bytes = Vec::new();
+            reader.read_to_end(&mut bytes).await?;
+            let mesh = PathMesh {
+                mesh: Arc::new(PolyanyaFile::from_bytes(&bytes).into()),
                 transform: Transform::from_scale(Vec3::splat(1.)),
-            }));
-            Ok(())
+            };
+
+            Ok(mesh)
         })
     }
 

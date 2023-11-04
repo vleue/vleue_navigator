@@ -23,7 +23,7 @@ git = "https://github.com/vleue/polyanya"
 branch = "radius-baking"
 
 [dependencies.bevy]
-version = "0.11"
+version = "0.12"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
@@ -31,7 +31,7 @@ default-features = false
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.11"
+version = "0.12"
 features = [
     "bevy_ui",
     "bevy_text",
@@ -42,10 +42,8 @@ features = [
     "bevy_pbr",
     "bevy_sprite",
     "bevy_gizmos",
-    # Required for TonyMcMapface
     "tonemapping_luts",
-    "ktx2",
-    "zstd",
+    "multi-threaded"
 ]
 default-features = false
 

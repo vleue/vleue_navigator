@@ -264,7 +264,7 @@ fn update_navmesh_asset(
             match pathmesh_built {
                 Ok(navmesh) => {
                     debug!("navmesh built");
-                    let _ = pathmeshes.set(handle, navmesh);
+                    pathmeshes.insert(handle, navmesh);
                     *status = NavMeshStatus::Built;
                 }
                 Err(()) => {

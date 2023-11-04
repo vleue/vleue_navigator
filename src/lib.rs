@@ -38,7 +38,7 @@ pub struct PathMeshPlugin;
 
 impl Plugin for PathMeshPlugin {
     fn build(&self, app: &mut App) {
-        app.add_asset::<PathMesh>()
+        app.init_asset::<PathMesh>()
             .init_asset_loader::<asset_loaders::PathMeshPolyanyaLoader>();
     }
 }
@@ -58,7 +58,7 @@ pub use polyanya::Triangulation as PolyanyaTriangulation;
 use polyanya::Trimesh;
 
 /// A navigation mesh
-#[derive(Debug, TypePath, TypeUuid, Clone)]
+#[derive(Asset, Debug, TypePath, TypeUuid, Clone)]
 #[uuid = "807C7A31-EA06-4A3B-821B-6E91ADB95734"]
 pub struct PathMesh {
     mesh: Arc<polyanya::Mesh>,
