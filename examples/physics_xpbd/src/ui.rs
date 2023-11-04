@@ -478,8 +478,8 @@ fn button_system(
 
                 commands.spawn((
                     PbrBundle {
-                        mesh: HANDLE_AGENT_MESH.typed(),
-                        material: HANDLE_AGENT_MATERIAL.typed(),
+                        mesh: HANDLE_AGENT_MESH,
+                        material: HANDLE_AGENT_MATERIAL,
                         transform: Transform::from_xyz(x, 0.0, z),
                         ..Default::default()
                     },

@@ -5,7 +5,6 @@ use bevy::{
     math::{vec2, vec3},
     pbr::NotShadowCaster,
     prelude::*,
-    reflect::TypeUuid,
     render::view::{RenderLayers, VisibilitySystems},
 };
 use bevy_pathmesh::{
@@ -18,19 +17,16 @@ use rand::Rng;
 mod build_navmesh;
 mod ui;
 
-const HANDLE_NAVMESH_WIREFRAME: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 1);
-const HANDLE_NAVMESH_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 2);
+const HANDLE_NAVMESH_WIREFRAME: Handle<Mesh> = Handle::weak_from_u128(952579465);
+const HANDLE_NAVMESH_MESH: Handle<Mesh> = Handle::weak_from_u128(1919406390);
 
-const HANDLE_OBSTACLE_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 3);
-const HANDLE_AGENT_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 4);
-const HANDLE_TARGET_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 5);
+const HANDLE_OBSTACLE_MESH: Handle<Mesh> = Handle::weak_from_u128(316104190);
+const HANDLE_AGENT_MESH: Handle<Mesh> = Handle::weak_from_u128(1312667734);
+const HANDLE_TARGET_MESH: Handle<Mesh> = Handle::weak_from_u128(1639694912);
 
-const HANDLE_OBSTACLE_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 1);
-const HANDLE_AGENT_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 2);
-const HANDLE_TARGET_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 3);
+const HANDLE_OBSTACLE_MATERIAL: Handle<StandardMaterial> = Handle::weak_from_u128(1666062804);
+const HANDLE_AGENT_MATERIAL: Handle<StandardMaterial> = Handle::weak_from_u128(1508084406);
+const HANDLE_TARGET_MATERIAL: Handle<StandardMaterial> = Handle::weak_from_u128(510973528);
 
 const BOARD_LIMIT: f32 = 10.0;
 
@@ -74,8 +70,8 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut pathmeshes: ResMut<Assets<PathMesh>>,
 ) {
-    meshes.set_untracked(HANDLE_OBSTACLE_MESH, Mesh::from(shape::Cube { size: 0.4 }));
-    meshes.set_untracked(
+    meshes.insert(HANDLE_OBSTACLE_MESH, Mesh::from(shape::Cube { size: 0.4 }));
+    meshes.insert(
         HANDLE_AGENT_MESH,
         Mesh::from(shape::Capsule {
             radius: 0.1,
@@ -83,14 +79,14 @@ fn setup(
             ..default()
         }),
     );
-    meshes.set_untracked(
+    meshes.insert(
         HANDLE_TARGET_MESH,
         Mesh::from(shape::UVSphere {
             radius: 0.05,
             ..default()
         }),
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_OBSTACLE_MATERIAL,
         StandardMaterial {
             base_color: Color::rgba(0.8, 0.7, 0.6, 0.5),
@@ -98,14 +94,14 @@ fn setup(
             ..default()
         },
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_AGENT_MATERIAL,
         StandardMaterial {
             base_color: Color::GREEN,
             ..default()
         },
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_TARGET_MATERIAL,
         StandardMaterial {
             base_color: Color::YELLOW,
@@ -124,8 +120,8 @@ fn setup(
         vec![],
     );
     pathmesh.set_transform(Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)));
-    meshes.set_untracked(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
-    meshes.set_untracked(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
+    meshes.insert(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
+    meshes.insert(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
     commands.spawn((
         NavMeshBundle {
             settings: NavMeshSettings {
@@ -177,7 +173,7 @@ fn setup(
     ));
     commands.spawn((
         PbrBundle {
-            mesh: HANDLE_NAVMESH_MESH.typed(),
+            mesh: HANDLE_NAVMESH_MESH,
             material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
             // material: materials.add(StandardMaterial {
             //             base_color: Color::MIDNIGHT_BLUE,
@@ -194,7 +190,7 @@ fn setup(
 
     commands.spawn((
         PbrBundle {
-            mesh: HANDLE_NAVMESH_WIREFRAME.typed(),
+            mesh: HANDLE_NAVMESH_WIREFRAME,
             transform: Transform::from_translation(Vec3::new(0., 0.01, 0.)),
             material: materials.add(StandardMaterial {
                 base_color: Color::RED,
@@ -281,8 +277,8 @@ fn give_target_auto(
         let target_id = commands
             .spawn((
                 PbrBundle {
-                    mesh: HANDLE_TARGET_MESH.typed(),
-                    material: HANDLE_TARGET_MATERIAL.typed(),
+                    mesh: HANDLE_TARGET_MESH,
+                    material: HANDLE_TARGET_MATERIAL,
                     transform: Transform::from_xyz(x, 0.0, z),
                     ..Default::default()
                 },
@@ -403,8 +399,8 @@ fn spawn_cubes(
                 let size = rng.gen_range(0.5..1.0);
                 commands.spawn((
                     PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Cube { size: size })),
-                        material: HANDLE_OBSTACLE_MATERIAL.typed(),
+                        mesh: meshes.add(Mesh::from(shape::Cube { size })),
+                        material: HANDLE_OBSTACLE_MATERIAL,
                         transform: Transform::from_translation(Vec3::new(0.0, 10.0, 0.0)),
                         global_transform: GlobalTransform::from_translation(Vec3::new(
                             0.0, 10.0, 0.0,
@@ -432,7 +428,7 @@ fn spawn_cubes(
                             radius,
                             ..default()
                         })),
-                        material: HANDLE_OBSTACLE_MATERIAL.typed(),
+                        material: HANDLE_OBSTACLE_MATERIAL,
                         transform: Transform::from_translation(Vec3::new(
                             theta.cos() * radius_spawn,
                             radius,
@@ -470,11 +466,11 @@ fn spawn_cubes(
                 commands.spawn((
                     PbrBundle {
                         mesh: meshes.add(Mesh::from(shape::Capsule {
-                            radius: radius,
+                            radius,
                             depth: height,
                             ..default()
                         })),
-                        material: HANDLE_OBSTACLE_MATERIAL.typed(),
+                        material: HANDLE_OBSTACLE_MATERIAL,
                         transform: Transform::from_translation(Vec3::new(0.0, 10.0, 0.0)),
                         global_transform: GlobalTransform::from_translation(Vec3::new(
                             0.0, 10.0, 0.0,

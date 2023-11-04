@@ -6,7 +6,7 @@ publish = false
 license = "MIT OR Apache-2.0"
 
 [dependencies.bevy]
-version = "0.11"
+version = "0.12"
 default-features = false
 features = [
     "bevy_asset",
@@ -22,12 +22,10 @@ features = [
     "hdr",
     "default_font",
     "tonemapping_luts",
-    "ktx2",
-    "zstd",
 ]
 
 [dependencies]
 bevy_pathmesh = { path = "../../" }
 rand = "0.8"
-bevy_vector_shapes = "0.5"
-bevy_xpbd_3d = "0.2"
+bevy_vector_shapes = "0.6"
+bevy_xpbd_3d = "0.3"
