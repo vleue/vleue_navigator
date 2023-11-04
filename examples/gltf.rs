@@ -10,7 +10,8 @@ use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
-const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> = Handle::weak_from_u128(0);
+const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> =
+    Handle::weak_from_u128(NavMesh::TYPE_UUID.as_u128());
 
 fn main() {
     App::new()

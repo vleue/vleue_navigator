@@ -5,17 +5,19 @@ use std::{error::Error, fmt::Display, sync::Arc};
 use bevy::{
     asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
     prelude::{Transform, Vec3},
-    utils::BoxedFuture,
+    utils::{thiserror, BoxedFuture},
 };
 use polyanya::PolyanyaFile;
 
 use crate::NavMesh;
 
 /// Error that can happen while reading a `NavMesh` from a file
-#[derive(Debug)]
+#[non_exhaustive]
+#[derive(thiserror::Error, Debug)]
 pub enum NavMeshLoaderError {
-    /// Error when reading file
-    Io(std::io::Error),
+    /// An [IO](std::io) Error
+    #[error("Couldn't load polyanya file: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 impl Display for NavMeshLoaderError {
@@ -52,12 +54,9 @@ impl AssetLoader for NavMeshPolyanyaLoader {
     ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();
-            reader
-                .read_to_end(&mut bytes)
-                .await
-                .map_err(NavMeshLoaderError::Io)?;
+            reader.read_to_end(&mut bytes).await?;
             let navmesh = NavMesh {
-                mesh: Arc::new(PolyanyaFile::from_bytes(bytes.as_slice()).into()),
+                mesh: Arc::new(PolyanyaFile::from_bytes(&bytes).into()),
                 transform: Transform::from_scale(Vec3::splat(1.)),
             };
             Ok(navmesh)

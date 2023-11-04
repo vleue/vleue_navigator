@@ -19,12 +19,12 @@ use tracing::instrument;
 use bevy::{
     math::Vec3Swizzles,
     prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
     reflect::TypePath,
     reflect::TypeUuid,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
     render::{
-        render_asset::RenderAssetUsages
         mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
+        render_asset::RenderAssetUsages,
         render_resource::PrimitiveTopology,
     },
 };
@@ -40,8 +40,8 @@ pub struct VleueNavigatorPlugin;
 
 impl Plugin for VleueNavigatorPlugin {
     fn build(&self, app: &mut App) {
-        app.register_asset_loader(asset_loaders::NavMeshPolyanyaLoader)
-            .init_asset::<NavMesh>();
+        app.init_asset::<NavMesh>()
+            .init_asset_loader(asset_loaders::NavMeshPolyanyaLoader);
     }
 }
 

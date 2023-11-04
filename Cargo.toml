@@ -42,7 +42,6 @@ features = [
     "bevy_pbr",
     "bevy_sprite",
     "bevy_gizmos",
-    # Required for TonyMcMapface
     "tonemapping_luts",
     "ktx2",
     "zstd",
