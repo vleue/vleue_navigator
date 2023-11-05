@@ -42,6 +42,7 @@ features = [
     "tonemapping_luts",
     "ktx2",
     "zstd",
+    "multi-threaded",
 ]
 default-features = false
 

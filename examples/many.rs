@@ -274,7 +274,13 @@ fn spawn(
         let screen = Vec2::new(window.width(), window.height());
         let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
-        for _ in 0..100 {
+        #[cfg(target_arch = "wasm32")]
+        let per_update = 20;
+        #[cfg(not(target_arch = "wasm32"))]
+        let per_update = 100;
+
+        let mut to_spawn = Vec::with_capacity(per_update);
+        for _ in 0..per_update {
             let in_mesh = *[
                 Vec2::new(575.0, 410.0),
                 Vec2::new(387.0, 524.0),
@@ -290,24 +296,24 @@ fn spawn(
             let position = (in_mesh - MESH_SIZE / 2.0) * factor;
             let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
 
-            commands.spawn((
-                // SpriteBundle {
-                //     sprite: Sprite {
-                //         color,
-                //         custom_size: Some(Vec2::ONE),
-                //         ..default()
-                //     },
-                //     transform: Transform::from_translation(position.extend(1.0))
-                //         .with_scale(Vec3::splat(5.0)),
-                //     ..default()
-                // },
-                Transform::from_translation(position.extend(1.0)).with_scale(Vec3::splat(5.0)),
+            to_spawn.push((
+                SpriteBundle {
+                    sprite: Sprite {
+                        color,
+                        custom_size: Some(Vec2::ONE),
+                        ..default()
+                    },
+                    transform: Transform::from_translation(position.extend(1.0))
+                        .with_scale(Vec3::splat(5.0)),
+                    ..default()
+                },
                 Navigator {
                     speed: rng.gen_range(50.0..100.0),
                     color,
                 },
             ));
         }
+        commands.spawn_batch(to_spawn);
     }
 }
 
@@ -419,23 +425,27 @@ fn move_navigator(
     mut query: Query<(Entity, &mut Transform, &mut Path, &Navigator)>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
-    mut commands: Commands,
+    par_commands: ParallelCommands,
 ) {
     let window = primary_window.single();
     let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
-    for (entity, mut transform, mut path, navigator) in &mut query {
-        let next = (path.path[0] - MESH_SIZE / 2.0) * factor;
-        let toward = next - transform.translation.xy();
-        // TODO: compare this in mesh dimensions, not in display dimensions
-        if toward.length() < time.delta_seconds() * navigator.speed * 2.0 {
-            path.path.remove(0);
-            if path.path.is_empty() {
-                commands.entity(entity).remove::<Path>().remove::<Target>();
+    query
+        .par_iter_mut()
+        .for_each(|(entity, mut transform, mut path, navigator)| {
+            let next = (path.path[0] - MESH_SIZE / 2.0) * factor;
+            let toward = next - transform.translation.xy();
+            // TODO: compare this in mesh dimensions, not in display dimensions
+            if toward.length() < time.delta_seconds() * navigator.speed * 2.0 {
+                path.path.remove(0);
+                if path.path.is_empty() {
+                    par_commands.command_scope(|mut commands| {
+                        commands.entity(entity).remove::<Path>().remove::<Target>();
+                    });
+                }
             }
-        }
-        transform.translation +=
-            (toward.normalize() * time.delta_seconds() * navigator.speed).extend(0.0);
-    }
+            transform.translation +=
+                (toward.normalize() * time.delta_seconds() * navigator.speed).extend(0.0);
+        });
 }
 
 fn display_path(
