@@ -55,7 +55,7 @@ impl AssetLoader for PathMeshPolyanyaLoader {
             reader
                 .read_to_end(&mut bytes)
                 .await
-                .map_err(|e| PathMeshLoaderError::Io(e))?;
+                .map_err(PathMeshLoaderError::Io)?;
             let pathmesh = PathMesh {
                 mesh: Arc::new(PolyanyaFile::from_bytes(bytes.as_slice()).into()),
                 transform: Transform::from_scale(Vec3::splat(1.)),
