@@ -64,7 +64,7 @@ fn main() {
             ),
         )
         .add_systems(FixedUpdate, (spawn, update_ui))
-        .insert_resource(FixedTime::new_from_secs(0.1))
+        .insert_resource(Time::<Fixed>::from_seconds(0.1))
         .run();
 }
 
@@ -289,17 +289,19 @@ fn spawn(
             .unwrap();
             let position = (in_mesh - MESH_SIZE / 2.0) * factor;
             let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
+
             commands.spawn((
-                SpriteBundle {
-                    sprite: Sprite {
-                        color,
-                        custom_size: Some(Vec2::ONE),
-                        ..default()
-                    },
-                    transform: Transform::from_translation(position.extend(1.0))
-                        .with_scale(Vec3::splat(5.0)),
-                    ..default()
-                },
+                // SpriteBundle {
+                //     sprite: Sprite {
+                //         color,
+                //         custom_size: Some(Vec2::ONE),
+                //         ..default()
+                //     },
+                //     transform: Transform::from_translation(position.extend(1.0))
+                //         .with_scale(Vec3::splat(5.0)),
+                //     ..default()
+                // },
+                Transform::from_translation(position.extend(1.0)).with_scale(Vec3::splat(5.0)),
                 Navigator {
                     speed: rng.gen_range(50.0..100.0),
                     color,

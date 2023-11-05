@@ -18,7 +18,6 @@ use bevy::reflect::TypePath;
 use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
 use bevy::{
     prelude::*,
-    reflect::TypeUuid,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use itertools::Itertools;
@@ -31,8 +30,8 @@ pub struct PathMeshPlugin;
 
 impl Plugin for PathMeshPlugin {
     fn build(&self, app: &mut App) {
-        app.add_asset::<PathMesh>()
-            .init_asset_loader::<asset_loaders::PathMeshPolyanyaLoader>();
+        app.register_asset_loader(asset_loaders::PathMeshPolyanyaLoader)
+            .init_asset::<PathMesh>();
     }
 }
 
@@ -49,8 +48,7 @@ pub use polyanya::Path;
 use polyanya::Trimesh;
 
 /// A navigation mesh
-#[derive(Debug, TypePath, TypeUuid, Clone)]
-#[uuid = "807C7A31-EA06-4A3B-821B-6E91ADB95734"]
+#[derive(Debug, TypePath, Clone, Asset)]
 pub struct PathMesh {
     mesh: Arc<polyanya::Mesh>,
     transform: Transform,
