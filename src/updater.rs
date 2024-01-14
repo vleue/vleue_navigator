@@ -87,8 +87,6 @@ impl ObstacleSource for Aabb {
         let transform = transform.compute_transform();
         let to_vec2 = |v: Vec3| mesh_transform.transform_point(v).xy();
 
-        // info!("Aabb: {}, {}", self.center, self.half_extents);
-
         vec![
             to_vec2(transform.transform_point(vec3(
                 -self.half_extents.x,

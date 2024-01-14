@@ -430,7 +430,6 @@ use bevy_xpbd_3d::prelude::*;
 fn spawn_cubes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
     mut timer: Local<Option<Timer>>,
 ) {
