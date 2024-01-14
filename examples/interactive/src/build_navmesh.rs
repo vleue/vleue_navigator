@@ -66,8 +66,8 @@ fn update(
                 }
             }
 
-            meshes.set_untracked(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
-            meshes.set_untracked(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
+            meshes.insert(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
+            meshes.insert(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
         }
         match *status {
             NavMeshStatus::Failed => {

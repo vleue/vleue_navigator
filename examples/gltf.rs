@@ -4,15 +4,13 @@ use bevy::{
     math::Vec3Swizzles,
     pbr::NotShadowCaster,
     prelude::*,
-    reflect::TypeUuid,
     window::PrimaryWindow,
 };
 use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 
-const HANDLE_TRIMESH_OPTIMIZED: HandleUntyped =
-    HandleUntyped::weak_from_u64(PathMesh::TYPE_UUID, 0);
+const HANDLE_TRIMESH_OPTIMIZED: Handle<PathMesh> = Handle::weak_from_u128(0);
 
 fn main() {
     App::new()
@@ -127,7 +125,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..Default::default()
     });
 
-    commands.insert_resource(CurrentMesh(HANDLE_TRIMESH_OPTIMIZED.typed()));
+    commands.insert_resource(CurrentMesh(HANDLE_TRIMESH_OPTIMIZED));
 }
 
 fn check_textures(
@@ -135,7 +133,7 @@ fn check_textures(
     gltf: ResMut<GltfHandle>,
     asset_server: Res<AssetServer>,
 ) {
-    if let LoadState::Loaded = asset_server.get_load_state(gltf.id()) {
+    if let Some(LoadState::Loaded) = asset_server.get_load_state(gltf.id()) {
         next_state.set(AppState::Playing);
     }
 }
@@ -170,7 +168,7 @@ fn setup_scene(
     let mut material: StandardMaterial = Color::ALICE_BLUE.into();
     material.perceptual_roughness = 1.0;
     let ground_material = materials.add(material);
-    if let Some(gltf) = gltfs.get(&gltf) {
+    if let Some(gltf) = gltfs.get(gltf.id()) {
         let mesh = gltf_meshes.get(&gltf.named_meshes["obstacles"]).unwrap();
         let mut material: StandardMaterial = Color::GRAY.into();
         material.perceptual_roughness = 1.0;
@@ -223,7 +221,7 @@ fn setup_scene(
         }
     }
 
-    if let Some(gltf) = gltfs.get(&gltf) {
+    if let Some(gltf) = gltfs.get(gltf.id()) {
         {
             let navmesh = bevy_pathmesh::PathMesh::from_bevy_mesh(
                 meshes
@@ -248,9 +246,9 @@ fn setup_scene(
                     visibility: Visibility::Hidden,
                     ..Default::default()
                 },
-                NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED.typed()),
+                NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED),
             ));
-            pathmeshes.set_untracked(HANDLE_TRIMESH_OPTIMIZED, navmesh);
+            pathmeshes.insert(HANDLE_TRIMESH_OPTIMIZED, navmesh);
         }
 
         commands
@@ -303,7 +301,7 @@ fn give_target_auto(
 
         let Some(path) = navmesh.transformed_path(transform.translation, Vec3::new(x, 0.0, z))
         else {
-            break
+            break;
         };
         if let Some((first, remaining)) = path.path.split_first() {
             let mut remaining = remaining.to_vec();
@@ -367,7 +365,7 @@ fn give_target_on_click(
             let target = ray.origin + ray.direction * t;
             navmesh.transformed_is_in_mesh(target).then_some(target)
         })() else {
-            return
+            return;
         };
 
         for (entity, transform, mut object) in object_query.iter_mut() {

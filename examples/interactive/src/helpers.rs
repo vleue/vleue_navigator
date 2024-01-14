@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::Obstacle;
+use crate::{BOARD_LIMIT, Obstacle};
 
 pub struct HelperPlugin;
 
@@ -12,17 +12,17 @@ impl Plugin for HelperPlugin {
 
 fn block_moving_obstacles_out(mut obstacle_transforms: Query<&mut Transform, With<Obstacle>>) {
     for mut transform in &mut obstacle_transforms {
-        if transform.translation.x < -4.4 {
-            transform.translation.x = -4.4;
+        if transform.translation.x < -BOARD_LIMIT {
+            transform.translation.x = -BOARD_LIMIT;
         }
-        if transform.translation.x > 4.4 {
-            transform.translation.x = 4.4;
+        if transform.translation.x > BOARD_LIMIT {
+            transform.translation.x = BOARD_LIMIT;
         }
-        if transform.translation.z < -4.4 {
-            transform.translation.z = -4.4;
+        if transform.translation.z < -BOARD_LIMIT {
+            transform.translation.z = -BOARD_LIMIT;
         }
-        if transform.translation.z > 4.4 {
-            transform.translation.z = 4.4;
+        if transform.translation.z > BOARD_LIMIT {
+            transform.translation.z = BOARD_LIMIT;
         }
     }
 }

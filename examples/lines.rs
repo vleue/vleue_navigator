@@ -283,7 +283,7 @@ fn compute_paths(
     meshes: Res<Meshes>,
     pathmeshes: Res<Assets<PathMesh>>,
 ) {
-    for ev in event_new_step_path.iter() {
+    for ev in event_new_step_path.read() {
         if path_to_display.steps.is_empty() {
             path_to_display.steps.push(ev.0);
             return;

@@ -64,7 +64,7 @@ fn main() {
             ),
         )
         .add_systems(FixedUpdate, (spawn, update_ui))
-        .insert_resource(FixedTime::new_from_secs(0.1))
+        .insert_resource(Time::<Fixed>::from_seconds(0.1))
         .run();
 }
 

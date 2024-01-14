@@ -20,7 +20,6 @@ use bevy::{
     math::Vec3Swizzles,
     prelude::*,
     reflect::TypePath,
-    reflect::TypeUuid,
     render::{
         mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
         render_resource::PrimitiveTopology,
@@ -38,8 +37,8 @@ pub struct PathMeshPlugin;
 
 impl Plugin for PathMeshPlugin {
     fn build(&self, app: &mut App) {
-        app.add_asset::<PathMesh>()
-            .init_asset_loader::<asset_loaders::PathMeshPolyanyaLoader>();
+        app.register_asset_loader(asset_loaders::PathMeshPolyanyaLoader)
+            .init_asset::<PathMesh>();
     }
 }
 
@@ -58,8 +57,7 @@ pub use polyanya::Triangulation as PolyanyaTriangulation;
 use polyanya::Trimesh;
 
 /// A navigation mesh
-#[derive(Debug, TypePath, TypeUuid, Clone)]
-#[uuid = "807C7A31-EA06-4A3B-821B-6E91ADB95734"]
+#[derive(Debug, TypePath, Clone, Asset)]
 pub struct PathMesh {
     mesh: Arc<polyanya::Mesh>,
     transform: Transform,
@@ -148,7 +146,7 @@ impl PathMesh {
     /// zut
     pub fn set_delta(&mut self, delta: f32) -> bool {
         if let Some(mesh) = Arc::get_mut(&mut self.mesh) {
-            debug!("setting mesh delta to {}", delta);
+            // debug!("setting mesh delta to {}", delta);
             mesh.set_delta(delta);
             true
         } else {

@@ -556,7 +556,7 @@ fn button_system(
                         ..Default::default()
                     },
                     bevy_mod_picking::PickableBundle::default(),
-                    bevy_mod_picking::backends::raycast::RaycastPickTarget::default(),
+                    bevy_mod_picking::backends::raycast::RaycastPickable::default(),
                     bevy_transform_gizmo::GizmoTransformable,
                     Obstacle,
                     RenderLayers::layer(1),
@@ -578,7 +578,7 @@ fn button_system(
                             ..Default::default()
                         },
                         bevy_mod_picking::PickableBundle::default(),
-                        bevy_mod_picking::backends::raycast::RaycastPickTarget::default(),
+                        bevy_mod_picking::backends::raycast::RaycastPickable::default(),
                         bevy_transform_gizmo::GizmoTransformable,
                         Obstacle,
                         RenderLayers::layer(1),
@@ -607,7 +607,7 @@ fn button_system(
                                 ..Default::default()
                             },
                             bevy_mod_picking::PickableBundle::default(),
-                            bevy_mod_picking::backends::raycast::RaycastPickTarget::default(),
+                            bevy_mod_picking::backends::raycast::RaycastPickable::default(),
                             bevy_transform_gizmo::GizmoTransformable,
                             Obstacle,
                             RenderLayers::layer(1),

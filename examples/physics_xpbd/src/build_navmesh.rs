@@ -31,7 +31,7 @@ impl ObstacleSource for MyCollider {
     ) -> Vec<Vec2> {
         let transform = global_transform.compute_transform();
         let to_vec2 = |v: Vec3| mesh_transform.transform_point(v).xy();
-        let intersection = match self.0.as_typed_shape() {
+        let intersection = match self.0.shape().as_typed_shape() {
             bevy_xpbd_3d::parry::shape::TypedShape::Ball(collider) => {
                 let (vtx, idx) = collider.to_trimesh(10, 10);
                 TriMesh::new(vtx, idx).intersection_with_plane(
@@ -164,8 +164,8 @@ fn update(
                 }
             }
 
-            meshes.set_untracked(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
-            meshes.set_untracked(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
+            meshes.insert(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
+            meshes.insert(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
         }
         match *status {
             NavMeshStatus::Failed => {

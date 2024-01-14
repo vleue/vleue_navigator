@@ -5,3 +5,4 @@ Cargo.lock
 /wasm/*.png
 /wasm/*.js
 TODO.md
+/.idea/

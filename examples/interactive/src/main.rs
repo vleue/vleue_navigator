@@ -1,3 +1,6 @@
+#![feature(const_type_id)]
+
+use std::any::TypeId;
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::{
@@ -5,9 +8,9 @@ use bevy::{
     math::{vec2, vec3},
     pbr::NotShadowCaster,
     prelude::*,
-    reflect::TypeUuid,
     render::view::{RenderLayers, VisibilitySystems},
 };
+use bevy::asset::UntypedAssetId;
 use bevy_pathmesh::{
     updater::{NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode},
     PathMesh, PathMeshPlugin, PolyanyaTriangulation,
@@ -19,19 +22,56 @@ mod build_navmesh;
 mod helpers;
 mod ui;
 
-const HANDLE_NAVMESH_WIREFRAME: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 1);
-const HANDLE_NAVMESH_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 2);
+const HANDLE_NAVMESH_WIREFRAME: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<Mesh>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x01,
+    ])
+});
+const HANDLE_NAVMESH_MESH: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<Mesh>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x02,
+    ])
+});
 
-const HANDLE_OBSTACLE_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 3);
-const HANDLE_AGENT_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 4);
-const HANDLE_TARGET_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 5);
+const HANDLE_OBSTACLE_MESH: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<Mesh>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x03,
+    ])
+});
+const HANDLE_AGENT_MESH: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<Mesh>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x04,
+    ])
+});
+const HANDLE_TARGET_MESH: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<Mesh>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x05,
+    ])
+});
 
-const HANDLE_OBSTACLE_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 1);
-const HANDLE_AGENT_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 2);
-const HANDLE_TARGET_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 3);
+const HANDLE_OBSTACLE_MATERIAL: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<StandardMaterial>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x06,
+    ])
+});
+const HANDLE_AGENT_MATERIAL: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<StandardMaterial>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x07,
+    ])
+});
+const HANDLE_TARGET_MATERIAL: UntypedHandle = UntypedHandle::Weak(UntypedAssetId::Uuid {
+    type_id: TypeId::of::<StandardMaterial>(),
+    uuid: bevy::reflect::Uuid::from_bytes([
+        0x6b, 0xa7, 0xb6, 0x11, 0x9d, 0xaa, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0x08,
+    ])
+});
 
 const BOARD_LIMIT: f32 = 4.4;
 
@@ -79,8 +119,8 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut pathmeshes: ResMut<Assets<PathMesh>>,
 ) {
-    meshes.set_untracked(HANDLE_OBSTACLE_MESH, Mesh::from(shape::Cube { size: 0.4 }));
-    meshes.set_untracked(
+    meshes.insert(HANDLE_OBSTACLE_MESH, Mesh::from(shape::Cube { size: 0.4 }));
+    meshes.insert(
         HANDLE_AGENT_MESH,
         Mesh::from(shape::Capsule {
             radius: 0.1,
@@ -88,14 +128,14 @@ fn setup(
             ..default()
         }),
     );
-    meshes.set_untracked(
+    meshes.insert(
         HANDLE_TARGET_MESH,
         Mesh::from(shape::UVSphere {
             radius: 0.05,
             ..default()
         }),
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_OBSTACLE_MATERIAL,
         StandardMaterial {
             base_color: Color::RED,
@@ -103,14 +143,14 @@ fn setup(
             ..default()
         },
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_AGENT_MATERIAL,
         StandardMaterial {
             base_color: Color::GREEN,
             ..default()
         },
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_TARGET_MATERIAL,
         StandardMaterial {
             base_color: Color::YELLOW,
@@ -124,8 +164,8 @@ fn setup(
         vec![],
     );
     pathmesh.set_transform(Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)));
-    meshes.set_untracked(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
-    meshes.set_untracked(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
+    meshes.insert(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
+    meshes.insert(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
     commands.spawn((
         NavMeshBundle {
             settings: NavMeshSettings {
@@ -208,7 +248,7 @@ fn setup(
             ..Default::default()
         },
         UiCameraConfig { show_ui: false },
-        bevy_mod_picking::backends::raycast::RaycastPickCamera::default(),
+        bevy_mod_picking::backends::raycast::RaycastPickable::default(),
         bevy_transform_gizmo::GizmoPickSource::default(),
         RenderLayers::layer(1),
     ));

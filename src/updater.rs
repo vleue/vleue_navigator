@@ -87,6 +87,8 @@ impl ObstacleSource for Aabb {
         let transform = transform.compute_transform();
         let to_vec2 = |v: Vec3| mesh_transform.transform_point(v).xy();
 
+        // info!("Aabb: {}, {}", self.center, self.half_extents);
+
         vec![
             to_vec2(transform.transform_point(vec3(
                 -self.half_extents.x,
@@ -103,7 +105,11 @@ impl ObstacleSource for Aabb {
                 0.0,
                 -self.half_extents.z,
             ))),
-            to_vec2(transform.transform_point(vec3(self.half_extents.x, 0.0, self.half_extents.z))),
+            to_vec2(transform.transform_point(vec3(
+                self.half_extents.x,
+                0.0,
+                self.half_extents.z,
+            ))),
         ]
     }
 }
@@ -264,7 +270,7 @@ fn update_navmesh_asset(
             match pathmesh_built {
                 Ok(navmesh) => {
                     debug!("navmesh built");
-                    let _ = pathmeshes.set(handle, navmesh);
+                    let _ = pathmeshes.insert(handle, navmesh);
                     *status = NavMeshStatus::Built;
                 }
                 Err(()) => {
