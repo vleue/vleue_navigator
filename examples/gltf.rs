@@ -311,7 +311,6 @@ fn give_target_auto(
                     PbrBundle {
                         mesh: meshes.add(Mesh::from(Sphere {
                             radius: 0.5,
-                            ..default()
                         })),
                         material: materials.add(StandardMaterial::from(Color::RED)),
                         transform: Transform::from_xyz(x, 0.0, z),
@@ -334,7 +333,7 @@ fn give_target_auto(
                 })
                 .id();
             commands.entity(entity).insert(Path {
-                current: first.clone(),
+                current: *first,
                 next: remaining,
             });
             object.0 = Some(target_id);
@@ -342,6 +341,7 @@ fn give_target_auto(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn give_target_on_click(
     mut commands: Commands,
     mut object_query: Query<(Entity, &Transform, &mut Object)>,
@@ -380,7 +380,6 @@ fn give_target_on_click(
                         PbrBundle {
                             mesh: meshes.add(Mesh::from(Sphere {
                                 radius: 0.5,
-                                ..default()
                             })),
                             material: materials.add(StandardMaterial::from(Color::RED)),
                             transform: Transform::from_translation(target),
@@ -403,7 +402,7 @@ fn give_target_on_click(
                     })
                     .id();
                 commands.entity(entity).insert(Path {
-                    current: first.clone(),
+                    current: *first,
                     next: remaining,
                 });
                 object.0 = Some(target_id);

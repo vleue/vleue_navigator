@@ -43,7 +43,7 @@ fn main() {
                         ..default()
                     },
                 }),
-            FrameTimeDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin,
             LogDiagnosticsPlugin::default(),
             PathMeshPlugin,
         ))
@@ -205,6 +205,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn on_mesh_change(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -470,6 +471,7 @@ fn display_path(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn go_somewhere(
     query: Query<
         Entity,
@@ -488,7 +490,7 @@ fn go_somewhere(
             rng.gen_range(0.0..MESH_SIZE.x),
             rng.gen_range(0.0..MESH_SIZE.y),
         );
-        commands.entity(navigator).insert(Target { target: target });
+        commands.entity(navigator).insert(Target { target });
     }
 }
 
@@ -526,13 +528,10 @@ fn update_ui(
         )
     );
     text.sections[9].value = format!("{:?}\n", *task_mode);
-    text.sections[11].value = format!(
-        "{}",
-        match *display_mode {
-            DisplayMode::Line => "hide lines",
-            DisplayMode::Nothing => "display lines",
-        }
-    );
+    text.sections[11].value = match *display_mode {
+        DisplayMode::Line => "hide lines",
+        DisplayMode::Nothing => "display lines",
+    }.to_string();
     *count = new_count;
 }
 

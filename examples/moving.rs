@@ -126,6 +126,7 @@ fn setup(
     commands.insert_resource(AURORA);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn on_mesh_change(
     mesh: Res<MeshDetails>,
     mut commands: Commands,
@@ -269,6 +270,7 @@ struct Path {
     path: Vec<Vec2>,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn on_click(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,

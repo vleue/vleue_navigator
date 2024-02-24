@@ -123,6 +123,7 @@ struct PathToDisplay {
     steps: Vec<Vec2>,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn on_mesh_change(
     mut path_to_display: ResMut<PathToDisplay>,
     mesh: Res<MeshDetails>,
