@@ -1,7 +1,7 @@
 use bevy::{
     asset::LoadState,
     gltf::{Gltf, GltfMesh},
-    math::Vec3Swizzles,
+    math::{primitives::Sphere, Vec3Swizzles},
     pbr::NotShadowCaster,
     prelude::*,
     window::PrimaryWindow,
@@ -20,14 +20,14 @@ fn main() {
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Navmesh with Polyanya".to_string(),
-                    fit_canvas_to_parent: true,
+                    canvas: Some("canvas { width: 100%; height: 100%; }".to_string()),
                     ..default()
                 }),
                 ..default()
             }),
             PathMeshPlugin,
         ))
-        .add_state::<AppState>()
+        .init_state::<AppState>()
         .add_systems(OnEnter(AppState::Setup), setup)
         .add_systems(Update, check_textures.run_if(in_state(AppState::Setup)))
         .add_systems(OnExit(AppState::Setup), setup_scene)
@@ -64,7 +64,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.insert_resource(AmbientLight {
         color: Color::SEA_GREEN,
-        brightness: 0.05,
+        brightness: 400.0,
     });
 
     commands.spawn(Camera3dBundle {
@@ -197,7 +197,7 @@ fn setup_scene(
             commands.spawn((
                 SpotLightBundle {
                     spot_light: SpotLight {
-                        intensity: 800.0,
+                        intensity: 1000000.0,
                         color: Color::SEA_GREEN,
                         shadows_enabled: true,
                         inner_angle: 0.5,
@@ -254,8 +254,8 @@ fn setup_scene(
         commands
             .spawn((
                 PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::Capsule { ..default() })),
-                    material: materials.add(Color::BLUE.into()),
+                    mesh: meshes.add(Mesh::from(Capsule3d { ..default() })),
+                    material: materials.add(StandardMaterial::from(Color::BLUE)),
                     transform: Transform::from_xyz(-1.0, 0.0, -2.0),
                     ..Default::default()
                 },
@@ -267,7 +267,7 @@ fn setup_scene(
                     point_light: PointLight {
                         color: Color::BLUE,
                         range: 500.0,
-                        intensity: 2000.0,
+                        intensity: 100000.0,
                         shadows_enabled: true,
                         ..default()
                     },
@@ -309,11 +309,11 @@ fn give_target_auto(
             let target_id = commands
                 .spawn((
                     PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::UVSphere {
+                        mesh: meshes.add(Mesh::from(Sphere {
                             radius: 0.5,
                             ..default()
                         })),
-                        material: materials.add(Color::RED.into()),
+                        material: materials.add(StandardMaterial::from(Color::RED)),
                         transform: Transform::from_xyz(x, 0.0, z),
                         ..Default::default()
                     },
@@ -350,7 +350,7 @@ fn give_target_on_click(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,
-    mouse_buttons: Res<Input<MouseButton>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
 ) {
@@ -360,7 +360,7 @@ fn give_target_on_click(
             let position = primary_window.single().cursor_position()?;
             let (camera, transform) = camera.get_single().ok()?;
             let ray = camera.viewport_to_world(transform, position)?;
-            let denom = Vec3::Y.dot(ray.direction);
+            let denom = Vec3::Y.dot(*ray.direction);
             let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;
             let target = ray.origin + ray.direction * t;
             navmesh.transformed_is_in_mesh(target).then_some(target)
@@ -378,11 +378,11 @@ fn give_target_on_click(
                 let target_id = commands
                     .spawn((
                         PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::UVSphere {
+                            mesh: meshes.add(Mesh::from(Sphere {
                                 radius: 0.5,
                                 ..default()
                             })),
-                            material: materials.add(Color::RED.into()),
+                            material: materials.add(StandardMaterial::from(Color::RED)),
                             transform: Transform::from_translation(target),
                             ..Default::default()
                         },
@@ -437,7 +437,7 @@ fn move_object(
 
 fn trigger_navmesh_visibility(
     mut query: Query<(&mut Visibility, &NavMeshDisp)>,
-    keyboard_input: ResMut<Input<KeyCode>>,
+    keyboard_input: ResMut<ButtonInput<KeyCode>>,
     current_mesh: Res<CurrentMesh>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
@@ -460,7 +460,7 @@ fn target_activity(
 ) {
     for children in &target {
         point_light.get_mut(children[0]).unwrap().intensity =
-            (time.elapsed_seconds() * 10.0).sin().abs() * 100.0;
+            (time.elapsed_seconds() * 10.0).sin().abs() * 100000.0;
     }
 }
 
