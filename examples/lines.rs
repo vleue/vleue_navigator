@@ -12,7 +12,7 @@ fn main() {
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Navmesh with Polyanya".to_string(),
-                    fit_canvas_to_parent: true,
+                    canvas: Some("canvas { width: 100%; height: 100%; }".to_string()),
                     ..default()
                 }),
                 ..default()
@@ -224,7 +224,7 @@ fn on_mesh_change(
     });
 }
 
-fn mesh_change(mut mesh: ResMut<MeshDetails>, keyboard_input: Res<Input<KeyCode>>) {
+fn mesh_change(mut mesh: ResMut<MeshDetails>, keyboard_input: Res<ButtonInput<KeyCode>>) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         match mesh.mesh {
             CurrentMesh::Simple => *mesh = ARENA,
@@ -239,7 +239,7 @@ struct NewPathStepEvent(Vec2);
 
 fn on_click(
     mut path_step_event: EventWriter<NewPathStepEvent>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mesh: Res<MeshDetails>,
