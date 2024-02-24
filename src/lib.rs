@@ -16,6 +16,7 @@ use std::sync::Arc;
 use bevy::math::Vec3Swizzles;
 use bevy::reflect::TypePath;
 use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
+use bevy::render::render_asset::RenderAssetUsages;
 use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
@@ -183,7 +184,7 @@ impl PathMesh {
 
     /// Creates a [`Mesh`] from this [`PathMesh`], suitable for rendering the surface
     pub fn to_mesh(&self) -> Mesh {
-        let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
         let inverse_transform = self.inverse_transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
@@ -194,7 +195,7 @@ impl PathMesh {
                 .map(|coords| inverse_transform.transform_point(coords.into()).into())
                 .collect::<Vec<[f32; 3]>>(),
         );
-        new_mesh.set_indices(Some(Indices::U32(
+        new_mesh.insert_indices(Indices::U32(
             self.mesh
                 .polygons
                 .iter()
@@ -203,13 +204,13 @@ impl PathMesh {
                         .flat_map(|i| [p.vertices[0], p.vertices[i - 1], p.vertices[i]])
                 })
                 .collect(),
-        )));
+        ));
         new_mesh
     }
 
     /// Creates a [`Mesh`] from this [`PathMesh`], showing the wireframe of the polygons
     pub fn to_wireframe_mesh(&self) -> Mesh {
-        let mut new_mesh = Mesh::new(PrimitiveTopology::LineList);
+        let mut new_mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::all());
         let inverse_transform = self.inverse_transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
@@ -220,7 +221,7 @@ impl PathMesh {
                 .map(|coords| inverse_transform.transform_point(coords.into()).into())
                 .collect::<Vec<[f32; 3]>>(),
         );
-        new_mesh.set_indices(Some(Indices::U32(
+        new_mesh.insert_indices(Indices::U32(
             self.mesh
                 .polygons
                 .iter()
@@ -231,7 +232,7 @@ impl PathMesh {
                 .unique_by(|[a, b]| if a < b { (*a, *b) } else { (*b, *a) })
                 .flatten()
                 .collect(),
-        )));
+        ));
         new_mesh
     }
 
