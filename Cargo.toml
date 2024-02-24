@@ -23,12 +23,6 @@ version = "0.13"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
-[patch.crates-io]
-polyanya = { git = "https://github.com/66OJ66/polyanya", branch = "main" }
-
-[patch."https://github.com/mockersf/bvh2d"]
-bvh2d = { git = "https://github.com/66OJ66/bvh2d", branch = "main"}
-
 [dev-dependencies]
 rand = "0.8"
 
