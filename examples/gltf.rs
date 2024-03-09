@@ -6,11 +6,11 @@ use bevy::{
     prelude::*,
     window::PrimaryWindow,
 };
-use bevy_pathmesh::{PathMesh, PathMeshPlugin};
 use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
+use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
-const HANDLE_TRIMESH_OPTIMIZED: Handle<PathMesh> = Handle::weak_from_u128(0);
+const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> = Handle::weak_from_u128(0);
 
 fn main() {
     App::new()
@@ -24,7 +24,7 @@ fn main() {
                 }),
                 ..default()
             }),
-            PathMeshPlugin,
+            VleueNavigatorPlugin,
         ))
         .init_state::<AppState>()
         .add_systems(OnEnter(AppState::Setup), setup)
@@ -56,7 +56,7 @@ enum AppState {
 struct GltfHandle(Handle<Gltf>);
 
 #[derive(Resource)]
-struct CurrentMesh(Handle<PathMesh>);
+struct CurrentMesh(Handle<NavMesh>);
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(GltfHandle(asset_server.load("meshes/navmesh.glb")));
@@ -153,7 +153,7 @@ struct Target;
 struct Hover(Vec2);
 
 #[derive(Component, Clone)]
-struct NavMeshDisp(Handle<PathMesh>);
+struct NavMeshDisp(Handle<NavMesh>);
 
 fn setup_scene(
     mut commands: Commands,
@@ -162,7 +162,7 @@ fn setup_scene(
     gltf_meshes: Res<Assets<GltfMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut pathmeshes: ResMut<Assets<PathMesh>>,
+    mut navmeshes: ResMut<Assets<NavMesh>>,
 ) {
     let mut material: StandardMaterial = Color::ALICE_BLUE.into();
     material.perceptual_roughness = 1.0;
@@ -222,7 +222,7 @@ fn setup_scene(
 
     if let Some(gltf) = gltfs.get(gltf.id()) {
         {
-            let navmesh = bevy_pathmesh::PathMesh::from_bevy_mesh(
+            let navmesh = vleue_navigator::NavMesh::from_bevy_mesh(
                 meshes
                     .get(
                         &gltf_meshes
@@ -247,7 +247,7 @@ fn setup_scene(
                 },
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED),
             ));
-            pathmeshes.insert(HANDLE_TRIMESH_OPTIMIZED, navmesh);
+            navmeshes.insert(HANDLE_TRIMESH_OPTIMIZED, navmesh);
         }
 
         commands
@@ -284,7 +284,7 @@ fn setup_scene(
 fn give_target_auto(
     mut commands: Commands,
     mut object_query: Query<(Entity, &Transform, &mut Object), Without<Path>>,
-    navmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,
@@ -353,7 +353,7 @@ fn give_target_on_click(
     mut commands: Commands,
     mut object_query: Query<(Entity, &Transform, &mut Object)>,
     targets: Query<Entity, With<Target>>,
-    navmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,

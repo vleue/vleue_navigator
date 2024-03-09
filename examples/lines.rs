@@ -3,7 +3,7 @@ use bevy::{
     sprite::MaterialMesh2dBundle,
     window::{PrimaryWindow, WindowResized},
 };
-use bevy_pathmesh::{PathMesh, PathMeshPlugin};
+use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
 fn main() {
     App::new()
@@ -16,7 +16,7 @@ fn main() {
                 }),
                 ..default()
             }),
-            PathMeshPlugin,
+            VleueNavigatorPlugin,
         ))
         .add_event::<NewPathStepEvent>()
         .insert_resource(PathToDisplay::default())
@@ -36,9 +36,9 @@ fn main() {
 
 #[derive(Resource)]
 struct Meshes {
-    simple: Handle<PathMesh>,
-    arena: Handle<PathMesh>,
-    aurora: Handle<PathMesh>,
+    simple: Handle<NavMesh>,
+    arena: Handle<NavMesh>,
+    aurora: Handle<NavMesh>,
 }
 
 enum CurrentMesh {
@@ -70,12 +70,12 @@ const AURORA: MeshDetails = MeshDetails {
 
 fn setup(
     mut commands: Commands,
-    mut pathmeshes: ResMut<Assets<PathMesh>>,
+    mut navmeshes: ResMut<Assets<NavMesh>>,
     asset_server: Res<AssetServer>,
 ) {
     commands.spawn(Camera2dBundle::default());
     commands.insert_resource(Meshes {
-        simple: pathmeshes.add(PathMesh::from_polyanya_mesh(polyanya::Mesh::new(
+        simple: navmeshes.add(NavMesh::from_polyanya_mesh(polyanya::Mesh::new(
             vec![
                 polyanya::Vertex::new(Vec2::new(0., 6.), vec![0, -1]),
                 polyanya::Vertex::new(Vec2::new(2., 5.), vec![0, -1, 2]),
@@ -127,7 +127,7 @@ fn on_mesh_change(
     mesh: Res<MeshDetails>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     path_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
@@ -145,7 +145,7 @@ fn on_mesh_change(
         CurrentMesh::Arena => &path_meshes.arena,
         CurrentMesh::Aurora => &path_meshes.aurora,
     };
-    let pathmesh = pathmeshes.get(handle).unwrap();
+    let navmesh = navmeshes.get(handle).unwrap();
     if let Some(entity) = *current_mesh_entity {
         commands.entity(entity).despawn_recursive();
     }
@@ -155,7 +155,7 @@ fn on_mesh_change(
     *current_mesh_entity = Some(
         commands
             .spawn(MaterialMesh2dBundle {
-                mesh: meshes.add(pathmesh.to_mesh()).into(),
+                mesh: meshes.add(navmesh.to_mesh()).into(),
                 transform: Transform::from_translation(Vec3::new(
                     -mesh.size.x / 2.0 * factor,
                     -mesh.size.y / 2.0 * factor,
@@ -167,7 +167,7 @@ fn on_mesh_change(
             })
             .with_children(|main_mesh| {
                 main_mesh.spawn(MaterialMesh2dBundle {
-                    mesh: meshes.add(pathmesh.to_wireframe_mesh()).into(),
+                    mesh: meshes.add(navmesh.to_wireframe_mesh()).into(),
                     transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
                     material: materials.add(ColorMaterial::from(Color::rgb(0.5, 0.5, 1.0))),
                     ..default()
@@ -243,7 +243,7 @@ fn on_click(
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
         let (camera, camera_transform) = camera_q.single();
@@ -257,7 +257,7 @@ fn on_click(
             let factor = (screen.x / mesh.size.x).min(screen.y / mesh.size.y);
 
             let in_mesh = position / factor + mesh.size / 2.0;
-            if pathmeshes
+            if navmeshes
                 .get(match mesh.mesh {
                     CurrentMesh::Simple => &meshes.simple,
                     CurrentMesh::Arena => &meshes.arena,
@@ -280,7 +280,7 @@ fn compute_paths(
     mut path_to_display: ResMut<PathToDisplay>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
 ) {
     for ev in event_new_step_path.read() {
         if path_to_display.steps.is_empty() {
@@ -288,7 +288,7 @@ fn compute_paths(
             return;
         }
 
-        let path_mesh = pathmeshes
+        let path_mesh = navmeshes
             .get(match mesh.mesh {
                 CurrentMesh::Simple => &meshes.simple,
                 CurrentMesh::Arena => &meshes.arena,

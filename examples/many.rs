@@ -16,7 +16,7 @@ use bevy::{
 };
 use rand::prelude::*;
 
-use bevy_pathmesh::{PathMesh, PathMeshPlugin};
+use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
 fn main() {
     App::new()
@@ -44,7 +44,7 @@ fn main() {
                 }),
             FrameTimeDiagnosticsPlugin::default(),
             LogDiagnosticsPlugin::default(),
-            PathMeshPlugin,
+            VleueNavigatorPlugin,
         ))
         .init_resource::<Stats>()
         .insert_resource(TaskMode::Blocking)
@@ -81,7 +81,7 @@ enum DisplayMode {
 
 #[derive(Resource)]
 struct Meshes {
-    aurora: Handle<PathMesh>,
+    aurora: Handle<NavMesh>,
 }
 
 const MESH_SIZE: Vec2 = Vec2::new(1024.0, 768.0);
@@ -207,7 +207,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn on_mesh_change(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     path_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
@@ -217,7 +217,7 @@ fn on_mesh_change(
 ) {
     if !window_resized.is_empty() || *wait_for_mesh {
         let handle = &path_meshes.aurora;
-        if let Some(pathmesh) = pathmeshes.get(handle) {
+        if let Some(navmesh) = navmeshes.get(handle) {
             *wait_for_mesh = false;
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
@@ -227,7 +227,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn(MaterialMesh2dBundle {
-                        mesh: meshes.add(pathmesh.to_mesh()).into(),
+                        mesh: meshes.add(navmesh.to_mesh()).into(),
                         transform: Transform::from_translation(Vec3::new(
                             -MESH_SIZE.x / 2.0 * factor,
                             -MESH_SIZE.y / 2.0 * factor,
@@ -264,10 +264,10 @@ struct Path {
 fn spawn(
     primary_window: Query<&Window, With<PrimaryWindow>>,
     mut commands: Commands,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
     path_meshes: Res<Meshes>,
 ) {
-    if pathmeshes.contains(&path_meshes.aurora) {
+    if navmeshes.contains(&path_meshes.aurora) {
         let window = primary_window.single();
         let mut rng = rand::thread_rng();
         let screen = Vec2::new(window.width(), window.height());
@@ -330,7 +330,7 @@ struct FindingPath(Arc<RwLock<TaskResult>>);
 fn compute_paths(
     mut commands: Commands,
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
-    meshes: Res<Assets<PathMesh>>,
+    meshes: Res<Assets<NavMesh>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     task_mode: Res<TaskMode>,
     mesh: Res<Meshes>,
@@ -382,7 +382,7 @@ fn poll_path_tasks(
     mut commands: Commands,
     computing: Query<(Entity, &FindingPath, &Transform)>,
     mut stats: ResMut<Stats>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
     meshes: Res<Meshes>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -403,7 +403,7 @@ fn poll_path_tasks(
                 let screen = Vec2::new(window.width(), window.height());
                 let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
-                if !pathmeshes
+                if !navmeshes
                     .get(&meshes.aurora)
                     .unwrap()
                     .is_in_mesh(transform.translation.xy() / factor + MESH_SIZE / 2.0)

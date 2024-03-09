@@ -11,7 +11,7 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 
-use bevy_pathmesh::{PathMesh, PathMeshPlugin};
+use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
 fn main() {
     App::new()
@@ -24,7 +24,7 @@ fn main() {
                 }),
                 ..default()
             }),
-            PathMeshPlugin,
+            VleueNavigatorPlugin,
         ))
         .add_systems(Startup, setup)
         .add_systems(
@@ -44,9 +44,9 @@ fn main() {
 
 #[derive(Resource)]
 struct Meshes {
-    simple: Handle<PathMesh>,
-    arena: Handle<PathMesh>,
-    aurora: Handle<PathMesh>,
+    simple: Handle<NavMesh>,
+    arena: Handle<NavMesh>,
+    aurora: Handle<NavMesh>,
 }
 
 enum CurrentMesh {
@@ -78,12 +78,12 @@ const AURORA: MeshDetails = MeshDetails {
 
 fn setup(
     mut commands: Commands,
-    mut pathmeshes: ResMut<Assets<PathMesh>>,
+    mut navmeshes: ResMut<Assets<NavMesh>>,
     asset_server: Res<AssetServer>,
 ) {
     commands.spawn(Camera2dBundle::default());
     commands.insert_resource(Meshes {
-        simple: pathmeshes.add(PathMesh::from_polyanya_mesh(polyanya::Mesh::new(
+        simple: navmeshes.add(NavMesh::from_polyanya_mesh(polyanya::Mesh::new(
             vec![
                 polyanya::Vertex::new(Vec2::new(0., 6.), vec![0, -1]),
                 polyanya::Vertex::new(Vec2::new(2., 5.), vec![0, -1, 2]),
@@ -129,7 +129,7 @@ fn on_mesh_change(
     mesh: Res<MeshDetails>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     path_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
@@ -146,7 +146,7 @@ fn on_mesh_change(
             CurrentMesh::Arena => &path_meshes.arena,
             CurrentMesh::Aurora => &path_meshes.aurora,
         };
-        if let Some(pathmesh) = pathmeshes.get(handle) {
+        if let Some(navmesh) = navmeshes.get(handle) {
             *wait_for_mesh = false;
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
@@ -159,7 +159,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn(MaterialMesh2dBundle {
-                        mesh: meshes.add(pathmesh.to_mesh()).into(),
+                        mesh: meshes.add(navmesh.to_mesh()).into(),
                         transform: Transform::from_translation(Vec3::new(
                             -mesh.size.x / 2.0 * factor,
                             -mesh.size.y / 2.0 * factor,
@@ -260,7 +260,7 @@ struct Navigator {
 #[derive(Component)]
 struct Target {
     target: Vec2,
-    pathmesh: Handle<PathMesh>,
+    navmesh: Handle<NavMesh>,
 }
 
 #[derive(Component)]
@@ -276,7 +276,7 @@ fn on_click(
     meshes: Res<Meshes>,
     mut commands: Commands,
     query: Query<Entity, With<Navigator>>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
         let (camera, camera_transform) = camera_q.single();
@@ -289,7 +289,7 @@ fn on_click(
             let screen = Vec2::new(window.width(), window.height());
             let factor = (screen.x / mesh.size.x).min(screen.y / mesh.size.y);
             let in_mesh = position / factor + mesh.size / 2.0;
-            if pathmeshes
+            if navmeshes
                 .get(match mesh.mesh {
                     CurrentMesh::Simple => &meshes.simple,
                     CurrentMesh::Arena => &meshes.arena,
@@ -302,7 +302,7 @@ fn on_click(
                     info!("going to {}", in_mesh);
                     commands.entity(navigator).insert(Target {
                         target: in_mesh,
-                        pathmesh: match mesh.mesh {
+                        navmesh: match mesh.mesh {
                             CurrentMesh::Simple => meshes.simple.clone_weak(),
                             CurrentMesh::Arena => meshes.arena.clone_weak(),
                             CurrentMesh::Aurora => meshes.aurora.clone_weak(),
@@ -340,7 +340,7 @@ struct FindingPath(Arc<RwLock<(Option<polyanya::Path>, bool)>>);
 fn compute_paths(
     mut commands: Commands,
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
-    meshes: Res<Assets<PathMesh>>,
+    meshes: Res<Assets<NavMesh>>,
     mesh: Res<MeshDetails>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -349,7 +349,7 @@ fn compute_paths(
 
     for (entity, target, transform) in &with_target {
         let in_mesh = transform.translation.truncate() / factor + mesh.size / 2.0;
-        let mesh = meshes.get(&target.pathmesh).unwrap();
+        let mesh = meshes.get(&target.navmesh).unwrap();
 
         let to = target.target;
         let mesh = mesh.clone();

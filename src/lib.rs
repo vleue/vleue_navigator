@@ -25,18 +25,18 @@ use itertools::Itertools;
 
 pub mod asset_loaders;
 
-/// Bevy plugin to add support for the [`PathMesh`] asset type.
+/// Bevy plugin to add support for the [`NavMesh`] asset type.
 #[derive(Debug, Clone, Copy)]
-pub struct PathMeshPlugin;
+pub struct VleueNavigatorPlugin;
 
-impl Plugin for PathMeshPlugin {
+impl Plugin for VleueNavigatorPlugin {
     fn build(&self, app: &mut App) {
-        app.register_asset_loader(asset_loaders::PathMeshPolyanyaLoader)
-            .init_asset::<PathMesh>();
+        app.register_asset_loader(asset_loaders::NavMeshPolyanyaLoader)
+            .init_asset::<NavMesh>();
     }
 }
 
-/// A path between two points, in 3 dimensions using [`PathMesh::transform`].
+/// A path between two points, in 3 dimensions using [`NavMesh::transform`].
 #[derive(Debug, PartialEq)]
 pub struct TransformedPath {
     /// Length of the path.
@@ -50,29 +50,26 @@ use polyanya::Trimesh;
 
 /// A navigation mesh
 #[derive(Debug, TypePath, Clone, Asset)]
-pub struct PathMesh {
+pub struct NavMesh {
     mesh: Arc<polyanya::Mesh>,
     transform: Transform,
 }
 
-impl PathMesh {
-    /// Builds a [`PathMesh`] from a Polyanya [`Mesh`](polyanya::Mesh)
-    pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> PathMesh {
-        PathMesh {
+impl NavMesh {
+    /// Builds a [`NavMesh`] from a Polyanya [`Mesh`](polyanya::Mesh)
+    pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> NavMesh {
+        NavMesh {
             mesh: Arc::new(mesh),
             transform: Transform::IDENTITY,
         }
     }
 
-    /// Creates a [`PathMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
+    /// Creates a [`NavMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
     /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
     /// The [`polyanya::Mesh`] generated in the process can be modified via `callback`.
     ///
     /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
-    pub fn from_bevy_mesh_and_then(
-        mesh: &Mesh,
-        callback: impl Fn(&mut polyanya::Mesh),
-    ) -> PathMesh {
+    pub fn from_bevy_mesh_and_then(mesh: &Mesh, callback: impl Fn(&mut polyanya::Mesh)) -> NavMesh {
         let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).next().unwrap();
         let rotation = Quat::from_rotation_arc(normal, Vec3::Z);
 
@@ -101,11 +98,11 @@ impl PathMesh {
         path_mesh
     }
 
-    /// Creates a [`PathMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
+    /// Creates a [`NavMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
     /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
     ///
     /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
-    pub fn from_bevy_mesh(mesh: &Mesh) -> PathMesh {
+    pub fn from_bevy_mesh(mesh: &Mesh) -> NavMesh {
         Self::from_bevy_mesh_and_then(mesh, |_| {})
     }
 
@@ -122,7 +119,7 @@ impl PathMesh {
 
     /// Get a path between two points, in an async way.
     ///
-    /// Inputs and results are transformed using the [`PathMesh::transform`]
+    /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub async fn get_transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
         let inner_from = self.transform.transform_point(from).xy();
         let inner_to = self.transform.transform_point(to).xy();
@@ -138,7 +135,7 @@ impl PathMesh {
 
     /// Get a path between two points, in an async way.
     ///
-    /// Inputs and results are transformed using the [`PathMesh::transform`]
+    /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
         let inner_from = self.transform.transform_point(from).xy();
         let inner_to = self.transform.transform_point(to).xy();
@@ -182,7 +179,7 @@ impl PathMesh {
         self.transform = transform;
     }
 
-    /// Creates a [`Mesh`] from this [`PathMesh`], suitable for rendering the surface
+    /// Creates a [`Mesh`] from this [`NavMesh`], suitable for rendering the surface
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
         let inverse_transform = self.inverse_transform();
@@ -208,7 +205,7 @@ impl PathMesh {
         new_mesh
     }
 
-    /// Creates a [`Mesh`] from this [`PathMesh`], showing the wireframe of the polygons
+    /// Creates a [`Mesh`] from this [`NavMesh`], showing the wireframe of the polygons
     pub fn to_wireframe_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::all());
         let inverse_transform = self.inverse_transform();
@@ -266,7 +263,7 @@ mod tests {
 
     #[test]
     fn generating_from_existing_path_mesh_results_in_same_path_mesh() {
-        let expected_path_mesh = PathMesh::from_polyanya_mesh(
+        let expected_path_mesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
                     Vec2::new(1., 1.),
@@ -286,14 +283,14 @@ mod tests {
             Mesh::ATTRIBUTE_NORMAL,
             (0..6).map(|_| [0.0, 0.0, 1.0]).collect::<Vec<_>>(),
         );
-        let actual_path_mesh = PathMesh::from_bevy_mesh(&bevy_mesh);
+        let actual_path_mesh = NavMesh::from_bevy_mesh(&bevy_mesh);
 
         assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
     }
 
     #[test]
     fn rotated_mesh_generates_expected_path_mesh() {
-        let expected_path_mesh = PathMesh::from_polyanya_mesh(
+        let expected_path_mesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
                     Vec2::new(-1., -1.),
@@ -326,12 +323,12 @@ mod tests {
         );
         bevy_mesh.insert_indices(Indices::U32(vec![0, 1, 3, 0, 3, 2]));
 
-        let actual_path_mesh = PathMesh::from_bevy_mesh(&bevy_mesh);
+        let actual_path_mesh = NavMesh::from_bevy_mesh(&bevy_mesh);
 
         assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
     }
 
-    fn assert_same_path_mesh(expected: PathMesh, actual: PathMesh) {
+    fn assert_same_path_mesh(expected: NavMesh, actual: NavMesh) {
         let expected_mesh = expected.mesh;
         let actual_mesh = actual.mesh;
 
