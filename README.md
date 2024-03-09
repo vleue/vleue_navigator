@@ -10,8 +10,7 @@ Navigation mesh for [Bevy](http://github.com/bevyengine/bevy) using [Polyanya](h
 
 Check out the [WASM demo](https://vleue.github.io/vleue_navigator/)
 
-> [!WARNING]
-> This crate has been renamed to [vleue_navigator](https://github.com/vleue/vleue_navigator). For updates and continued support, change your dependency!
+> :warning: **This crate has been renamed to [vleue_navigator](https://github.com/vleue/vleue_navigator)**. For updates and continued support, change your dependency!
 
 ## Usage
 
