@@ -4,13 +4,13 @@
 [![Release Doc](https://docs.rs/bevy_pathmesh/badge.svg)](https://docs.rs/bevy_pathmesh)
 [![Crate](https://img.shields.io/crates/v/bevy_pathmesh.svg)](https://crates.io/crates/bevy_pathmesh)
 
+> :warning: **This crate has been renamed to [vleue_navigator](https://github.com/vleue/vleue_navigator)**. For updates and continued support, change your dependency!
+
 Navigation mesh for [Bevy](http://github.com/bevyengine/bevy) using [Polyanya](https://github.com/vleue/polyanya).
 
 ![map with many points finding their paths](https://raw.githubusercontent.com/vleue/bevy_pathmesh/main/screenshots/many.png)
 
 Check out the [WASM demo](https://vleue.github.io/vleue_navigator/)
-
-> :warning: **This crate has been renamed to [vleue_navigator](https://github.com/vleue/vleue_navigator)**. For updates and continued support, change your dependency!
 
 ## Usage
 
