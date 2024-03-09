@@ -3,11 +3,11 @@ use bevy::{
     prelude::*,
     render::primitives::Aabb,
 };
-use bevy_pathmesh::{
-    updater::{NavMeshStatus, NavmeshUpdateTask, NavmeshUpdaterPlugin, ObstacleSource},
-    PathMesh,
-};
 use bevy_xpbd_3d::parry::{math::Isometry, na::Vector3, shape::TriMesh};
+use vleue_navigator::{
+    updater::{NavMeshStatus, NavmeshUpdateTask, NavmeshUpdaterPlugin, ObstacleSource},
+    NavMesh,
+};
 
 use crate::{
     ui::{Slider, UiButton, UiInfo},
@@ -120,12 +120,12 @@ fn update(
     mut commands: Commands,
     obstacles: Query<(Ref<GlobalTransform>, &Aabb), With<Obstacle>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    pathmeshes: Res<Assets<NavMesh>>,
     mut agents: Query<(Entity, &mut Agent)>,
     targets: Query<&Transform, With<Target>>,
     mut text_info: Query<(&mut Text, &UiInfo)>,
     mut sliders: Query<(&mut Slider, &UiButton)>,
-    navmeshes: Query<(&Handle<PathMesh>, Ref<NavMeshStatus>)>,
+    navmeshes: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
 ) {
     for (handle, status) in &navmeshes {
         if status.is_changed() {

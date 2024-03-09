@@ -1,10 +1,10 @@
 use bevy::{prelude::*, render::view::RenderLayers, ui::RelativeCursorPosition};
-use bevy_pathmesh::{updater::NavMeshSettings, PathMesh};
 use bevy_vector_shapes::{
     prelude::ShapePainter,
     shapes::{Cap, DiscPainter, LinePainter},
 };
 use rand::Rng;
+use vleue_navigator::{updater::NavMeshSettings, NavMesh};
 
 use crate::{
     Agent, Obstacle, BOARD_LIMIT, HANDLE_AGENT_MATERIAL, HANDLE_AGENT_MESH,
@@ -255,7 +255,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -290,7 +290,7 @@ fn setup(mut commands: Commands) {
                                         ..default()
                                     },
                                 }])
-                                .with_text_alignment(TextAlignment::Right)
+                                .with_text_justify(JustifyText::Right)
                                 .with_style(Style {
                                     margin: UiRect::horizontal(Val::Px(10.0)),
                                     ..default()
@@ -318,7 +318,7 @@ fn setup(mut commands: Commands) {
                                 },
                             }
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -353,7 +353,7 @@ fn setup(mut commands: Commands) {
                                         ..default()
                                     },
                                 }])
-                                .with_text_alignment(TextAlignment::Right)
+                                .with_text_justify(JustifyText::Right)
                                 .with_style(Style {
                                     margin: UiRect::horizontal(Val::Px(10.0)),
                                     ..default()
@@ -373,7 +373,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -408,7 +408,7 @@ fn setup(mut commands: Commands) {
                                         ..default()
                                     },
                                 }])
-                                .with_text_alignment(TextAlignment::Right)
+                                .with_text_justify(JustifyText::Right)
                                 .with_style(Style {
                                     margin: UiRect::horizontal(Val::Px(10.0)),
                                     ..default()
@@ -444,7 +444,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -470,7 +470,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -496,7 +496,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -538,10 +538,10 @@ fn button_system(
     >,
     obstacles: Query<Entity, With<Obstacle>>,
     agents: Query<(Entity, &Agent)>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    pathmeshes: Res<Assets<NavMesh>>,
     mut text_info: Query<(&mut Text, &UiInfo)>,
     mut settings: Query<&mut NavMeshSettings>,
-    navmesh: Query<&Handle<PathMesh>>,
+    navmesh: Query<&Handle<NavMesh>>,
 ) {
     let mut settings = settings.single_mut();
 
@@ -550,14 +550,11 @@ fn button_system(
             (Interaction::Pressed, true, UiButton::AddObstacle) => {
                 commands.spawn((
                     PbrBundle {
-                        mesh: HANDLE_OBSTACLE_MESH.typed(),
-                        material: HANDLE_OBSTACLE_MATERIAL.typed(),
+                        mesh: HANDLE_OBSTACLE_MESH,
+                        material: HANDLE_OBSTACLE_MATERIAL,
                         transform: Transform::from_xyz(0.0, -0.2, 0.0),
                         ..Default::default()
                     },
-                    bevy_mod_picking::PickableBundle::default(),
-                    bevy_mod_picking::backends::raycast::RaycastPickTarget::default(),
-                    bevy_transform_gizmo::GizmoTransformable,
                     Obstacle,
                     RenderLayers::layer(1),
                 ));
@@ -571,15 +568,12 @@ fn button_system(
                     let rot = thread_rng.gen_range(0.0..std::f32::consts::PI * 2.0);
                     commands.spawn((
                         PbrBundle {
-                            mesh: HANDLE_OBSTACLE_MESH.typed(),
-                            material: HANDLE_OBSTACLE_MATERIAL.typed(),
+                            mesh: HANDLE_OBSTACLE_MESH,
+                            material: HANDLE_OBSTACLE_MATERIAL,
                             transform: Transform::from_xyz(x, y, z)
                                 .with_rotation(Quat::from_rotation_y(rot)),
                             ..Default::default()
                         },
-                        bevy_mod_picking::PickableBundle::default(),
-                        bevy_mod_picking::backends::raycast::RaycastPickTarget::default(),
-                        bevy_transform_gizmo::GizmoTransformable,
                         Obstacle,
                         RenderLayers::layer(1),
                     ));
@@ -596,8 +590,8 @@ fn button_system(
 
                         commands.spawn((
                             PbrBundle {
-                                mesh: HANDLE_OBSTACLE_MESH.typed(),
-                                material: HANDLE_OBSTACLE_MATERIAL.typed(),
+                                mesh: HANDLE_OBSTACLE_MESH,
+                                material: HANDLE_OBSTACLE_MATERIAL,
                                 transform: Transform::from_xyz(
                                     (i as f32 / count as f32 - 0.5) * 2.0 * BOARD_LIMIT,
                                     y,
@@ -606,9 +600,6 @@ fn button_system(
                                 .with_rotation(Quat::from_rotation_y(rot)),
                                 ..Default::default()
                             },
-                            bevy_mod_picking::PickableBundle::default(),
-                            bevy_mod_picking::backends::raycast::RaycastPickTarget::default(),
-                            bevy_transform_gizmo::GizmoTransformable,
                             Obstacle,
                             RenderLayers::layer(1),
                         ));
@@ -636,8 +627,8 @@ fn button_system(
 
                 commands.spawn((
                     PbrBundle {
-                        mesh: HANDLE_AGENT_MESH.typed(),
-                        material: HANDLE_AGENT_MATERIAL.typed(),
+                        mesh: HANDLE_AGENT_MESH,
+                        material: HANDLE_AGENT_MATERIAL,
                         transform: Transform::from_xyz(x, 0.0, z),
                         ..Default::default()
                     },

@@ -17,7 +17,7 @@ use bevy::{
 };
 use polyanya::Triangulation;
 
-use crate::PathMesh;
+use crate::NavMesh;
 
 /// Bundle for preparing an auto updated navmesh. To use with plugin [`NavmeshUpdaterPlugin`].
 #[derive(Bundle, Debug)]
@@ -27,7 +27,7 @@ pub struct NavMeshBundle {
     /// Status of the last navmesh update.
     pub status: NavMeshStatus,
     /// Handle to the navmesh.
-    pub handle: Handle<PathMesh>,
+    pub handle: Handle<NavMesh>,
     /// Transform of the navmesh. USed to transform point in 3d to 2d (by ignoring the `z` axis).
     pub transform: Transform,
     /// How to trigger navmesh updates.
@@ -113,7 +113,7 @@ fn build_pathmesh<T: ObstacleSource>(
     obstacles: Vec<(GlobalTransform, T)>,
     settings: NavMeshSettings,
     mesh_transform: Transform,
-) -> Result<PathMesh, ()> {
+) -> Result<NavMesh, ()> {
     let obstacle_aabbs = obstacles
         .iter()
         .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform))
@@ -130,7 +130,7 @@ fn build_pathmesh<T: ObstacleSource>(
         }
         navmesh.bake();
         navmesh.set_delta(settings.default_delta);
-        let mut pathmesh = PathMesh::from_polyanya_mesh(navmesh);
+        let mut pathmesh = NavMesh::from_polyanya_mesh(navmesh);
         pathmesh.set_transform(mesh_transform);
         Ok(pathmesh)
     } else {
@@ -140,7 +140,7 @@ fn build_pathmesh<T: ObstacleSource>(
 
 /// Zut
 #[derive(Component, Debug, Clone)]
-pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<PathMesh, ()>>>>);
+pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<NavMesh, ()>>>>);
 
 type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
     'world,
@@ -249,11 +249,11 @@ fn update_navmesh_asset(
     mut commands: Commands,
     mut navmeshes: Query<(
         Entity,
-        &Handle<PathMesh>,
+        &Handle<NavMesh>,
         &NavmeshUpdateTask,
         &mut NavMeshStatus,
     )>,
-    mut pathmeshes: ResMut<Assets<PathMesh>>,
+    mut pathmeshes: ResMut<Assets<NavMesh>>,
 ) {
     for (entity, handle, task, mut status) in &mut navmeshes {
         let mut task = task.0.write().unwrap();

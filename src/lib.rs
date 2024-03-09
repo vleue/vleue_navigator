@@ -20,8 +20,6 @@ use bevy::{
     math::Vec3Swizzles,
     prelude::*,
     reflect::TypePath,
-    reflect::TypeUuid,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
     render::{
         mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
         render_asset::RenderAssetUsages,
@@ -41,7 +39,7 @@ pub struct VleueNavigatorPlugin;
 impl Plugin for VleueNavigatorPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<NavMesh>()
-            .init_asset_loader(asset_loaders::NavMeshPolyanyaLoader);
+            .init_asset_loader::<asset_loaders::NavMeshPolyanyaLoader>();
     }
 }
 
@@ -68,7 +66,7 @@ pub struct NavMesh {
 
 impl NavMesh {
     /// Builds a [`PathMesh`] from a Polyanya [`Mesh`](polyanya::Mesh)
-    pub fn from_polyanya_mesh(mesh: PolyanyaNavMesh) -> PathMesh {
+    pub fn from_polyanya_mesh(mesh: PolyanyaNavMesh) -> NavMesh {
         NavMesh {
             mesh: Arc::new(mesh),
             transform: Transform::IDENTITY,
@@ -121,13 +119,13 @@ impl NavMesh {
     }
 
     /// zut
-    pub fn from_edge(edges: Vec<Vec2>) -> PathMesh {
+    pub fn from_edge(edges: Vec<Vec2>) -> NavMesh {
         let triangulation = polyanya::Triangulation::from_outer_edges(&edges);
         Self::from_polyanya_mesh(triangulation.as_navmesh().unwrap())
     }
 
     /// zut
-    pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> PathMesh {
+    pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> NavMesh {
         let mut triangulation = polyanya::Triangulation::from_outer_edges(&edges);
         for obstacle in obstacles {
             triangulation.add_obstacle(obstacle);

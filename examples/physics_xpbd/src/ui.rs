@@ -1,10 +1,10 @@
 use bevy::{prelude::*, render::view::RenderLayers, ui::RelativeCursorPosition};
-use bevy_pathmesh::{updater::NavMeshSettings, PathMesh};
 use bevy_vector_shapes::{
     prelude::ShapePainter,
     shapes::{Cap, DiscPainter, LinePainter},
 };
 use rand::Rng;
+use vleue_navigator::{updater::NavMeshSettings, NavMesh};
 
 use crate::{Agent, Obstacle, HANDLE_AGENT_MATERIAL, HANDLE_AGENT_MESH};
 
@@ -168,7 +168,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -203,7 +203,7 @@ fn setup(mut commands: Commands) {
                                         ..default()
                                     },
                                 }])
-                                .with_text_alignment(TextAlignment::Right)
+                                .with_text_justify(JustifyText::Right)
                                 .with_style(Style {
                                     margin: UiRect::horizontal(Val::Px(10.0)),
                                     ..default()
@@ -231,7 +231,7 @@ fn setup(mut commands: Commands) {
                                 },
                             }
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -266,7 +266,7 @@ fn setup(mut commands: Commands) {
                                         ..default()
                                     },
                                 }])
-                                .with_text_alignment(TextAlignment::Right)
+                                .with_text_justify(JustifyText::Right)
                                 .with_style(Style {
                                     margin: UiRect::horizontal(Val::Px(10.0)),
                                     ..default()
@@ -286,7 +286,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -321,7 +321,7 @@ fn setup(mut commands: Commands) {
                                         ..default()
                                     },
                                 }])
-                                .with_text_alignment(TextAlignment::Right)
+                                .with_text_justify(JustifyText::Right)
                                 .with_style(Style {
                                     margin: UiRect::horizontal(Val::Px(10.0)),
                                     ..default()
@@ -357,7 +357,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -383,7 +383,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -409,7 +409,7 @@ fn setup(mut commands: Commands) {
                                 },
                             },
                         ])
-                        .with_text_alignment(TextAlignment::Right)
+                        .with_text_justify(JustifyText::Right)
                         .with_style(Style {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -448,10 +448,10 @@ fn button_system(
     >,
     obstacles: Query<Entity, With<Obstacle>>,
     agents: Query<(Entity, &Agent)>,
-    pathmeshes: Res<Assets<PathMesh>>,
+    NavMeshes: Res<Assets<NavMesh>>,
     mut text_info: Query<(&mut Text, &UiInfo)>,
     mut settings: Query<&mut NavMeshSettings>,
-    navmesh: Query<&Handle<PathMesh>>,
+    navmesh: Query<&Handle<NavMesh>>,
 ) {
     let mut settings = settings.single_mut();
 
@@ -464,7 +464,7 @@ fn button_system(
             }
 
             (Interaction::Pressed, true, UiButton::SpawnAgent) => {
-                let navmesh = pathmeshes.get(navmesh.single()).unwrap();
+                let navmesh = NavMeshes.get(navmesh.single()).unwrap();
                 let mut x;
                 let mut z;
                 loop {

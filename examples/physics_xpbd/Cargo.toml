@@ -6,7 +6,7 @@ publish = false
 license = "MIT OR Apache-2.0"
 
 [dependencies.bevy]
-version = "0.12"
+version = "0.13"
 default-features = false
 features = [
     "bevy_asset",
@@ -25,7 +25,7 @@ features = [
 ]
 
 [dependencies]
-bevy_pathmesh = { path = "../../" }
+vleue_navigator = { path = "../../" }
 rand = "0.8"
-bevy_vector_shapes = "0.6"
-bevy_xpbd_3d = "0.3"
+bevy_vector_shapes = "0.7"
+bevy_xpbd_3d = "0.4"

@@ -142,8 +142,8 @@ fn setup(
                 polyanya::Polygon::new(vec![11, 17, 20, 21], true),
             ],
         ))),
-        simple_triangulation: pathmeshes.add({
-            bevy_pathmesh::PathMesh::from_edge(vec![
+        simple_triangulation: navmeshes.add({
+            vleue_navigator::NavMesh::from_edge(vec![
                 vec2(0., 6.),
                 vec2(2., 5.),
                 vec2(2., 4.),
@@ -170,8 +170,8 @@ fn setup(
             ])
         }),
         arena: asset_server.load("arena-merged.polyanya.mesh"),
-        arena_triangulation: pathmeshes.add({
-            bevy_pathmesh::PathMesh::from_edge_and_obstacles(
+        arena_triangulation: navmeshes.add({
+            vleue_navigator::NavMesh::from_edge_and_obstacles(
                 vec![
                     vec2(1., 3.),
                     vec2(2., 3.),
@@ -357,7 +357,7 @@ fn on_mesh_change(
             if mesh.with_wireframe {
                 commands.spawn((
                     MaterialMesh2dBundle {
-                        mesh: meshes.add(pathmesh.to_wireframe_mesh()).into(),
+                        mesh: meshes.add(navmesh.to_wireframe_mesh()).into(),
                         transform: Transform::from_translation(Vec3::new(
                             -mesh.size.x / 2.0 * factor,
                             -mesh.size.y / 2.0 * factor,
@@ -478,7 +478,7 @@ fn mesh_change(
             CurrentMesh::Aurora => *mesh = SIMPLE,
         }
     }
-    if keyboard_input.just_pressed(KeyCode::Return) {
+    if keyboard_input.just_pressed(KeyCode::Enter) {
         mesh.with_wireframe = !mesh.with_wireframe;
     }
 }

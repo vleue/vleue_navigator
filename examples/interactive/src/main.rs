@@ -1,37 +1,32 @@
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
     math::{vec2, vec3},
     pbr::NotShadowCaster,
     prelude::*,
-    reflect::TypeUuid,
     render::view::{RenderLayers, VisibilitySystems},
-};
-use bevy_pathmesh::{
-    updater::{NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode},
-    PathMesh, PathMeshPlugin, PolyanyaTriangulation,
 };
 use bevy_vector_shapes::Shape2dPlugin;
 use rand::Rng;
+use vleue_navigator::{
+    updater::{NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode},
+    NavMesh, PolyanyaTriangulation, VleueNavigatorPlugin,
+};
 
 mod build_navmesh;
 mod helpers;
 mod ui;
 
-const HANDLE_NAVMESH_WIREFRAME: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 1);
-const HANDLE_NAVMESH_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 2);
+const HANDLE_NAVMESH_WIREFRAME: Handle<Mesh> = Handle::weak_from_u128(1);
+const HANDLE_NAVMESH_MESH: Handle<Mesh> = Handle::weak_from_u128(2);
 
-const HANDLE_OBSTACLE_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 3);
-const HANDLE_AGENT_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 4);
-const HANDLE_TARGET_MESH: HandleUntyped = HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, 5);
+const HANDLE_OBSTACLE_MESH: Handle<Mesh> = Handle::weak_from_u128(3);
+const HANDLE_AGENT_MESH: Handle<Mesh> = Handle::weak_from_u128(4);
+const HANDLE_TARGET_MESH: Handle<Mesh> = Handle::weak_from_u128(5);
 
-const HANDLE_OBSTACLE_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 1);
-const HANDLE_AGENT_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 2);
-const HANDLE_TARGET_MATERIAL: HandleUntyped =
-    HandleUntyped::weak_from_u64(StandardMaterial::TYPE_UUID, 3);
+const HANDLE_OBSTACLE_MATERIAL: Handle<StandardMaterial> = Handle::weak_from_u128(1);
+const HANDLE_AGENT_MATERIAL: Handle<StandardMaterial> = Handle::weak_from_u128(2);
+const HANDLE_TARGET_MATERIAL: Handle<StandardMaterial> = Handle::weak_from_u128(3);
 
 const BOARD_LIMIT: f32 = 4.4;
 
@@ -42,15 +37,12 @@ fn main() {
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Navmesh with Polyanya".to_string(),
-                    fit_canvas_to_parent: true,
                     ..default()
                 }),
                 ..default()
             }),
-            bevy_mod_picking::DefaultPickingPlugins,
-            bevy_transform_gizmo::TransformGizmoPlugin::default(),
             Shape2dPlugin::default(),
-            PathMeshPlugin,
+            VleueNavigatorPlugin,
         ))
         .add_plugins((
             ui::UiPlugin,
@@ -65,11 +57,21 @@ fn main() {
                 .chain()
                 .before(VisibilitySystems::CalculateBounds),
         )
-        .insert_resource(GizmoConfig {
-            depth_bias: -1.0,
-            render_layers: RenderLayers::layer(1),
-            ..default()
-        })
+        .insert_gizmo_group(
+            DefaultGizmoConfigGroup,
+            GizmoConfig {
+                depth_bias: -1.0,
+                render_layers: RenderLayers::layer(1),
+                ..default()
+            },
+        )
+        // .insert_resource(
+        //GizmoConfig {
+        //     depth_bias: -1.0,
+        //     render_layers: RenderLayers::layer(1),
+        //     ..default()
+        // }
+        // )
         .run();
 }
 
@@ -77,25 +79,30 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut pathmeshes: ResMut<Assets<PathMesh>>,
+    mut pathmeshes: ResMut<Assets<NavMesh>>,
 ) {
-    meshes.set_untracked(HANDLE_OBSTACLE_MESH, Mesh::from(shape::Cube { size: 0.4 }));
-    meshes.set_untracked(
+    meshes.insert(
+        HANDLE_OBSTACLE_MESH,
+        Mesh::from(Cuboid {
+            half_size: Vec3::splat(0.2),
+        }),
+    );
+    meshes.insert(
         HANDLE_AGENT_MESH,
-        Mesh::from(shape::Capsule {
-            radius: 0.1,
-            depth: 0.2,
+        Mesh::from(Capsule3d {
+            radius: 0.07,
+            half_length: 0.1,
             ..default()
         }),
     );
-    meshes.set_untracked(
+    meshes.insert(
         HANDLE_TARGET_MESH,
-        Mesh::from(shape::UVSphere {
+        Mesh::from(Sphere {
             radius: 0.05,
             ..default()
         }),
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_OBSTACLE_MATERIAL,
         StandardMaterial {
             base_color: Color::RED,
@@ -103,14 +110,14 @@ fn setup(
             ..default()
         },
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_AGENT_MATERIAL,
         StandardMaterial {
             base_color: Color::GREEN,
             ..default()
         },
     );
-    materials.set_untracked(
+    materials.insert(
         HANDLE_TARGET_MATERIAL,
         StandardMaterial {
             base_color: Color::YELLOW,
@@ -119,13 +126,13 @@ fn setup(
         },
     );
 
-    let mut pathmesh = bevy_pathmesh::PathMesh::from_edge_and_obstacles(
+    let mut pathmesh = NavMesh::from_edge_and_obstacles(
         vec![vec2(-5., -5.), vec2(5., -5.), vec2(5., 5.), vec2(-5., 5.)],
         vec![],
     );
     pathmesh.set_transform(Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)));
-    meshes.set_untracked(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
-    meshes.set_untracked(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
+    meshes.insert(HANDLE_NAVMESH_WIREFRAME, pathmesh.to_wireframe_mesh());
+    meshes.insert(HANDLE_NAVMESH_MESH, pathmesh.to_mesh());
     commands.spawn((
         NavMeshBundle {
             settings: NavMeshSettings {
@@ -150,10 +157,7 @@ fn setup(
     ));
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane {
-                size: 10.0,
-                ..default()
-            })),
+            mesh: meshes.add(Plane3d::default().mesh().size(10.0, 10.0)),
             material: materials.add(StandardMaterial {
                 base_color: Color::BEIGE,
                 perceptual_roughness: 1.0,
@@ -167,7 +171,7 @@ fn setup(
     ));
     commands.spawn((
         PbrBundle {
-            mesh: HANDLE_NAVMESH_MESH.typed(),
+            mesh: HANDLE_NAVMESH_MESH,
             material: materials.add(StandardMaterial {
                 base_color: Color::MIDNIGHT_BLUE,
                 perceptual_roughness: 1.0,
@@ -180,7 +184,7 @@ fn setup(
     ));
     commands.spawn((
         PbrBundle {
-            mesh: HANDLE_NAVMESH_WIREFRAME.typed(),
+            mesh: HANDLE_NAVMESH_WIREFRAME,
             transform: Transform::from_translation(Vec3::new(0., 0.01, 0.)),
             material: materials.add(StandardMaterial {
                 base_color: Color::RED,
@@ -207,9 +211,9 @@ fn setup(
                 .looking_at(Vec3::new(-0.8, 0.0, 0.0), Vec3::Y),
             ..Default::default()
         },
-        UiCameraConfig { show_ui: false },
-        bevy_mod_picking::backends::raycast::RaycastPickCamera::default(),
-        bevy_transform_gizmo::GizmoPickSource::default(),
+        // UiCameraConfig { show_ui: false },
+        // bevy_mod_picking::backends::raycast::RaycastPickCamera::default(),
+        // bevy_transform_gizmo::GizmoPickSource::default(),
         RenderLayers::layer(1),
     ));
     commands.spawn(Camera2dBundle {
@@ -217,9 +221,9 @@ fn setup(
             order: 1,
             ..default()
         },
-        camera_2d: Camera2d {
-            clear_color: ClearColorConfig::None,
-        },
+        // camera_2d: Camera2d {
+        //     // clear_color: ClearColorConfig::None,
+        // },
         ..default()
     });
 }
@@ -244,8 +248,8 @@ struct Path {
 fn give_target_auto(
     mut commands: Commands,
     mut object_query: Query<&mut Agent, Without<Path>>,
-    navmeshes: Res<Assets<PathMesh>>,
-    navmesh: Query<&Handle<PathMesh>>,
+    navmeshes: Res<Assets<NavMesh>>,
+    navmesh: Query<&Handle<NavMesh>>,
 ) {
     for mut agent in object_query.iter_mut() {
         if agent.target.is_some() {
@@ -265,8 +269,8 @@ fn give_target_auto(
         let target_id = commands
             .spawn((
                 PbrBundle {
-                    mesh: HANDLE_TARGET_MESH.typed(),
-                    material: HANDLE_TARGET_MATERIAL.typed(),
+                    mesh: HANDLE_TARGET_MESH,
+                    material: HANDLE_TARGET_MATERIAL,
                     transform: Transform::from_xyz(x, 0.0, z),
                     ..Default::default()
                 },
@@ -283,8 +287,8 @@ fn find_path_to_target(
     mut commands: Commands,
     agents: Query<(Entity, &Transform, &Agent), (With<Agent>, Without<Path>)>,
     targets: Query<&Transform, With<Target>>,
-    mut navmeshes: ResMut<Assets<PathMesh>>,
-    navmesh: Query<(&Handle<PathMesh>, &NavMeshSettings)>,
+    mut navmeshes: ResMut<Assets<NavMesh>>,
+    navmesh: Query<(&Handle<NavMesh>, &NavMeshSettings)>,
 ) {
     let (navmesh_handle, settings) = navmesh.single();
     let navmesh = navmeshes.get(navmesh_handle).unwrap();
