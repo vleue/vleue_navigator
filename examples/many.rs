@@ -209,14 +209,14 @@ fn on_mesh_change(
     mut meshes: ResMut<Assets<Mesh>>,
     navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    path_meshes: Res<Meshes>,
+    known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     mut wait_for_mesh: Local<bool>,
 ) {
     if !window_resized.is_empty() || *wait_for_mesh {
-        let handle = &path_meshes.aurora;
+        let handle = &known_meshes.aurora;
         if let Some(navmesh) = navmeshes.get(handle) {
             *wait_for_mesh = false;
             if let Some(entity) = *current_mesh_entity {
@@ -265,9 +265,9 @@ fn spawn(
     primary_window: Query<&Window, With<PrimaryWindow>>,
     mut commands: Commands,
     navmeshes: Res<Assets<NavMesh>>,
-    path_meshes: Res<Meshes>,
+    known_meshes: Res<Meshes>,
 ) {
-    if navmeshes.contains(&path_meshes.aurora) {
+    if navmeshes.contains(&known_meshes.aurora) {
         let window = primary_window.single();
         let mut rng = rand::thread_rng();
         let screen = Vec2::new(window.width(), window.height());

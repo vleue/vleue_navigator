@@ -43,7 +43,7 @@ fn get_path(
     gltfs: Res<Assets<Gltf>>,
     gltf_meshes: Res<Assets<GltfMesh>>,
     meshes: Res<Assets<Mesh>>,
-    mut path_meshes: ResMut<Assets<NavMesh>>,
+    mut navmeshes: ResMut<Assets<NavMesh>>,
 ) {
     if handles.1.is_none() {
         // Get the gltf struct loaded from the file
@@ -59,10 +59,10 @@ fn get_path(
             return
         };
         // Build a `NavMesh` from that mesh, then save it as an asset
-        handles.1 = Some(path_meshes.add(NavMesh::from_bevy_mesh(mesh)));
+        handles.1 = Some(navmeshes.add(NavMesh::from_bevy_mesh(mesh)));
     } else {
-        // Get the path mesh, then search for a path
-        let Some(path_mesh) = path_meshes.get(handles.1.as_ref().unwrap()) else {
+        // Get the navmesh, then search for a path
+        let Some(navmesh) = navmeshes.get(handles.1.as_ref().unwrap()) else {
             return
         };
         // Find two random point
@@ -74,7 +74,7 @@ fn get_path(
             rand::thread_rng().gen_range(-50.0..50.0),
             rand::thread_rng().gen_range(-50.0..50.0),
         );
-        if let Some(path) = path_mesh.path(from, to) {
+        if let Some(path) = navmesh.path(from, to) {
             info!("path from {} to {}: {:?}", from, to, path);
         } else {
             info!("no path between {} and {}", from, to)

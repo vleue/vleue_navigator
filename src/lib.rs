@@ -93,9 +93,9 @@ impl NavMesh {
         .into();
         callback(&mut polyanya_mesh);
 
-        let mut path_mesh = Self::from_polyanya_mesh(polyanya_mesh);
-        path_mesh.transform = Transform::from_rotation(rotation);
-        path_mesh
+        let mut navmesh = Self::from_polyanya_mesh(polyanya_mesh);
+        navmesh.transform = Transform::from_rotation(rotation);
+        navmesh
     }
 
     /// Creates a [`NavMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
@@ -167,7 +167,7 @@ impl NavMesh {
     }
 
     /// The transform used to convert world coordinates into mesh coordinates.
-    /// After applying this transform, the `z` coordinate is dropped because path meshes are 2D.
+    /// After applying this transform, the `z` coordinate is dropped because navmeshes are 2D.
     pub fn transform(&self) -> Transform {
         self.transform
     }
@@ -262,8 +262,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn generating_from_existing_path_mesh_results_in_same_path_mesh() {
-        let expected_path_mesh = NavMesh::from_polyanya_mesh(
+    fn generating_from_existing_navmesh_results_in_same_navmesh() {
+        let expected_navmesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
                     Vec2::new(1., 1.),
@@ -277,20 +277,20 @@ mod tests {
             }
             .into(),
         );
-        let mut bevy_mesh = expected_path_mesh.to_mesh();
+        let mut bevy_mesh = expected_navmesh.to_mesh();
         // Add back normals as they are used to determine where is up in the mesh
         bevy_mesh.insert_attribute(
             Mesh::ATTRIBUTE_NORMAL,
             (0..6).map(|_| [0.0, 0.0, 1.0]).collect::<Vec<_>>(),
         );
-        let actual_path_mesh = NavMesh::from_bevy_mesh(&bevy_mesh);
+        let actual_navmesh = NavMesh::from_bevy_mesh(&bevy_mesh);
 
-        assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
+        assert_same_navmesh(expected_navmesh, actual_navmesh);
     }
 
     #[test]
-    fn rotated_mesh_generates_expected_path_mesh() {
-        let expected_path_mesh = NavMesh::from_polyanya_mesh(
+    fn rotated_mesh_generates_expected_navmesh() {
+        let expected_navmesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
                     Vec2::new(-1., -1.),
@@ -323,12 +323,12 @@ mod tests {
         );
         bevy_mesh.insert_indices(Indices::U32(vec![0, 1, 3, 0, 3, 2]));
 
-        let actual_path_mesh = NavMesh::from_bevy_mesh(&bevy_mesh);
+        let actual_navmesh = NavMesh::from_bevy_mesh(&bevy_mesh);
 
-        assert_same_path_mesh(expected_path_mesh, actual_path_mesh);
+        assert_same_navmesh(expected_navmesh, actual_navmesh);
     }
 
-    fn assert_same_path_mesh(expected: NavMesh, actual: NavMesh) {
+    fn assert_same_navmesh(expected: NavMesh, actual: NavMesh) {
         let expected_mesh = expected.mesh;
         let actual_mesh = actual.mesh;
 

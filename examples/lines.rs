@@ -129,7 +129,7 @@ fn on_mesh_change(
     mut meshes: ResMut<Assets<Mesh>>,
     navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    path_meshes: Res<Meshes>,
+    known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
@@ -141,9 +141,9 @@ fn on_mesh_change(
     }
     path_to_display.steps.clear();
     let handle = match mesh.mesh {
-        CurrentMesh::Simple => &path_meshes.simple,
-        CurrentMesh::Arena => &path_meshes.arena,
-        CurrentMesh::Aurora => &path_meshes.aurora,
+        CurrentMesh::Simple => &known_meshes.simple,
+        CurrentMesh::Arena => &known_meshes.arena,
+        CurrentMesh::Aurora => &known_meshes.aurora,
     };
     let navmesh = navmeshes.get(handle).unwrap();
     if let Some(entity) = *current_mesh_entity {
@@ -288,14 +288,14 @@ fn compute_paths(
             return;
         }
 
-        let path_mesh = navmeshes
+        let navmesh = navmeshes
             .get(match mesh.mesh {
                 CurrentMesh::Simple => &meshes.simple,
                 CurrentMesh::Arena => &meshes.arena,
                 CurrentMesh::Aurora => &meshes.aurora,
             })
             .unwrap();
-        if let Some(path) = path_mesh.path(*path_to_display.steps.last().unwrap(), ev.0) {
+        if let Some(path) = navmesh.path(*path_to_display.steps.last().unwrap(), ev.0) {
             for p in path.path {
                 path_to_display.steps.push(p);
             }

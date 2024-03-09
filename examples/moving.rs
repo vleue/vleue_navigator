@@ -131,7 +131,7 @@ fn on_mesh_change(
     mut meshes: ResMut<Assets<Mesh>>,
     navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    path_meshes: Res<Meshes>,
+    known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     navigator: Query<Entity, With<Navigator>>,
@@ -142,9 +142,9 @@ fn on_mesh_change(
 ) {
     if mesh.is_changed() || !window_resized.is_empty() || *wait_for_mesh {
         let handle = match mesh.mesh {
-            CurrentMesh::Simple => &path_meshes.simple,
-            CurrentMesh::Arena => &path_meshes.arena,
-            CurrentMesh::Aurora => &path_meshes.aurora,
+            CurrentMesh::Simple => &known_meshes.simple,
+            CurrentMesh::Arena => &known_meshes.arena,
+            CurrentMesh::Aurora => &known_meshes.aurora,
         };
         if let Some(navmesh) = navmeshes.get(handle) {
             *wait_for_mesh = false;
