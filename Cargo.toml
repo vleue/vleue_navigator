@@ -1,6 +1,6 @@
 [package]
 name = "bevy_pathmesh"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["François Mockers <mockersf@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -13,13 +13,13 @@ documentation = "https://docs.rs/bevy_pathmesh"
 categories = ["game-development"]
 
 [dependencies]
-itertools = "0.11"
+itertools = "0.12"
 
 [dependencies.polyanya]
-version = "0.4"
+version = "0.5"
 
 [dependencies.bevy]
-version = "0.12"
+version = "0.13"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
@@ -27,7 +27,7 @@ default-features = false
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.12"
+version = "0.13"
 features = [
     "bevy_ui",
     "bevy_text",

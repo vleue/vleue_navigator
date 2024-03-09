@@ -26,7 +26,6 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Navmesh with Polyanya".to_string(),
-                        fit_canvas_to_parent: true,
                         present_mode: PresentMode::AutoNoVsync,
                         ..default()
                     }),
@@ -507,7 +506,7 @@ fn update_ui(
     text.sections[3].value = format!(
         "{:.2}\n",
         diagnostics
-            .get(FrameTimeDiagnosticsPlugin::FPS)
+            .get(&FrameTimeDiagnosticsPlugin::FPS)
             .and_then(|d| d.average())
             .unwrap_or_default()
     );
@@ -537,7 +536,7 @@ fn update_ui(
 }
 
 fn mode_change(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut task_mode: ResMut<TaskMode>,
     mut display_mode: ResMut<DisplayMode>,
 ) {
@@ -547,7 +546,7 @@ fn mode_change(
             TaskMode::Blocking => *task_mode = TaskMode::Async,
         }
     }
-    if keyboard_input.just_pressed(KeyCode::L) {
+    if keyboard_input.just_pressed(KeyCode::KeyL) {
         match *display_mode {
             DisplayMode::Line => *display_mode = DisplayMode::Nothing,
             DisplayMode::Nothing => *display_mode = DisplayMode::Line,
