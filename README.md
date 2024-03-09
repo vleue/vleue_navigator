@@ -8,7 +8,10 @@ Navigation mesh for [Bevy](http://github.com/bevyengine/bevy) using [Polyanya](h
 
 ![map with many points finding their paths](https://raw.githubusercontent.com/vleue/bevy_pathmesh/main/screenshots/many.png)
 
-Check out the [WASM demo](https://vleue.github.io/bevy_pathmesh/)
+Check out the [WASM demo](https://vleue.github.io/vleue_navigator/)
+
+> [!WARNING]
+> This crate has been renamed to [vleue_navigator](https://github.com/vleue/vleue_navigator). For updates and continued support, change your dependency!
 
 ## Usage
 
