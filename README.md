@@ -1,20 +1,18 @@
-# NavMesh for Bevy
+# Navigation for Bevy with NavMesh
 
 ![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
-[![Release Doc](https://docs.rs/bevy_pathmesh/badge.svg)](https://docs.rs/bevy_pathmesh)
-[![Crate](https://img.shields.io/crates/v/bevy_pathmesh.svg)](https://crates.io/crates/bevy_pathmesh)
-
-> :warning: **This crate has been renamed to [vleue_navigator](https://github.com/vleue/vleue_navigator)**. For updates and continued support, change your dependency!
+[![Release Doc](https://docs.rs/vleue_navigator/badge.svg)](https://docs.rs/vleue_navigator)
+[![Crate](https://img.shields.io/crates/v/vleue_navigator.svg)](https://crates.io/crates/vleue_navigator)
 
 Navigation mesh for [Bevy](http://github.com/bevyengine/bevy) using [Polyanya](https://github.com/vleue/polyanya).
 
-![map with many points finding their paths](https://raw.githubusercontent.com/vleue/bevy_pathmesh/main/screenshots/many.png)
+![map with many points finding their paths](https://raw.githubusercontent.com/vleue/vleue_navigator/main/screenshots/many.png)
 
 Check out the [WASM demo](https://vleue.github.io/vleue_navigator/)
 
 ## Usage
 
-Loading a mesh from a gLTF file, then building a `PathMesh` from it and using it for getting paths between random points.
+Loading a mesh from a gLTF file, then building a `NavMesh` from it and using it for getting paths between random points.
 
 ```rust,no_run
 use bevy::{
@@ -22,19 +20,19 @@ use bevy::{
     prelude::*,
 };
 
-use bevy_pathmesh::{PathMesh, PathMeshPlugin};
+use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 use rand::Rng;
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, PathMeshPlugin))
+        .add_plugins((DefaultPlugins, VleueNavigatorPlugin))
         .add_systems(Startup, load)
         .add_systems(Update, get_path)
         .run()
 }
 
 #[derive(Resource)]
-struct Handles(Handle<Gltf>, Option<Handle<PathMesh>>);
+struct Handles(Handle<Gltf>, Option<Handle<NavMesh>>);
 
 fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(Handles(asset_server.load("navmesh.glb"), None));
@@ -45,7 +43,7 @@ fn get_path(
     gltfs: Res<Assets<Gltf>>,
     gltf_meshes: Res<Assets<GltfMesh>>,
     meshes: Res<Assets<Mesh>>,
-    mut path_meshes: ResMut<Assets<PathMesh>>,
+    mut path_meshes: ResMut<Assets<NavMesh>>,
 ) {
     if handles.1.is_none() {
         // Get the gltf struct loaded from the file
@@ -60,8 +58,8 @@ fn get_path(
         let Some(mesh) = meshes.get(&gltf_mesh.primitives[0].mesh) else {
             return
         };
-        // Build a `PathMesh` from that mesh, then save it as an asset
-        handles.1 = Some(path_meshes.add(PathMesh::from_bevy_mesh(mesh)));
+        // Build a `NavMesh` from that mesh, then save it as an asset
+        handles.1 = Some(path_meshes.add(NavMesh::from_bevy_mesh(mesh)));
     } else {
         // Get the path mesh, then search for a path
         let Some(path_mesh) = path_meshes.get(handles.1.as_ref().unwrap()) else {
@@ -85,8 +83,6 @@ fn get_path(
 }
 ```
 
-|Bevy|bevy_pathmesh|
+|Bevy|vleue_navigator|
 |---|---|
-|0.13|0.6|
-|0.11|0.5|
-|0.10|0.4|
+|0.13|0.7|

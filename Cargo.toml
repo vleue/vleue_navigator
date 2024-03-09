@@ -1,15 +1,15 @@
 [package]
-name = "bevy_pathmesh"
-version = "0.6.0"
-authors = ["François Mockers <mockersf@gmail.com>"]
+name = "vleue_navigator"
+version = "0.7.0"
+authors = ["François Mockers <francois.mockers@vleue.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-keywords = ["pathfinding", "bevy", "navmesh"]
+keywords = ["pathfinding", "bevy", "navmesh", "navigation"]
 readme = "README.md"
 description = "Navmesh plugin for Bevy"
-repository = "https://github.com/vleue/bevy_pathmesh"
-homepage = "https://github.com/vleue/bevy_pathmesh"
-documentation = "https://docs.rs/bevy_pathmesh"
+repository = "https://github.com/vleue/vleue_navigator"
+homepage = "https://github.com/vleue/vleue_navigator"
+documentation = "https://docs.rs/vleue_navigator"
 categories = ["game-development"]
 
 [dependencies]
