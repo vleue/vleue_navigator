@@ -4,6 +4,7 @@ use std::{
 };
 
 use bevy::{
+    color::palettes,
     math::Vec3Swizzles,
     prelude::*,
     sprite::MaterialMesh2dBundle,
@@ -15,7 +16,7 @@ use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(ClearColor(palettes::css::BLACK.into()))
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -83,42 +84,45 @@ fn setup(
 ) {
     commands.spawn(Camera2dBundle::default());
     commands.insert_resource(Meshes {
-        simple: navmeshes.add(NavMesh::from_polyanya_mesh(polyanya::Mesh::new(
-            vec![
-                polyanya::Vertex::new(Vec2::new(0., 6.), vec![0, -1]),
-                polyanya::Vertex::new(Vec2::new(2., 5.), vec![0, -1, 2]),
-                polyanya::Vertex::new(Vec2::new(5., 7.), vec![0, 2, -1]),
-                polyanya::Vertex::new(Vec2::new(5., 8.), vec![0, -1]),
-                polyanya::Vertex::new(Vec2::new(0., 8.), vec![0, -1]),
-                polyanya::Vertex::new(Vec2::new(1., 4.), vec![1, -1]),
-                polyanya::Vertex::new(Vec2::new(2., 1.), vec![1, -1]),
-                polyanya::Vertex::new(Vec2::new(4., 1.), vec![1, -1]),
-                polyanya::Vertex::new(Vec2::new(4., 2.), vec![1, -1, 2]),
-                polyanya::Vertex::new(Vec2::new(2., 4.), vec![1, 2, -1]),
-                polyanya::Vertex::new(Vec2::new(7., 4.), vec![2, -1, 4]),
-                polyanya::Vertex::new(Vec2::new(10., 7.), vec![2, 4, 6, -1, 3]),
-                polyanya::Vertex::new(Vec2::new(7., 7.), vec![2, 3, -1]),
-                polyanya::Vertex::new(Vec2::new(11., 8.), vec![3, -1]),
-                polyanya::Vertex::new(Vec2::new(7., 8.), vec![3, -1]),
-                polyanya::Vertex::new(Vec2::new(7., 0.), vec![5, 4, -1]),
-                polyanya::Vertex::new(Vec2::new(11., 3.), vec![4, 5, -1]),
-                polyanya::Vertex::new(Vec2::new(11., 5.), vec![4, -1, 6]),
-                polyanya::Vertex::new(Vec2::new(12., 0.), vec![5, -1]),
-                polyanya::Vertex::new(Vec2::new(12., 3.), vec![5, -1]),
-                polyanya::Vertex::new(Vec2::new(13., 5.), vec![6, -1]),
-                polyanya::Vertex::new(Vec2::new(13., 7.), vec![6, -1]),
-                polyanya::Vertex::new(Vec2::new(1., 3.), vec![1, -1]),
-            ],
-            vec![
-                polyanya::Polygon::new(vec![0, 1, 2, 3, 4], true),
-                polyanya::Polygon::new(vec![5, 22, 6, 7, 8, 9], true),
-                polyanya::Polygon::new(vec![1, 9, 8, 10, 11, 12, 2], false),
-                polyanya::Polygon::new(vec![12, 11, 13, 14], true),
-                polyanya::Polygon::new(vec![10, 15, 16, 17, 11], false),
-                polyanya::Polygon::new(vec![15, 18, 19, 16], true),
-                polyanya::Polygon::new(vec![11, 17, 20, 21], true),
-            ],
-        ))),
+        simple: navmeshes.add(NavMesh::from_polyanya_mesh(
+            polyanya::Mesh::new(
+                vec![
+                    polyanya::Vertex::new(Vec2::new(0., 6.), vec![0, -1]),
+                    polyanya::Vertex::new(Vec2::new(2., 5.), vec![0, -1, 2]),
+                    polyanya::Vertex::new(Vec2::new(5., 7.), vec![0, 2, -1]),
+                    polyanya::Vertex::new(Vec2::new(5., 8.), vec![0, -1]),
+                    polyanya::Vertex::new(Vec2::new(0., 8.), vec![0, -1]),
+                    polyanya::Vertex::new(Vec2::new(1., 4.), vec![1, -1]),
+                    polyanya::Vertex::new(Vec2::new(2., 1.), vec![1, -1]),
+                    polyanya::Vertex::new(Vec2::new(4., 1.), vec![1, -1]),
+                    polyanya::Vertex::new(Vec2::new(4., 2.), vec![1, -1, 2]),
+                    polyanya::Vertex::new(Vec2::new(2., 4.), vec![1, 2, -1]),
+                    polyanya::Vertex::new(Vec2::new(7., 4.), vec![2, -1, 4]),
+                    polyanya::Vertex::new(Vec2::new(10., 7.), vec![2, 4, 6, -1, 3]),
+                    polyanya::Vertex::new(Vec2::new(7., 7.), vec![2, 3, -1]),
+                    polyanya::Vertex::new(Vec2::new(11., 8.), vec![3, -1]),
+                    polyanya::Vertex::new(Vec2::new(7., 8.), vec![3, -1]),
+                    polyanya::Vertex::new(Vec2::new(7., 0.), vec![5, 4, -1]),
+                    polyanya::Vertex::new(Vec2::new(11., 3.), vec![4, 5, -1]),
+                    polyanya::Vertex::new(Vec2::new(11., 5.), vec![4, -1, 6]),
+                    polyanya::Vertex::new(Vec2::new(12., 0.), vec![5, -1]),
+                    polyanya::Vertex::new(Vec2::new(12., 3.), vec![5, -1]),
+                    polyanya::Vertex::new(Vec2::new(13., 5.), vec![6, -1]),
+                    polyanya::Vertex::new(Vec2::new(13., 7.), vec![6, -1]),
+                    polyanya::Vertex::new(Vec2::new(1., 3.), vec![1, -1]),
+                ],
+                vec![
+                    polyanya::Polygon::new(vec![0, 1, 2, 3, 4], true),
+                    polyanya::Polygon::new(vec![5, 22, 6, 7, 8, 9], true),
+                    polyanya::Polygon::new(vec![1, 9, 8, 10, 11, 12, 2], false),
+                    polyanya::Polygon::new(vec![12, 11, 13, 14], true),
+                    polyanya::Polygon::new(vec![10, 15, 16, 17, 11], false),
+                    polyanya::Polygon::new(vec![15, 18, 19, 16], true),
+                    polyanya::Polygon::new(vec![11, 17, 20, 21], true),
+                ],
+            )
+            .unwrap(),
+        )),
         arena: asset_server.load("arena-merged.polyanya.mesh"),
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
@@ -166,7 +170,8 @@ fn on_mesh_change(
                             0.0,
                         ))
                         .with_scale(Vec3::splat(factor)),
-                        material: materials.add(ColorMaterial::from(Color::BLUE)),
+                        material: materials
+                            .add(ColorMaterial::from(Color::Srgba(palettes::css::BLUE))),
                         ..default()
                     })
                     .id(),
@@ -186,7 +191,7 @@ fn on_mesh_change(
                         TextStyle {
                             font: font.clone_weak(),
                             font_size: 30.0,
-                            color: Color::WHITE,
+                            color: palettes::css::WHITE.into(),
                         },
                     ),
                     TextSection::new(
@@ -194,7 +199,7 @@ fn on_mesh_change(
                         TextStyle {
                             font: font.clone_weak(),
                             font_size: 15.0,
-                            color: Color::WHITE,
+                            color: palettes::css::WHITE.into(),
                         },
                     ),
                     TextSection::new(
@@ -202,7 +207,7 @@ fn on_mesh_change(
                         TextStyle {
                             font: font.clone_weak(),
                             font_size: 15.0,
-                            color: Color::WHITE,
+                            color: palettes::css::WHITE.into(),
                         },
                     ),
                 ]),
@@ -313,7 +318,7 @@ fn on_click(
                     commands.spawn((
                         SpriteBundle {
                             sprite: Sprite {
-                                color: Color::RED,
+                                color: palettes::css::RED.into(),
                                 custom_size: Some(Vec2::ONE),
                                 ..default()
                             },
@@ -423,14 +428,14 @@ fn display_path(
         }
         gizmos.linestrip_2d(
             path.path.iter().map(|p| (*p - mesh.size / 2.0) * factor),
-            Color::ORANGE,
+            palettes::css::ORANGE,
         );
 
         if let Some(next) = path.path.first() {
             gizmos.line_2d(
                 transform.translation.truncate(),
                 (*next - mesh.size / 2.0) * factor,
-                Color::YELLOW,
+                palettes::css::YELLOW,
             );
         }
     }

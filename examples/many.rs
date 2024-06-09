@@ -5,6 +5,7 @@ use std::{
 };
 
 use bevy::{
+    color::palettes,
     core::TaskPoolThreadAssignmentPolicy,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::Vec3Swizzles,
@@ -20,7 +21,7 @@ use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(ClearColor(palettes::css::BLACK.into()))
         .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
@@ -99,7 +100,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 30.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -107,7 +108,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 30.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -115,7 +116,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 20.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -123,7 +124,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 20.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -131,7 +132,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 20.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -139,7 +140,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 20.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -147,7 +148,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 20.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -155,7 +156,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 20.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -163,7 +164,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 15.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -171,7 +172,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 15.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -179,7 +180,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font: font.clone_weak(),
                     font_size: 15.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
             TextSection::new(
@@ -187,7 +188,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextStyle {
                     font,
                     font_size: 15.0,
-                    color: Color::WHITE,
+                    color: palettes::css::WHITE.into(),
                 },
             ),
         ]),
@@ -234,7 +235,8 @@ fn on_mesh_change(
                             0.0,
                         ))
                         .with_scale(Vec3::splat(factor)),
-                        material: materials.add(ColorMaterial::from(Color::DARK_GRAY)),
+                        material: materials
+                            .add(ColorMaterial::from(Color::Srgba(palettes::css::DARK_GRAY))),
                         ..default()
                     })
                     .id(),
@@ -293,12 +295,12 @@ fn spawn(
             .choose(&mut rng)
             .unwrap();
             let position = (in_mesh - MESH_SIZE / 2.0) * factor;
-            let color = Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5).as_rgba();
+            let color = Hsla::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5);
 
             to_spawn.push((
                 SpriteBundle {
                     sprite: Sprite {
-                        color,
+                        color: Color::Srgba(color.into()),
                         custom_size: Some(Vec2::ONE),
                         ..default()
                     },
@@ -308,7 +310,7 @@ fn spawn(
                 },
                 Navigator {
                     speed: rng.gen_range(50.0..100.0),
-                    color,
+                    color: Color::Srgba(color.into()),
                 },
             ));
         }
