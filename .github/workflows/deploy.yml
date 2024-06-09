@@ -31,17 +31,20 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --target wasm32-unknown-unknown --release --example moving
+          cargo build --target wasm32-unknown-unknown --release --example moving --features bevy/webgl2
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/moving.wasm
 
-          cargo build --target wasm32-unknown-unknown --release --example lines
+          cargo build --target wasm32-unknown-unknown --release --example lines --features bevy/webgl2
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/lines.wasm
 
-          cargo build --target wasm32-unknown-unknown --release --example many
+          cargo build --target wasm32-unknown-unknown --release --example many --features bevy/webgl2
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/many.wasm
 
-          cargo build --target wasm32-unknown-unknown --release --example gltf
+          cargo build --target wasm32-unknown-unknown --release --example gltf --features bevy/webgl2
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/gltf.wasm
+
+          cargo build --target wasm32-unknown-unknown --release --example random_obstacles --features bevy/webgl2
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/random_obstacles.wasm
 
       - name: Copy Assets
         run: cp -r assets wasm/

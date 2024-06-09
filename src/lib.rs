@@ -107,9 +107,53 @@ impl NavMesh {
         Self::from_bevy_mesh_and_then(mesh, |_| {})
     }
 
+    /// Build a navmesh from its edges and obstacles.
+    ///
+    /// Obstacles will be merged in case some are overlapping, and mesh will be simplified to reduce the number of polygons.
+    ///
+    /// If you want more controls over the simplification process, you can use the [`from_polyanya_mesh`] method.
+    ///
+    /// Depending on the scale of your mesh, you should change the [`delta`](polyanya::Mesh::delta) value using [`set_delta`].
+    pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> NavMesh {
+        let mut triangulation = polyanya::Triangulation::from_outer_edges(&edges);
+        for obstacle in obstacles {
+            triangulation.add_obstacle(obstacle);
+        }
+
+        triangulation.merge_overlapping_obstacles();
+
+        triangulation.simplify(0.1);
+        let mut mesh: polyanya::Mesh = triangulation.as_navmesh().unwrap();
+        for _i in 0..3 {
+            if mesh.merge_polygons() {
+                break;
+            }
+        }
+        mesh.set_delta(0.01);
+
+        Self::from_polyanya_mesh(mesh)
+    }
+
     /// Get the underlying Polyanya navigation mesh
     pub fn get(&self) -> Arc<polyanya::Mesh> {
         self.mesh.clone()
+    }
+
+    /// Set the [`delta`](polyanya::Mesh::delta) value of the navmesh.
+    pub fn set_delta(&mut self, delta: f32) -> bool {
+        if let Some(mesh) = Arc::get_mut(&mut self.mesh) {
+            debug!("setting mesh delta to {}", delta);
+            mesh.set_delta(delta);
+            true
+        } else {
+            warn!("failed setting mesh delta to {}", delta);
+            false
+        }
+    }
+
+    /// Get the [`delta`](polyanya::Mesh::delta) value of the navmesh.  
+    pub fn delta(&self) -> f32 {
+        self.mesh.delta()
     }
 
     /// Get a path between two points, in an async way
