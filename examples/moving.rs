@@ -140,7 +140,6 @@ fn on_mesh_change(
     primary_window: Query<&Window, With<PrimaryWindow>>,
     navigator: Query<Entity, With<Navigator>>,
     window_resized: EventReader<WindowResized>,
-    asset_server: Res<AssetServer>,
     text: Query<Entity, With<Text>>,
     mut wait_for_mesh: Local<bool>,
 ) {
@@ -179,7 +178,6 @@ fn on_mesh_change(
             if let Ok(entity) = text.get_single() {
                 commands.entity(entity).despawn();
             }
-            let font = asset_server.load("fonts/FiraMono-Medium.ttf");
             commands.spawn(TextBundle {
                 text: Text::from_sections([
                     TextSection::new(
@@ -189,25 +187,25 @@ fn on_mesh_change(
                             CurrentMesh::Aurora => "Aurora\n",
                         },
                         TextStyle {
-                            font: font.clone_weak(),
                             font_size: 30.0,
                             color: palettes::css::WHITE.into(),
+                            ..default()
                         },
                     ),
                     TextSection::new(
                         "Press spacebar or long touch to switch mesh\n",
                         TextStyle {
-                            font: font.clone_weak(),
                             font_size: 15.0,
                             color: palettes::css::WHITE.into(),
+                            ..default()
                         },
                     ),
                     TextSection::new(
                         "Click to find a path",
                         TextStyle {
-                            font: font.clone_weak(),
                             font_size: 15.0,
                             color: palettes::css::WHITE.into(),
+                            ..default()
                         },
                     ),
                 ]),

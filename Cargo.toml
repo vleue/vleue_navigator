@@ -44,6 +44,7 @@ features = [
     "zstd",
     "multi_threaded",
     "bevy_state",
+    "default_font",
 ]
 default-features = false
 

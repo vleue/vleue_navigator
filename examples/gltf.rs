@@ -78,7 +78,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..Default::default()
     });
 
-    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
     commands.spawn(TextBundle {
         style: Style {
             align_self: AlignSelf::FlexStart,
@@ -90,33 +89,33 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TextSection {
                     value: "<space>".to_string(),
                     style: TextStyle {
-                        font: font.clone_weak(),
                         font_size: 30.0,
                         color: palettes::css::GOLD.into(),
+                        ..default()
                     },
                 },
                 TextSection {
                     value: " to display the navmesh, ".to_string(),
                     style: TextStyle {
-                        font: font.clone_weak(),
                         font_size: 30.0,
                         color: palettes::css::WHITE.into(),
+                        ..default()
                     },
                 },
                 TextSection {
                     value: "click".to_string(),
                     style: TextStyle {
-                        font: font.clone_weak(),
                         font_size: 30.0,
                         color: palettes::css::GOLD.into(),
+                        ..default()
                     },
                 },
                 TextSection {
                     value: " to set the destination".to_string(),
                     style: TextStyle {
-                        font,
                         font_size: 30.0,
                         color: palettes::css::WHITE.into(),
+                        ..default()
                     },
                 },
             ],

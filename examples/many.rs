@@ -92,103 +92,102 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(Meshes {
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
-    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
     commands.spawn(TextBundle {
         text: Text::from_sections([
             TextSection::new(
                 "Agents: ",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 30.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "0\n",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 30.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "FPS: ",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 20.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "0.0\n",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 20.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "Task duration: ",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 20.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "0.0\n",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 20.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "Task overhead: ",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 20.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "0.0\n",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 20.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "space - ",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 15.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "\n",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 15.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "l - ",
                 TextStyle {
-                    font: font.clone_weak(),
                     font_size: 15.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
             TextSection::new(
                 "\n",
                 TextStyle {
-                    font,
                     font_size: 15.0,
                     color: palettes::css::WHITE.into(),
+                    ..default()
                 },
             ),
         ]),
