@@ -85,4 +85,5 @@ fn get_path(
 
 |Bevy|vleue_navigator|
 |---|---|
+|0.14|0.8|
 |0.13|0.7|
