@@ -146,12 +146,12 @@ fn mesh_change(
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) || meshes.0 == Handle::default() {
         let mut obstacles = vec![];
-        for _i in 0..500 {
+        for _i in 0..1000 {
             let point = vec2(
-                rand::thread_rng().gen_range(1.0..14.0),
-                rand::thread_rng().gen_range(1.0..9.),
+                rand::thread_rng().gen_range(0.5..14.5),
+                rand::thread_rng().gen_range(0.5..9.5),
             );
-            let around = -0.6..0.6;
+            let around = -0.48..0.48;
             obstacles.push(vec![
                 point
                     + vec2(
