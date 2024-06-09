@@ -122,8 +122,8 @@ impl NavMesh {
 
         triangulation.merge_overlapping_obstacles();
 
-        triangulation.simplify(0.1);
         let mut mesh: polyanya::Mesh = triangulation.as_navmesh().unwrap();
+        triangulation.simplify(0.001);
         for _i in 0..3 {
             if mesh.merge_polygons() {
                 break;
