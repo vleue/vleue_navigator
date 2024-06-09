@@ -1,5 +1,6 @@
 use bevy::{
     asset::LoadState,
+    color::palettes,
     gltf::{Gltf, GltfMesh},
     math::Vec3Swizzles,
     pbr::NotShadowCaster,
@@ -15,7 +16,7 @@ const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> = Handle::weak_from_u128(0);
 fn main() {
     App::new()
         .insert_resource(Msaa::default())
-        .insert_resource(ClearColor(Color::rgb(0., 0., 0.01)))
+        .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -62,7 +63,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(GltfHandle(asset_server.load("meshes/navmesh.glb")));
 
     commands.insert_resource(AmbientLight {
-        color: Color::SEA_GREEN,
+        color: palettes::css::SEA_GREEN.into(),
         brightness: 100.0,
     });
 
@@ -91,7 +92,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     style: TextStyle {
                         font: font.clone_weak(),
                         font_size: 30.0,
-                        color: Color::GOLD,
+                        color: palettes::css::GOLD.into(),
                     },
                 },
                 TextSection {
@@ -99,7 +100,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     style: TextStyle {
                         font: font.clone_weak(),
                         font_size: 30.0,
-                        color: Color::WHITE,
+                        color: palettes::css::WHITE.into(),
                     },
                 },
                 TextSection {
@@ -107,7 +108,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     style: TextStyle {
                         font: font.clone_weak(),
                         font_size: 30.0,
-                        color: Color::GOLD,
+                        color: palettes::css::GOLD.into(),
                     },
                 },
                 TextSection {
@@ -115,7 +116,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     style: TextStyle {
                         font,
                         font_size: 30.0,
-                        color: Color::WHITE,
+                        color: palettes::css::WHITE.into(),
                     },
                 },
             ],
@@ -164,12 +165,12 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
 ) {
-    let mut material: StandardMaterial = Color::ALICE_BLUE.into();
+    let mut material: StandardMaterial = Color::Srgba(palettes::css::ALICE_BLUE).into();
     material.perceptual_roughness = 1.0;
     let ground_material = materials.add(material);
     if let Some(gltf) = gltfs.get(gltf.id()) {
         let mesh = gltf_meshes.get(&gltf.named_meshes["obstacles"]).unwrap();
-        let mut material: StandardMaterial = Color::GRAY.into();
+        let mut material: StandardMaterial = Color::Srgba(palettes::css::GRAY).into();
         material.perceptual_roughness = 1.0;
         commands.spawn(PbrBundle {
             mesh: mesh.primitives[0].mesh.clone(),
@@ -197,7 +198,7 @@ fn setup_scene(
                 SpotLightBundle {
                     spot_light: SpotLight {
                         intensity: 1000000.0,
-                        color: Color::SEA_GREEN,
+                        color: palettes::css::SEA_GREEN.into(),
                         shadows_enabled: true,
                         inner_angle: 0.5,
                         outer_angle: 0.8,
@@ -234,7 +235,7 @@ fn setup_scene(
                     .unwrap(),
             );
 
-            let mut material: StandardMaterial = Color::ANTIQUE_WHITE.into();
+            let mut material: StandardMaterial = Color::Srgba(palettes::css::ANTIQUE_WHITE).into();
             material.unlit = true;
 
             commands.spawn((
@@ -247,7 +248,7 @@ fn setup_scene(
                 },
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED),
             ));
-            navmeshes.insert(HANDLE_TRIMESH_OPTIMIZED, navmesh);
+            navmeshes.insert(&HANDLE_TRIMESH_OPTIMIZED, navmesh);
         }
 
         commands
@@ -255,8 +256,8 @@ fn setup_scene(
                 PbrBundle {
                     mesh: meshes.add(Mesh::from(Capsule3d { ..default() })),
                     material: materials.add(StandardMaterial {
-                        base_color: Color::BLUE,
-                        emissive: Color::BLUE * 50.0,
+                        base_color: palettes::css::BLUE.into(),
+                        emissive: (palettes::css::BLUE * 5.0).into(),
                         ..default()
                     }),
                     transform: Transform::from_xyz(-1.0, 0.0, -2.0),
@@ -268,7 +269,7 @@ fn setup_scene(
             .with_children(|object| {
                 object.spawn(PointLightBundle {
                     point_light: PointLight {
-                        color: Color::BLUE,
+                        color: palettes::css::BLUE.into(),
                         range: 500.0,
                         intensity: 100000.0,
                         shadows_enabled: true,
@@ -317,8 +318,8 @@ fn give_target_auto(
                             ..default()
                         })),
                         material: materials.add(StandardMaterial {
-                            base_color: Color::RED,
-                            emissive: Color::RED * 50.0,
+                            base_color: palettes::css::RED.into(),
+                            emissive: (palettes::css::RED * 5.0).into(),
                             ..default()
                         }),
                         transform: Transform::from_xyz(x, 0.0, z),
@@ -330,7 +331,7 @@ fn give_target_auto(
                 .with_children(|target| {
                     target.spawn(PointLightBundle {
                         point_light: PointLight {
-                            color: Color::RED,
+                            color: palettes::css::RED.into(),
                             shadows_enabled: true,
                             range: 10.0,
                             ..default()
@@ -390,8 +391,8 @@ fn give_target_on_click(
                                 ..default()
                             })),
                             material: materials.add(StandardMaterial {
-                                base_color: Color::RED,
-                                emissive: Color::RED * 50.0,
+                                base_color: palettes::css::RED.into(),
+                                emissive: (palettes::css::RED * 5.0).into(),
                                 ..default()
                             }),
                             transform: Transform::from_translation(target),
@@ -403,7 +404,7 @@ fn give_target_on_click(
                     .with_children(|target| {
                         target.spawn(PointLightBundle {
                             point_light: PointLight {
-                                color: Color::RED,
+                                color: palettes::css::RED.into(),
                                 shadows_enabled: true,
                                 range: 10.0,
                                 ..default()

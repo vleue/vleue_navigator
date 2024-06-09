@@ -28,7 +28,7 @@ fn main() {
         .add_plugins((DefaultPlugins, VleueNavigatorPlugin))
         .add_systems(Startup, load)
         .add_systems(Update, get_path)
-        .run()
+        .run();
 }
 
 #[derive(Resource)]

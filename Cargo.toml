@@ -13,13 +13,13 @@ documentation = "https://docs.rs/vleue_navigator"
 categories = ["game-development"]
 
 [dependencies]
-itertools = "0.12"
+itertools = "0.13"
 
 [dependencies.polyanya]
-version = "0.5"
+version = "0.6"
 
 [dependencies.bevy]
-version = "0.13"
+version = "0.14.0-rc.2"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
@@ -27,7 +27,7 @@ default-features = false
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.13"
+version = "0.14.0-rc.2"
 features = [
     "bevy_ui",
     "bevy_text",
@@ -42,7 +42,8 @@ features = [
     "tonemapping_luts",
     "ktx2",
     "zstd",
-    "multi-threaded",
+    "multi_threaded",
+    "bevy_state",
 ]
 default-features = false
 

@@ -90,7 +90,8 @@ impl NavMesh {
             vertices,
             triangles,
         }
-        .into();
+        .try_into()
+        .unwrap();
         callback(&mut polyanya_mesh);
 
         let mut navmesh = Self::from_polyanya_mesh(polyanya_mesh);
@@ -275,7 +276,8 @@ mod tests {
                 ],
                 triangles: vec![[0, 1, 4], [1, 2, 5], [5, 2, 3], [1, 5, 3], [0, 4, 3]],
             }
-            .into(),
+            .try_into()
+            .unwrap(),
         );
         let mut bevy_mesh = expected_navmesh.to_mesh();
         // Add back normals as they are used to determine where is up in the mesh
@@ -300,7 +302,8 @@ mod tests {
                 ],
                 triangles: vec![[0, 1, 3], [0, 3, 2]],
             }
-            .into(),
+            .try_into()
+            .unwrap(),
         );
         let mut bevy_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
         bevy_mesh.insert_attribute(
