@@ -27,10 +27,13 @@ pub mod asset_loaders;
 mod obstacles;
 mod updater;
 
-pub use obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
-pub use updater::{
-    NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
-};
+pub mod prelude {
+    pub use crate::obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
+    pub use crate::updater::{
+        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
+    };
+    pub use crate::{NavMesh, VleueNavigatorPlugin};
+}
 
 /// Bevy plugin to add support for the [`NavMesh`] asset type.
 #[derive(Debug, Clone, Copy)]

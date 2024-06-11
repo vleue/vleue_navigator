@@ -9,10 +9,7 @@ use bevy::{
 };
 use polyanya::Triangulation;
 use rand::{rngs::ThreadRng, Rng};
-use vleue_navigator::{
-    NavMesh, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
-    NavmeshUpdaterPlugin, PrimitiveObstacle, VleueNavigatorPlugin,
-};
+use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent.rs"]
 mod agent;

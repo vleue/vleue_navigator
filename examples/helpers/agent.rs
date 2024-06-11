@@ -1,6 +1,6 @@
 use bevy::{color::palettes, prelude::*, window::PrimaryWindow};
 use rand::Rng;
-use vleue_navigator::{NavMesh, NavMeshStatus};
+use vleue_navigator::prelude::*;
 
 #[derive(Component)]
 pub struct Navigator {

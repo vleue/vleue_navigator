@@ -20,7 +20,7 @@ use bevy::{
     prelude::*,
 };
 
-use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
+use vleue_navigator::prelude::*;
 use rand::Rng;
 
 fn main() {

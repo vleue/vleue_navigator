@@ -10,10 +10,7 @@ use bevy::{
 };
 use polyanya::Triangulation;
 use rand::Rng;
-use vleue_navigator::{
-    NavMesh, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
-    NavmeshUpdaterPlugin, VleueNavigatorPlugin,
-};
+use vleue_navigator::prelude::*;
 
 #[path = "helpers/ui.rs"]
 mod ui;
