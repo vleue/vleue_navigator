@@ -121,6 +121,7 @@ fn build_navmesh<T: ObstacleSource>(
     }
 }
 
+/// Task holder for a navmesh update.
 #[derive(Component, Debug, Clone)]
 pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<NavMesh, ()>>>>);
 

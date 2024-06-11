@@ -1,8 +1,5 @@
 use bevy::{color::palettes, prelude::*};
-use vleue_navigator::{
-    updater::{NavMeshSettings, NavMeshStatus},
-    NavMesh,
-};
+use vleue_navigator::{NavMesh, NavMeshSettings, NavMeshStatus};
 
 #[derive(Component)]
 pub enum UiSettings {

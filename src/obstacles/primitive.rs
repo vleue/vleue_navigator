@@ -11,15 +11,26 @@ use bevy::{
 
 use super::ObstacleSource;
 
+/// A primitive obstacle that can be used to create a [`NavMesh`].
+/// Variants are made from primitive shapes defined in Bevy
 #[derive(Component, Debug, Clone, Copy)]
 pub enum PrimitiveObstacle {
+    /// A rectangle primitive.
     Rectangle(Rectangle),
+    /// A circle primitive.
     Circle(Circle),
+    /// An ellipse primitive
     Ellipse(Ellipse),
+    /// A primitive representing a circular sector: a pie slice of a circle.
     CircularSector(CircularSector),
+    /// A primitive representing a circular segment:
+    /// the area enclosed by the arc of a circle and its chord (the line between its endpoints).
     CircularSegment(CircularSegment),
+    /// A 2D capsule primitive, also known as a stadium or pill shape.
     Capsule(Capsule2d),
+    /// A polygon where all vertices lie on a circle, equally far apart.
     RegularPolygon(RegularPolygon),
+    /// A rhombus primitive, also known as a diamond shape.
     Rhombus(Rhombus),
 }
 

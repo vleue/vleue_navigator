@@ -11,10 +11,8 @@ use bevy::{
 use polyanya::Triangulation;
 use rand::Rng;
 use vleue_navigator::{
-    updater::{
-        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
-    },
-    NavMesh, VleueNavigatorPlugin,
+    NavMesh, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
+    NavmeshUpdaterPlugin, VleueNavigatorPlugin,
 };
 
 #[path = "helpers/ui.rs"]

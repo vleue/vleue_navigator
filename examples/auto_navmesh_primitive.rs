@@ -10,10 +10,8 @@ use bevy::{
 use polyanya::Triangulation;
 use rand::{rngs::ThreadRng, Rng};
 use vleue_navigator::{
-    updater::{
-        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
-    },
-    NavMesh, PrimitiveObstacle, VleueNavigatorPlugin,
+    NavMesh, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
+    NavmeshUpdaterPlugin, PrimitiveObstacle, VleueNavigatorPlugin,
 };
 
 #[path = "helpers/agent.rs"]
