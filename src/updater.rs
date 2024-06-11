@@ -60,7 +60,7 @@ pub struct NavMeshSettings {
 impl Default for NavMeshSettings {
     fn default() -> Self {
         Self {
-            simplify: 0.001,
+            simplify: 0.0,
             merge_steps: 2,
             default_delta: 0.01,
             fixed: Triangulation::from_outer_edges(&[]),
