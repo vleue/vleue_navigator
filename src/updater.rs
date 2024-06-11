@@ -98,13 +98,21 @@ pub struct NavMeshUpdateModeBlocking;
 /// Trait to mark a component as the source of position and shape of an obstacle.
 pub trait ObstacleSource: Component + Clone {
     /// Get the polygon of the obstacle in the local space of the mesh.
-    fn get_polygon(&self, transform: &GlobalTransform, transform: &Transform) -> Vec<Vec2>;
+    fn get_polygon(
+        &self,
+        obstacle_transform: &GlobalTransform,
+        navmesh_transform: &Transform,
+    ) -> Vec<Vec2>;
 }
 
 impl ObstacleSource for Aabb {
-    fn get_polygon(&self, transform: &GlobalTransform, mesh_transform: &Transform) -> Vec<Vec2> {
-        let transform = transform.compute_transform();
-        let to_vec2 = |v: Vec3| mesh_transform.transform_point(v).xy();
+    fn get_polygon(
+        &self,
+        obstacle_transform: &GlobalTransform,
+        navmesh_transform: &Transform,
+    ) -> Vec<Vec2> {
+        let transform = obstacle_transform.compute_transform();
+        let to_vec2 = |v: Vec3| navmesh_transform.transform_point(v).xy();
 
         vec![
             to_vec2(transform.transform_point(vec3(
