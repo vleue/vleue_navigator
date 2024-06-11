@@ -81,7 +81,7 @@ fn setup(mut commands: Commands) {
     // - the `Transform` component to define the obstacle's position
     // - the `GlobalTransform` so that it's correctly handled by Bevy
     let mut rng = rand::thread_rng();
-    for _ in 0..10 {
+    for _ in 0..100 {
         commands.spawn((
             Obstacle,
             Aabb::from_min_max(
@@ -89,8 +89,8 @@ fn setup(mut commands: Commands) {
                 Vec3::new(rng.gen_range(0.1..0.5), rng.gen_range(0.1..0.5), 0.0),
             ),
             Transform::from_translation(Vec3::new(
-                rng.gen_range(0.5..MESH_WIDTH - 0.5),
-                rng.gen_range(0.5..MESH_HEIGHT - 0.5),
+                rng.gen_range(0.0..MESH_WIDTH),
+                rng.gen_range(0.0..MESH_HEIGHT),
                 0.0,
             ))
             .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
@@ -146,13 +146,6 @@ fn setup(mut commands: Commands) {
                 "\n\nClick to add an obstacle",
                 TextStyle {
                     font_size: 25.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "\nobstacles must not overlap the border, it would result in a build failure",
-                TextStyle {
-                    font_size: 15.0,
                     ..default()
                 },
             ),

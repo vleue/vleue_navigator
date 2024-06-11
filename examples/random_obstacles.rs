@@ -8,6 +8,9 @@ use bevy::{
 use rand::Rng;
 use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
+const MESH_WIDTH: f32 = 15.0;
+const MESH_HEIGHT: f32 = 10.0;
+
 fn main() {
     App::new()
         .insert_resource(ClearColor(palettes::css::BLACK.into()))
@@ -61,25 +64,30 @@ fn on_mesh_change(
     primary_window: Query<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     text: Query<Entity, With<Text>>,
+    mut waiting_for_available: Local<bool>,
 ) {
-    if !known_meshes.is_changed() && window_resized.is_empty() {
+    if !*waiting_for_available && !known_meshes.is_changed() && window_resized.is_empty() {
         return;
     }
     path_to_display.steps.clear();
-    let navmesh = navmeshes.get(&known_meshes.0).unwrap();
+    let Some(navmesh) = navmeshes.get(&known_meshes.0) else {
+        *waiting_for_available = true;
+        return;
+    };
+    *waiting_for_available = false;
     if let Some(entity) = *current_mesh_entity {
         commands.entity(entity).despawn_recursive();
     }
     let window = primary_window.single();
-    let factor = (window.width() / 15.0).min(window.height() / 10.0);
+    let factor = (window.width() / MESH_WIDTH).min(window.height() / MESH_HEIGHT);
 
     *current_mesh_entity = Some(
         commands
             .spawn(MaterialMesh2dBundle {
                 mesh: meshes.add(navmesh.to_mesh()).into(),
                 transform: Transform::from_translation(Vec3::new(
-                    -15.0 / 2.0 * factor,
-                    -10.0 / 2.0 * factor,
+                    -MESH_WIDTH / 2.0 * factor,
+                    -MESH_HEIGHT / 2.0 * factor,
                     0.0,
                 ))
                 .with_scale(Vec3::splat(factor)),
@@ -148,7 +156,10 @@ fn mesh_change(
         let mut obstacles = vec![];
         let mut rng = rand::thread_rng();
         for _i in 0..500 {
-            let point = vec2(rng.gen_range(1.0..14.0), rng.gen_range(1.0..9.0));
+            let point = vec2(
+                rng.gen_range(0.0..MESH_WIDTH),
+                rng.gen_range(0.0..MESH_HEIGHT),
+            );
             let around = -0.6..0.6;
             obstacles.push(vec![
                 point + vec2(rng.gen_range(around.clone()), rng.gen_range(around.clone())),
@@ -184,9 +195,9 @@ fn on_click(
             .map(|ray| ray.origin.truncate())
         {
             let screen = Vec2::new(window.width(), window.height());
-            let factor = (screen.x / 15.0).min(screen.y / 10.0);
+            let factor = (screen.x / MESH_WIDTH).min(screen.y / MESH_HEIGHT);
 
-            let in_mesh = position / factor + vec2(15.0, 10.0) / 2.0;
+            let in_mesh = position / factor + vec2(MESH_WIDTH, MESH_HEIGHT) / 2.0;
             if navmeshes
                 .get(&meshes.0)
                 .map(|mesh| mesh.is_in_mesh(in_mesh))
@@ -230,12 +241,12 @@ fn update_path_display(
     primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
     let window = primary_window.single();
-    let factor = (window.width() / 15.0).min(window.height() / 10.0);
+    let factor = (window.width() / MESH_WIDTH).min(window.height() / MESH_HEIGHT);
 
     let path = path_to_display
         .steps
         .iter()
-        .map(|p| (*p - vec2(15.0, 10.0) / 2.0) * factor);
+        .map(|p| (*p - vec2(MESH_WIDTH, MESH_HEIGHT) / 2.0) * factor);
 
     if path.len() >= 1 {
         gizmos.linestrip_2d(path, palettes::css::YELLOW);
