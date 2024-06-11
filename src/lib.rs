@@ -27,6 +27,7 @@ pub mod asset_loaders;
 mod obstacles;
 mod updater;
 
+/// Prelude for imports
 pub mod prelude {
     pub use crate::obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
     pub use crate::updater::{
