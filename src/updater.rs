@@ -163,7 +163,6 @@ fn build_navmesh<T: ObstacleSource + std::fmt::Debug>(
     }
 }
 
-/// Zut
 #[derive(Component, Debug, Clone)]
 pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<NavMesh, ()>>>>);
 
