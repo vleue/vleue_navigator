@@ -141,14 +141,17 @@ fn build_navmesh<T: ObstacleSource + std::fmt::Debug>(
         .iter()
         .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform))
         .filter(|polygon| !polygon.is_empty());
-    // .collect::<Vec<_>>();
     let mut triangulation = settings.fixed.clone();
     triangulation.add_obstacles(obstacle_aabbs);
     triangulation.merge_overlapping_obstacles();
-    triangulation.simplify(settings.simplify);
+    if settings.simplify != 0.0 {
+        triangulation.simplify(settings.simplify);
+    }
     if let Some(mut navmesh) = triangulation.as_navmesh() {
         for _ in 0..settings.merge_steps {
-            navmesh.merge_polygons();
+            if !navmesh.merge_polygons() {
+                break;
+            }
         }
         navmesh.bake();
         navmesh.set_delta(settings.default_delta);
