@@ -24,6 +24,17 @@ use bevy::{
 use itertools::Itertools;
 
 pub mod asset_loaders;
+mod obstacles;
+mod updater;
+
+/// Prelude for imports
+pub mod prelude {
+    pub use crate::obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
+    pub use crate::updater::{
+        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
+    };
+    pub use crate::{NavMesh, VleueNavigatorPlugin};
+}
 
 /// Bevy plugin to add support for the [`NavMesh`] asset type.
 #[derive(Debug, Clone, Copy)]
@@ -45,8 +56,8 @@ pub struct TransformedPath {
     pub path: Vec<Vec3>,
 }
 
-pub use polyanya::Path;
 use polyanya::Trimesh;
+pub use polyanya::{Path, Triangulation};
 
 /// A navigation mesh
 #[derive(Debug, TypePath, Clone, Asset)]
@@ -115,7 +126,7 @@ impl NavMesh {
     ///
     /// Depending on the scale of your mesh, you should change the [`delta`](polyanya::Mesh::delta) value using [`set_delta`].
     pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> NavMesh {
-        let mut triangulation = polyanya::Triangulation::from_outer_edges(&edges);
+        let mut triangulation = Triangulation::from_outer_edges(&edges);
         for obstacle in obstacles {
             triangulation.add_obstacle(obstacle);
         }
@@ -151,7 +162,7 @@ impl NavMesh {
         }
     }
 
-    /// Get the [`delta`](polyanya::Mesh::delta) value of the navmesh.  
+    /// Get the [`delta`](polyanya::Mesh::delta) value of the navmesh.
     pub fn delta(&self) -> f32 {
         self.mesh.delta()
     }

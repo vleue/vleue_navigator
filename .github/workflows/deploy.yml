@@ -15,7 +15,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -46,6 +45,12 @@ jobs:
           cargo build --target wasm32-unknown-unknown --release --example random_obstacles --features bevy/webgl2
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/random_obstacles.wasm
 
+          cargo build --target wasm32-unknown-unknown --release --example auto_navmesh_aabb --features bevy/webgl2
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/auto_navmesh_aabb.wasm
+
+          cargo build --target wasm32-unknown-unknown --release --example auto_navmesh_primitive --features bevy/webgl2
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/auto_navmesh_primitive.wasm
+
       - name: Copy Assets
         run: cp -r assets wasm/
 
@@ -58,7 +63,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: 'wasm'
+          path: "wasm"
 
       - name: Deploy to GitHub Pages
         id: deployment
