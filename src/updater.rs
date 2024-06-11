@@ -6,13 +6,7 @@ use std::{
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
-use bevy::{
-    math::{vec3, Vec3Swizzles},
-    prelude::*,
-    render::primitives::Aabb,
-    tasks::AsyncComputeTaskPool,
-    utils::HashMap,
-};
+use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
 use polyanya::Triangulation;
 
 use crate::{obstacles::ObstacleSource, NavMesh};

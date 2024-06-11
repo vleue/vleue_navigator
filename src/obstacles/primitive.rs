@@ -11,7 +11,7 @@ use bevy::{
 
 use super::ObstacleSource;
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Copy)]
 pub enum PrimitiveObstacle {
     Rectangle(Rectangle),
     Circle(Circle),
