@@ -15,7 +15,7 @@ use bevy::{
 };
 use polyanya::Triangulation;
 
-use crate::NavMesh;
+use crate::{obstacles::ObstacleSource, NavMesh};
 
 /// Bundle for preparing an auto updated navmesh. To use with plugin [`NavmeshUpdaterPlugin`].
 #[derive(Bundle, Debug)]
@@ -95,52 +95,8 @@ pub enum NavMeshUpdateMode {
 #[derive(Component, Debug, Copy, Clone)]
 pub struct NavMeshUpdateModeBlocking;
 
-/// Trait to mark a component as the source of position and shape of an obstacle.
-pub trait ObstacleSource: Component + Clone {
-    /// Get the polygon of the obstacle in the local space of the mesh.
-    fn get_polygon(
-        &self,
-        obstacle_transform: &GlobalTransform,
-        navmesh_transform: &Transform,
-    ) -> Vec<Vec2>;
-}
-
-impl ObstacleSource for Aabb {
-    fn get_polygon(
-        &self,
-        obstacle_transform: &GlobalTransform,
-        navmesh_transform: &Transform,
-    ) -> Vec<Vec2> {
-        let transform = obstacle_transform.compute_transform();
-        let to_vec2 = |v: Vec3| navmesh_transform.transform_point(v).xy();
-
-        vec![
-            to_vec2(transform.transform_point(vec3(
-                -self.half_extents.x,
-                self.half_extents.y,
-                self.half_extents.z,
-            ))),
-            to_vec2(transform.transform_point(vec3(
-                -self.half_extents.x,
-                -self.half_extents.y,
-                -self.half_extents.z,
-            ))),
-            to_vec2(transform.transform_point(vec3(
-                self.half_extents.x,
-                -self.half_extents.y,
-                -self.half_extents.z,
-            ))),
-            to_vec2(transform.transform_point(vec3(
-                self.half_extents.x,
-                self.half_extents.y,
-                self.half_extents.z,
-            ))),
-        ]
-    }
-}
-
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
-fn build_navmesh<T: ObstacleSource + std::fmt::Debug>(
+fn build_navmesh<T: ObstacleSource>(
     obstacles: Vec<(GlobalTransform, T)>,
     settings: NavMeshSettings,
     mesh_transform: Transform,
@@ -187,7 +143,7 @@ type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
     ),
 >;
 
-fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource + std::fmt::Debug>(
+fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     mut commands: Commands,
     obstacles: Query<(Ref<GlobalTransform>, &Obstacle), With<Marker>>,
     removed_obstacles: RemovedComponents<Marker>,

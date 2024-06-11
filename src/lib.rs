@@ -24,7 +24,10 @@ use bevy::{
 use itertools::Itertools;
 
 pub mod asset_loaders;
+mod obstacles;
 pub mod updater;
+
+pub use obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
 
 /// Bevy plugin to add support for the [`NavMesh`] asset type.
 #[derive(Debug, Clone, Copy)]
