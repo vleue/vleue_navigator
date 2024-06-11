@@ -16,11 +16,13 @@ use vleue_navigator::{
     NavMesh, PrimitiveObstacle, VleueNavigatorPlugin,
 };
 
+#[path = "helpers/agent.rs"]
+mod agent;
 #[path = "helpers/ui.rs"]
 mod ui;
 
-const MESH_WIDTH: f32 = 150.0;
-const MESH_HEIGHT: f32 = 100.0;
+const MESH_WIDTH: u32 = 150;
+const MESH_HEIGHT: u32 = 100;
 
 fn main() {
     App::new()
@@ -39,7 +41,15 @@ fn main() {
             // and use the `Aabb` component as the obstacle data source.
             NavmeshUpdaterPlugin::<PrimitiveObstacle, PrimitiveObstacle>::default(),
         ))
-        .add_systems(Startup, (setup, ui::setup_stats, ui::setup_settings))
+        .add_systems(
+            Startup,
+            (
+                setup,
+                ui::setup_stats,
+                ui::setup_settings,
+                agent::setup_agent::<10>,
+            ),
+        )
         .add_systems(
             Update,
             (
@@ -49,6 +59,10 @@ fn main() {
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
+                agent::give_target_to_navigator::<10, MESH_WIDTH, MESH_HEIGHT>,
+                agent::move_navigator,
+                agent::display_navigator_path,
+                agent::refresh_path::<10, MESH_WIDTH, MESH_HEIGHT>,
             ),
         )
         .run();
@@ -63,9 +77,9 @@ fn setup(mut commands: Commands) {
             // Define the outer borders of the navmesh.
             fixed: Triangulation::from_outer_edges(&vec![
                 vec2(0.0, 0.0),
-                vec2(MESH_WIDTH, 0.0),
-                vec2(MESH_WIDTH, MESH_HEIGHT),
-                vec2(0.0, MESH_HEIGHT),
+                vec2(MESH_WIDTH as f32, 0.0),
+                vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
+                vec2(0.0, MESH_HEIGHT as f32),
             ]),
             // Starting with a small mesh simplification factor to avoid very small geometry.
             // Small geometry can make navmesh generation fail due to rounding errors.
@@ -82,8 +96,8 @@ fn setup(mut commands: Commands) {
     let mut rng = rand::thread_rng();
     for _ in 0..50 {
         let transform = Transform::from_translation(Vec3::new(
-            rng.gen_range(0.0..MESH_WIDTH),
-            rng.gen_range(0.0..MESH_HEIGHT),
+            rng.gen_range(0.0..(MESH_WIDTH as f32)),
+            rng.gen_range(0.0..(MESH_HEIGHT as f32)),
             0.0,
         ))
         .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
@@ -152,15 +166,15 @@ fn display_mesh(
         commands.entity(entity).despawn_recursive();
     }
     let window = primary_window.single();
-    let factor = (window.width() / MESH_WIDTH).min(window.height() / MESH_HEIGHT);
+    let factor = (window.width() / (MESH_WIDTH as f32)).min(window.height() / (MESH_HEIGHT as f32));
 
     *current_mesh_entity = Some(
         commands
             .spawn(MaterialMesh2dBundle {
                 mesh: meshes.add(navmesh.to_mesh()).into(),
                 transform: Transform::from_translation(Vec3::new(
-                    -MESH_WIDTH / 2.0 * factor,
-                    -MESH_HEIGHT / 2.0 * factor,
+                    -(MESH_WIDTH as f32) / 2.0 * factor,
+                    -(MESH_HEIGHT as f32) / 2.0 * factor,
                     0.0,
                 ))
                 .with_scale(Vec3::splat(factor)),
@@ -203,9 +217,9 @@ fn spawn_obstacle_on_click(
             .map(|ray| ray.origin.truncate())
         {
             let screen = Vec2::new(window.width(), window.height());
-            let factor = (screen.x / MESH_WIDTH).min(screen.y / MESH_HEIGHT);
+            let factor = (screen.x / (MESH_WIDTH as f32)).min(screen.y / (MESH_HEIGHT as f32));
 
-            let in_mesh = position / factor + vec2(MESH_WIDTH, MESH_HEIGHT) / 2.0;
+            let in_mesh = position / factor + vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32) / 2.0;
             let mut rng = rand::thread_rng();
             let transform = Transform::from_translation(in_mesh.extend(0.0))
                 .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
