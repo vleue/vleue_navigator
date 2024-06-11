@@ -99,64 +99,32 @@ fn setup(mut commands: Commands) {
     }
 
     commands.spawn(TextBundle {
-        text: Text::from_sections([
-            TextSection::new(
-                "Status: ",
-                TextStyle {
-                    font_size: 30.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "{}",
-                TextStyle {
-                    font_size: 30.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "\nObstacles: ",
-                TextStyle {
-                    font_size: 30.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "{}",
-                TextStyle {
-                    font_size: 30.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "\nPolygons: ",
-                TextStyle {
-                    font_size: 30.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "{}",
-                TextStyle {
-                    font_size: 30.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "\n\nClick to add an obstacle",
-                TextStyle {
-                    font_size: 25.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "\nPress spacebar to reset",
-                TextStyle {
-                    font_size: 25.0,
-                    ..default()
-                },
-            ),
-        ]),
+        text: Text::from_sections(
+            [
+                ("Status: ", 30.0),
+                ("{}", 30.0),
+                ("\nObstacles: ", 30.0),
+                ("{}", 30.0),
+                ("\nPolygons: ", 30.0),
+                ("{}", 30.0),
+                ("\n\nClick to add an obstacle", 25.0),
+                ("\nPress spacebar to reset", 25.0),
+            ]
+            .into_iter()
+            .map(|(text, font_size): (&str, f32)| {
+                TextSection::new(
+                    text,
+                    TextStyle {
+                        font_size,
+                        ..default()
+                    },
+                )
+            }),
+        ),
+        style: Style {
+            margin: UiRect::all(Val::Px(12.0)),
+            ..default()
+        },
         ..default()
     });
 }
