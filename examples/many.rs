@@ -49,7 +49,6 @@ fn main() {
         ))
         .init_resource::<Stats>()
         .insert_resource(TaskMode::Blocking)
-        .insert_resource(DisplayMode::Line)
         .add_systems(Startup, setup)
         .add_systems(
             Update,
@@ -59,7 +58,6 @@ fn main() {
                 compute_paths,
                 poll_path_tasks,
                 move_navigator,
-                display_path,
                 mode_change,
             ),
         )
@@ -74,12 +72,6 @@ enum TaskMode {
     Blocking,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Resource)]
-enum DisplayMode {
-    Line,
-    Nothing,
-}
-
 #[derive(Resource)]
 struct Meshes {
     aurora: Handle<NavMesh>,
@@ -92,13 +84,13 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(Meshes {
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
+    let font = asset_server.load("FiraMono-Medium.ttf");
     commands.spawn(TextBundle {
         text: Text::from_sections([
             TextSection::new(
                 "Agents: ",
                 TextStyle {
                     font_size: 30.0,
-                    color: palettes::css::WHITE.into(),
                     ..default()
                 },
             ),
@@ -106,7 +98,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "0\n",
                 TextStyle {
                     font_size: 30.0,
-                    color: palettes::css::WHITE.into(),
                     ..default()
                 },
             ),
@@ -114,7 +105,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "FPS: ",
                 TextStyle {
                     font_size: 20.0,
-                    color: palettes::css::WHITE.into(),
                     ..default()
                 },
             ),
@@ -122,7 +112,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "0.0\n",
                 TextStyle {
                     font_size: 20.0,
-                    color: palettes::css::WHITE.into(),
                     ..default()
                 },
             ),
@@ -130,7 +119,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "Task duration: ",
                 TextStyle {
                     font_size: 20.0,
-                    color: palettes::css::WHITE.into(),
+                    font: font.clone(),
                     ..default()
                 },
             ),
@@ -138,7 +127,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "0.0\n",
                 TextStyle {
                     font_size: 20.0,
-                    color: palettes::css::WHITE.into(),
+                    font: font.clone(),
+
                     ..default()
                 },
             ),
@@ -146,7 +136,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "Task overhead: ",
                 TextStyle {
                     font_size: 20.0,
-                    color: palettes::css::WHITE.into(),
+                    font: font.clone(),
+
                     ..default()
                 },
             ),
@@ -154,7 +145,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "0.0\n",
                 TextStyle {
                     font_size: 20.0,
-                    color: palettes::css::WHITE.into(),
+                    font: font.clone(),
+
                     ..default()
                 },
             ),
@@ -162,7 +154,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "space - ",
                 TextStyle {
                     font_size: 15.0,
-                    color: palettes::css::WHITE.into(),
                     ..default()
                 },
             ),
@@ -170,23 +161,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 "\n",
                 TextStyle {
                     font_size: 15.0,
-                    color: palettes::css::WHITE.into(),
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "l - ",
-                TextStyle {
-                    font_size: 15.0,
-                    color: palettes::css::WHITE.into(),
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "\n",
-                TextStyle {
-                    font_size: 15.0,
-                    color: palettes::css::WHITE.into(),
                     ..default()
                 },
             ),
@@ -234,8 +208,9 @@ fn on_mesh_change(
                             0.0,
                         ))
                         .with_scale(Vec3::splat(factor)),
-                        material: materials
-                            .add(ColorMaterial::from(Color::Srgba(palettes::css::DARK_GRAY))),
+                        material: materials.add(ColorMaterial::from(Color::Srgba(
+                            palettes::tailwind::ZINC_700,
+                        ))),
                         ..default()
                     })
                     .id(),
@@ -249,7 +224,6 @@ fn on_mesh_change(
 #[derive(Component)]
 struct Navigator {
     speed: f32,
-    color: Color,
 }
 
 #[derive(Component)]
@@ -309,7 +283,6 @@ fn spawn(
                 },
                 Navigator {
                     speed: rng.gen_range(50.0..100.0),
-                    color: Color::Srgba(color.into()),
                 },
             ));
         }
@@ -448,28 +421,6 @@ fn move_navigator(
         });
 }
 
-fn display_path(
-    query: Query<(&Transform, &Path, &Navigator)>,
-    mut gizmos: Gizmos,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
-    display_mode: Res<DisplayMode>,
-) {
-    if *display_mode == DisplayMode::Line {
-        let window = primary_window.single();
-        let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
-
-        for (transform, path, navigator) in &query {
-            if path.path.is_empty() {
-                continue;
-            }
-            let mut p = Vec::with_capacity(path.path.len());
-            p.push(transform.translation.truncate());
-            p.extend(path.path.iter().map(|p| (*p - MESH_SIZE / 2.0) * factor));
-            gizmos.linestrip_2d(p, navigator.color);
-        }
-    }
-}
-
 fn go_somewhere(
     query: Query<
         Entity,
@@ -499,7 +450,6 @@ fn update_ui(
     stats: Res<Stats>,
     diagnostics: Res<DiagnosticsStore>,
     task_mode: Res<TaskMode>,
-    display_mode: Res<DisplayMode>,
 ) {
     let new_count = agents.iter().len();
     let mut text = ui_query.single_mut();
@@ -526,31 +476,14 @@ fn update_ui(
         )
     );
     text.sections[9].value = format!("{:?}\n", *task_mode);
-    text.sections[11].value = format!(
-        "{}",
-        match *display_mode {
-            DisplayMode::Line => "hide lines",
-            DisplayMode::Nothing => "display lines",
-        }
-    );
     *count = new_count;
 }
 
-fn mode_change(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut task_mode: ResMut<TaskMode>,
-    mut display_mode: ResMut<DisplayMode>,
-) {
+fn mode_change(keyboard_input: Res<ButtonInput<KeyCode>>, mut task_mode: ResMut<TaskMode>) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         match *task_mode {
             TaskMode::Async => *task_mode = TaskMode::Blocking,
             TaskMode::Blocking => *task_mode = TaskMode::Async,
-        }
-    }
-    if keyboard_input.just_pressed(KeyCode::KeyL) {
-        match *display_mode {
-            DisplayMode::Line => *display_mode = DisplayMode::Nothing,
-            DisplayMode::Nothing => *display_mode = DisplayMode::Line,
         }
     }
 }
