@@ -12,11 +12,13 @@ use polyanya::Triangulation;
 use rand::Rng;
 use vleue_navigator::prelude::*;
 
+#[path = "helpers/agent.rs"]
+mod agent;
 #[path = "helpers/ui.rs"]
 mod ui;
 
-const MESH_WIDTH: f32 = 15.0;
-const MESH_HEIGHT: f32 = 10.0;
+const MESH_WIDTH: u32 = 15;
+const MESH_HEIGHT: u32 = 10;
 
 #[derive(Component, Debug)]
 struct Obstacle;
@@ -38,7 +40,15 @@ fn main() {
             // and use the `Aabb` component as the obstacle data source.
             NavmeshUpdaterPlugin::<Obstacle, Aabb>::default(),
         ))
-        .add_systems(Startup, (setup, ui::setup_stats, ui::setup_settings))
+        .add_systems(
+            Startup,
+            (
+                setup,
+                ui::setup_stats,
+                ui::setup_settings,
+                agent::setup_agent::<10>,
+            ),
+        )
         .add_systems(
             Update,
             (
@@ -48,6 +58,10 @@ fn main() {
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<50>,
+                agent::give_target_to_navigator::<10, MESH_WIDTH, MESH_HEIGHT>,
+                agent::move_navigator,
+                agent::display_navigator_path,
+                agent::refresh_path::<10, MESH_WIDTH, MESH_HEIGHT>,
             ),
         )
         .run();
@@ -62,9 +76,9 @@ fn setup(mut commands: Commands) {
             // Define the outer borders of the navmesh.
             fixed: Triangulation::from_outer_edges(&vec![
                 vec2(0.0, 0.0),
-                vec2(MESH_WIDTH, 0.0),
-                vec2(MESH_WIDTH, MESH_HEIGHT),
-                vec2(0.0, MESH_HEIGHT),
+                vec2(MESH_WIDTH as f32, 0.0),
+                vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
+                vec2(0.0, MESH_HEIGHT as f32),
             ]),
             ..default()
         },
@@ -89,8 +103,8 @@ fn setup(mut commands: Commands) {
                 Vec3::new(rng.gen_range(0.1..0.5), rng.gen_range(0.1..0.5), 0.0),
             ),
             Transform::from_translation(Vec3::new(
-                rng.gen_range(0.0..MESH_WIDTH),
-                rng.gen_range(0.0..MESH_HEIGHT),
+                rng.gen_range(0.0..(MESH_WIDTH as f32)),
+                rng.gen_range(0.0..(MESH_HEIGHT as f32)),
                 0.0,
             ))
             .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
@@ -121,15 +135,15 @@ fn display_mesh(
         commands.entity(entity).despawn_recursive();
     }
     let window = primary_window.single();
-    let factor = (window.width() / MESH_WIDTH).min(window.height() / MESH_HEIGHT);
+    let factor = (window.width() / (MESH_WIDTH as f32)).min(window.height() / (MESH_HEIGHT as f32));
 
     *current_mesh_entity = Some(
         commands
             .spawn(MaterialMesh2dBundle {
                 mesh: meshes.add(navmesh.to_mesh()).into(),
                 transform: Transform::from_translation(Vec3::new(
-                    -MESH_WIDTH / 2.0 * factor,
-                    -MESH_HEIGHT / 2.0 * factor,
+                    -(MESH_WIDTH as f32) / 2.0 * factor,
+                    -(MESH_HEIGHT as f32) / 2.0 * factor,
                     0.0,
                 ))
                 .with_scale(Vec3::splat(factor)),

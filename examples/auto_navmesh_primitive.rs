@@ -79,7 +79,7 @@ fn setup(mut commands: Commands) {
             // Starting with a small mesh simplification factor to avoid very small geometry.
             // Small geometry can make navmesh generation fail due to rounding errors.
             // This example has round obstacles which can create small details.
-            simplify: 0.001,
+            simplify: 0.05,
             ..default()
         },
         // Mark it for update as soon as obstacles are changed.
