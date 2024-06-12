@@ -235,7 +235,8 @@ impl NavMesh {
         self.transform = transform;
     }
 
-    /// Creates a [`Mesh`] from this [`NavMesh`], suitable for rendering the surface
+    /// Creates a [`Mesh`] from this [`NavMesh`], suitable for debugging the surface.
+    /// This mesh doesn't have normals.
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
         let inverse_transform = self.inverse_transform();
