@@ -12,7 +12,7 @@ use polyanya::Triangulation;
 use rand::Rng;
 use vleue_navigator::prelude::*;
 
-#[path = "helpers/agent.rs"]
+#[path = "helpers/agent2d.rs"]
 mod agent;
 #[path = "helpers/ui.rs"]
 mod ui;
