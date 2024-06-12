@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    math::{vec2, EulerRot, Rot2, Vec2, Vec3Swizzles},
+    math::{vec2, Rot2, Vec2, Vec3, Vec3Swizzles},
     prelude::{
         Capsule2d, Circle, CircularSector, CircularSegment, Component, Ellipse, Rectangle,
         RegularPolygon, Rhombus,
@@ -75,66 +75,77 @@ mod copypasta {
     }
 }
 
-trait TransformPoint2d {
-    fn transform_point_2d(&self, point: Vec2) -> Vec2;
-}
-
-impl TransformPoint2d for Transform {
-    fn transform_point_2d(&self, mut point: Vec2) -> Vec2 {
-        point = self.scale.xy() * point;
-        point = Rot2::radians(self.rotation.to_euler(EulerRot::XYZ).2) * point;
-        point += self.translation.xy();
-        point
-    }
-}
-
 impl ObstacleSource for PrimitiveObstacle {
     fn get_polygon(
         &self,
         obstacle_transform: &GlobalTransform,
-        _navmesh_transform: &Transform,
+        navmesh_transform: &Transform,
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
+        let to_vec2 = |v: Vec3| navmesh_transform.transform_point(v).xy();
+        let to_navmesh = |v: Vec2| {
+            navmesh_transform
+                .compute_affine()
+                .inverse()
+                .transform_point3(v.extend(0.0))
+        };
 
         match self {
             PrimitiveObstacle::Rectangle(primitive) => vec![
-                transform.transform_point_2d(vec2(-primitive.half_size.x, -primitive.half_size.y)),
-                transform.transform_point_2d(vec2(-primitive.half_size.x, primitive.half_size.y)),
-                transform.transform_point_2d(vec2(primitive.half_size.x, primitive.half_size.y)),
-                transform.transform_point_2d(vec2(primitive.half_size.x, -primitive.half_size.y)),
+                to_vec2(transform.transform_point(to_navmesh(vec2(
+                    -primitive.half_size.x,
+                    -primitive.half_size.y,
+                )))),
+                to_vec2(transform.transform_point(to_navmesh(vec2(
+                    -primitive.half_size.x,
+                    primitive.half_size.y,
+                )))),
+                to_vec2(transform.transform_point(to_navmesh(vec2(
+                    primitive.half_size.x,
+                    primitive.half_size.y,
+                )))),
+                to_vec2(transform.transform_point(to_navmesh(vec2(
+                    primitive.half_size.x,
+                    -primitive.half_size.y,
+                )))),
             ],
             PrimitiveObstacle::Circle(primitive) => {
                 copypasta::ellipse_inner(vec2(primitive.radius, primitive.radius), 32)
-                    .map(|v| transform.transform_point_2d(v))
+                    .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                     .collect()
             }
             PrimitiveObstacle::Ellipse(primitive) => {
                 copypasta::ellipse_inner(primitive.half_size, 32)
-                    .map(|v| transform.transform_point_2d(v))
+                    .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                     .collect()
             }
             PrimitiveObstacle::CircularSector(primitive) => {
                 let mut arc =
                     copypasta::arc_2d_inner(0.0, primitive.arc.angle(), primitive.arc.radius, 32)
-                        .map(|v| transform.transform_point_2d(v))
+                        .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                         .collect::<Vec<_>>();
-                arc.push(transform.translation.xy());
+                arc.push(to_vec2(transform.translation));
                 arc
             }
             PrimitiveObstacle::CircularSegment(primitive) => {
                 copypasta::arc_2d_inner(0.0, primitive.arc.angle(), primitive.arc.radius, 32)
-                    .map(|v| transform.transform_point_2d(v))
+                    .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                     .collect()
             }
             PrimitiveObstacle::Capsule(primitive) => {
                 let mut points = copypasta::arc_2d_inner(0.0, PI, primitive.radius, 32)
-                    .map(|v| transform.transform_point_2d(v + primitive.half_length * Vec2::Y))
+                    .map(|v| {
+                        to_vec2(
+                            transform
+                                .transform_point(to_navmesh(v + primitive.half_length * Vec2::Y)),
+                        )
+                    })
                     .collect::<Vec<_>>();
                 points.extend(
                     copypasta::arc_2d_inner(0.0, PI, primitive.radius, 32).map(|v| {
-                        transform.transform_point_2d(
+                        to_vec2(transform.transform_point(to_navmesh(
                             (Rot2::radians(PI) * v) - primitive.half_length * Vec2::Y,
-                        )
+                        )))
                     }),
                 );
                 points
@@ -147,7 +158,7 @@ impl ObstacleSource for PrimitiveObstacle {
                         p,
                     )
                 })
-                .map(|v| transform.transform_point_2d(v))
+                .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                 .collect(),
             PrimitiveObstacle::Rhombus(primitive) => {
                 [(1.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (0.0, -1.0)]
@@ -158,7 +169,7 @@ impl ObstacleSource for PrimitiveObstacle {
                         )
                     })
                     .into_iter()
-                    .map(|v| transform.transform_point_2d(v))
+                    .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                     .collect()
             }
         }

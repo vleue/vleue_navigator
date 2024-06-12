@@ -154,7 +154,7 @@ pub fn move_navigator(
         let move_direction = path.current - transform.translation.xy();
         transform.translation +=
             (move_direction.normalize() * time.delta_seconds() * navigator.speed).extend(0.0);
-        while transform.translation.xy().distance(path.current) < 0.1 {
+        while transform.translation.xy().distance(path.current) < navigator.speed / 50.0 {
             if let Some(next) = path.next.pop() {
                 path.current = next;
             } else {
