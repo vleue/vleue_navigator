@@ -6,7 +6,7 @@ use std::{
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
+use bevy::{ecs::entity::EntityHashMap, prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
 use polyanya::Triangulation;
 
 use crate::{obstacles::ObstacleSource, NavMesh};
@@ -49,6 +49,8 @@ pub struct NavMeshSettings {
     pub default_delta: f32,
     /// Fixed edges and obstacles of the mesh
     pub fixed: Triangulation,
+    /// Duration in seconds after which to cancel a navmesh build
+    pub build_timeout: Option<f32>,
 }
 
 impl Default for NavMeshSettings {
@@ -58,6 +60,7 @@ impl Default for NavMeshSettings {
             merge_steps: 2,
             default_delta: 0.01,
             fixed: Triangulation::from_outer_edges(&[]),
+            build_timeout: None,
         }
     }
 }
@@ -121,11 +124,34 @@ fn build_navmesh<T: ObstacleSource>(
     }
 }
 
+fn drop_dead_tasks(
+    mut commands: Commands,
+    mut navmeshes: Query<(Entity, &mut NavMeshStatus, &NavMeshSettings), With<NavmeshUpdateTask>>,
+    time: Res<Time>,
+    mut task_ages: Local<EntityHashMap<f32>>,
+) {
+    for (entity, mut status, settings) in &mut navmeshes {
+        if status.is_changed() {
+            task_ages.insert(entity, time.elapsed_seconds());
+        } else if let Some(age) = task_ages.get(&entity) {
+            let Some(timeout) = settings.build_timeout else {
+                continue;
+            };
+            if time.elapsed_seconds() - *age > timeout {
+                *status = NavMeshStatus::Failed;
+                commands.entity(entity).remove::<NavmeshUpdateTask>();
+                task_ages.remove(&entity);
+                warn!("NavMesh build timed out for {:?}", entity);
+            }
+        }
+    }
+}
+
 /// Task holder for a navmesh update.
 #[derive(Component, Debug, Clone)]
 pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<NavMesh, ()>>>>);
 
-type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
+type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e, 'f> = Query<
     'world,
     'state,
     (
@@ -133,8 +159,9 @@ type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
         Ref<'a, NavMeshSettings>,
         Ref<'b, Transform>,
         &'c NavMeshUpdateMode,
-        Option<&'d NavMeshUpdateModeBlocking>,
-        Option<&'e NavmeshUpdateTask>,
+        &'d mut NavMeshStatus,
+        Option<&'e NavMeshUpdateModeBlocking>,
+        Option<&'f NavmeshUpdateTask>,
     ),
 >;
 
@@ -142,7 +169,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     mut commands: Commands,
     obstacles: Query<(Ref<GlobalTransform>, &Obstacle), With<Marker>>,
     removed_obstacles: RemovedComponents<Marker>,
-    navmeshes: NavMeshToUpdateQuery,
+    mut navmeshes: NavMeshToUpdateQuery,
     time: Res<Time>,
     mut ready_to_update: Local<HashMap<Entity, (f32, bool)>>,
 ) {
@@ -161,7 +188,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     let has_removed_obstacles = !removed_obstacles.is_empty();
     let mut to_check = navmeshes
         .iter()
-        .filter_map(|(entity, settings, _, mode, _, _)| {
+        .filter_map(|(entity, settings, _, mode, ..)| {
             if obstacles
                 .iter()
                 .any(|(t, _)| t.is_changed() && !t.is_added())
@@ -179,8 +206,8 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     to_check.sort_unstable();
     to_check.dedup();
     for entity in to_check.into_iter() {
-        if let Ok((entity, settings, transform, update_mode, is_blocking, updating)) =
-            navmeshes.get(entity)
+        if let Ok((entity, settings, transform, update_mode, mut status, is_blocking, updating)) =
+            navmeshes.get_mut(entity)
         {
             if let Some(val) = ready_to_update.get_mut(&entity) {
                 val.1 = true;
@@ -210,6 +237,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             let settings_local = settings.clone();
             let transform_local = *transform;
 
+            *status = NavMeshStatus::Building;
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
             if is_blocking.is_some() {
@@ -252,7 +280,7 @@ fn update_navmesh_asset(
                     *status = NavMeshStatus::Built;
                 }
                 Err(()) => {
-                    warn!("navmesh build failed");
+                    warn!("NavMesh build failed for {:?}", entity);
                     *status = NavMeshStatus::Failed;
                 }
             }
@@ -285,6 +313,7 @@ impl<Marker: Component, Obstacle: ObstacleSource + std::fmt::Debug> Plugin
 {
     fn build(&self, app: &mut App) {
         app.add_systems(PostUpdate, trigger_navmesh_build::<Marker, Obstacle>)
-            .add_systems(PreUpdate, update_navmesh_asset);
+            .add_systems(PreUpdate, update_navmesh_asset)
+            .add_systems(Update, drop_dead_tasks);
     }
 }
