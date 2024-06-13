@@ -13,9 +13,6 @@ mod ui;
 const MESH_WIDTH: u32 = 150;
 const MESH_HEIGHT: u32 = 100;
 
-#[derive(Component, Debug)]
-struct Obstacle;
-
 fn main() {
     App::new()
         .insert_resource(ClearColor(palettes::css::BLACK.into()))
@@ -422,13 +419,13 @@ fn spawn_obstacle_on_click(
 }
 
 fn remove_obstacles(
-    obstacles: Query<Entity, With<Obstacle>>,
+    obstacles: Query<Entity, With<PrimitiveObstacle>>,
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         for entity in obstacles.iter() {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
