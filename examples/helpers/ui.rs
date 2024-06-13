@@ -182,7 +182,7 @@ pub fn update_settings<const STEP: u32>(
     }
 }
 
-pub fn setup_stats(mut commands: Commands) {
+pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -201,21 +201,22 @@ pub fn setup_stats(mut commands: Commands) {
             ..default()
         })
         .with_children(|parent| {
+            let mut text = vec![
+                ("Status: ", 30.0),
+                ("{}", 30.0),
+                ("\nObstacles: ", 30.0),
+                ("{}", 30.0),
+                ("\nPolygons: ", 30.0),
+                ("{}", 30.0),
+            ];
+            if INTERACTIVE {
+                text.push(("\n\nClick to add an obstacle", 25.0));
+                text.push(("\nPress spacebar to reset", 25.0));
+            }
             parent.spawn((
                 TextBundle {
-                    text: Text::from_sections(
-                        [
-                            ("Status: ", 30.0),
-                            ("{}", 30.0),
-                            ("\nObstacles: ", 30.0),
-                            ("{}", 30.0),
-                            ("\nPolygons: ", 30.0),
-                            ("{}", 30.0),
-                            ("\n\nClick to add an obstacle", 25.0),
-                            ("\nPress spacebar to reset", 25.0),
-                        ]
-                        .into_iter()
-                        .map(|(text, font_size): (&str, f32)| {
+                    text: Text::from_sections(text.into_iter().map(
+                        |(text, font_size): (&str, f32)| {
                             TextSection::new(
                                 text,
                                 TextStyle {
@@ -223,8 +224,8 @@ pub fn setup_stats(mut commands: Commands) {
                                     ..default()
                                 },
                             )
-                        }),
-                    ),
+                        },
+                    )),
                     style: Style {
                         margin: UiRect::all(Val::Px(12.0)),
                         ..default()

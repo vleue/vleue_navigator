@@ -38,7 +38,7 @@ fn main() {
             Startup,
             (
                 setup,
-                ui::setup_stats,
+                ui::setup_stats::<true>,
                 ui::setup_settings,
                 agent2d::setup_agent::<100>,
             ),

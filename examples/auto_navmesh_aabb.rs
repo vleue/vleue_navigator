@@ -44,7 +44,7 @@ fn main() {
             Startup,
             (
                 setup,
-                ui::setup_stats,
+                ui::setup_stats::<true>,
                 ui::setup_settings,
                 agent::setup_agent::<10>,
             ),
