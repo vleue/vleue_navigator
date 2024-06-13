@@ -32,7 +32,7 @@ fn main() {
             // Obstacles will be entities with the `Obstacle` marker component,
             // and use the `Aabb` component as the obstacle data source.
             // NavmeshUpdaterPlugin::<Obstacle, Aabb>::default(),
-            NavmeshUpdaterPlugin::<PrimitiveObstacle, PrimitiveObstacle>::default(),
+            NavmeshUpdaterPlugin::<PrimitiveObstacle>::default(),
         ))
         .add_systems(
             Startup,

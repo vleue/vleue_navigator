@@ -292,13 +292,13 @@ fn update_navmesh_asset(
 /// - `Marker` is the component type that marks an entity as an obstacle.
 /// - `Obstacle` is the component type that provides the position and shape of an obstacle.
 #[derive(Debug)]
-pub struct NavmeshUpdaterPlugin<Marker: Component, Obstacle: ObstacleSource> {
+pub struct NavmeshUpdaterPlugin<Obstacle: ObstacleSource, Marker: Component = Obstacle> {
     marker1: PhantomData<Marker>,
     marker2: PhantomData<Obstacle>,
 }
 
 impl<Marker: Component, Obstacle: ObstacleSource> Default
-    for NavmeshUpdaterPlugin<Marker, Obstacle>
+    for NavmeshUpdaterPlugin<Obstacle, Marker>
 {
     fn default() -> Self {
         Self {
@@ -308,8 +308,8 @@ impl<Marker: Component, Obstacle: ObstacleSource> Default
     }
 }
 
-impl<Marker: Component, Obstacle: ObstacleSource + std::fmt::Debug> Plugin
-    for NavmeshUpdaterPlugin<Marker, Obstacle>
+impl<Obstacle: ObstacleSource, Marker: Component> Plugin
+    for NavmeshUpdaterPlugin<Obstacle, Marker>
 {
     fn build(&self, app: &mut App) {
         app.add_systems(PostUpdate, trigger_navmesh_build::<Marker, Obstacle>)
