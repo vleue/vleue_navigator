@@ -47,22 +47,27 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildBuilder) {
 
 pub fn setup_settings(mut commands: Commands) {
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                right: Val::Px(0.0),
-                flex_direction: FlexDirection::Column,
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    right: Val::Px(0.0),
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                border_radius: BorderRadius {
+                    top_left: Val::Px(0.),
+                    top_right: Val::Px(0.),
+                    bottom_left: Val::Px(20.0),
+                    bottom_right: Val::Px(0.),
+                },
+                background_color: BackgroundColor(
+                    palettes::tailwind::GRAY_900.with_alpha(0.8).into(),
+                ),
                 ..default()
             },
-            border_radius: BorderRadius {
-                top_left: Val::Px(0.),
-                top_right: Val::Px(0.),
-                bottom_left: Val::Px(20.0),
-                bottom_right: Val::Px(0.),
-            },
-            background_color: BackgroundColor(palettes::tailwind::GRAY_900.with_alpha(0.8).into()),
-            ..default()
-        })
+            Ui,
+        ))
         .with_children(|parent| {
             parent
                 .spawn(NodeBundle { ..default() })
@@ -184,22 +189,28 @@ pub fn update_settings<const STEP: u32>(
 
 pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.0),
-                flex_direction: FlexDirection::Column,
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    flex_direction: FlexDirection::Column,
+                    min_width: Val::Px(300.0),
+                    ..default()
+                },
+                border_radius: BorderRadius {
+                    top_left: Val::Px(0.),
+                    top_right: Val::Px(0.),
+                    bottom_right: Val::Px(20.0),
+                    bottom_left: Val::Px(0.),
+                },
+                background_color: BackgroundColor(
+                    palettes::tailwind::GRAY_900.with_alpha(0.8).into(),
+                ),
                 ..default()
             },
-            border_radius: BorderRadius {
-                top_left: Val::Px(0.),
-                top_right: Val::Px(0.),
-                bottom_right: Val::Px(20.0),
-                bottom_left: Val::Px(0.),
-            },
-            background_color: BackgroundColor(palettes::tailwind::GRAY_900.with_alpha(0.8).into()),
-            ..default()
-        })
+            Ui,
+        ))
         .with_children(|parent| {
             let mut text = vec![
                 ("Status: ", 30.0),
@@ -268,3 +279,24 @@ pub fn update_stats<T: Component>(
 
 #[derive(Component)]
 pub struct UiStats;
+
+#[derive(Component)]
+pub struct Ui;
+
+#[allow(dead_code)]
+pub fn toggle_ui(
+    mut stats: Query<&mut Visibility, With<Ui>>,
+    mut entered: EventReader<CursorEntered>,
+    mut left: EventReader<CursorLeft>,
+) {
+    for _ in entered.read() {
+        for mut visibility in &mut stats {
+            *visibility = Visibility::Visible
+        }
+    }
+    for _ in left.read() {
+        for mut visibility in &mut stats {
+            *visibility = Visibility::Hidden
+        }
+    }
+}

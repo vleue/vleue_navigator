@@ -15,7 +15,12 @@ pub struct Path {
     target: Entity,
 }
 
-pub fn setup_agent<const SIZE: u32>(mut commands: Commands) {
+pub fn setup_agent<const SIZE: u32>(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let sphere = meshes.add(Sphere::new(0.6).mesh());
     for color in [
         palettes::tailwind::AMBER_400,
         palettes::tailwind::BLUE_400,
@@ -37,14 +42,13 @@ pub fn setup_agent<const SIZE: u32>(mut commands: Commands) {
         palettes::tailwind::YELLOW_400,
     ] {
         commands.spawn((
-            SpriteBundle {
-                sprite: Sprite {
-                    color: palettes::css::RED.into(),
-                    custom_size: Some(Vec2::ONE),
+            PbrBundle {
+                mesh: sphere.clone(),
+                material: materials.add(StandardMaterial {
+                    base_color: color.into(),
+                    emissive_exposure_weight: 0.0,
                     ..default()
-                },
-                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1.0))
-                    .with_scale(Vec3::splat(SIZE as f32)),
+                }),
                 ..default()
             },
             Navigator {
