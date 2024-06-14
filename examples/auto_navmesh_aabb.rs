@@ -38,13 +38,13 @@ fn main() {
             // Auto update the navmesh.
             // Obstacles will be entities with the `Obstacle` marker component,
             // and use the `Aabb` component as the obstacle data source.
-            NavmeshUpdaterPlugin::<Obstacle, Aabb>::default(),
+            NavmeshUpdaterPlugin::<Aabb, Obstacle>::default(),
         ))
         .add_systems(
             Startup,
             (
                 setup,
-                ui::setup_stats,
+                ui::setup_stats::<true>,
                 ui::setup_settings,
                 agent::setup_agent::<10>,
             ),

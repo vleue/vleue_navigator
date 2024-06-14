@@ -13,9 +13,6 @@ mod ui;
 const MESH_WIDTH: u32 = 150;
 const MESH_HEIGHT: u32 = 100;
 
-#[derive(Component, Debug)]
-struct Obstacle;
-
 fn main() {
     App::new()
         .insert_resource(ClearColor(palettes::css::BLACK.into()))
@@ -32,13 +29,13 @@ fn main() {
             // Obstacles will be entities with the `Obstacle` marker component,
             // and use the `Aabb` component as the obstacle data source.
             // NavmeshUpdaterPlugin::<Obstacle, Aabb>::default(),
-            NavmeshUpdaterPlugin::<PrimitiveObstacle, PrimitiveObstacle>::default(),
+            NavmeshUpdaterPlugin::<PrimitiveObstacle>::default(),
         ))
         .add_systems(
             Startup,
             (
                 setup,
-                ui::setup_stats,
+                ui::setup_stats::<true>,
                 ui::setup_settings,
                 agent2d::setup_agent::<100>,
             ),
@@ -422,13 +419,13 @@ fn spawn_obstacle_on_click(
 }
 
 fn remove_obstacles(
-    obstacles: Query<Entity, With<Obstacle>>,
+    obstacles: Query<Entity, With<PrimitiveObstacle>>,
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         for entity in obstacles.iter() {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
