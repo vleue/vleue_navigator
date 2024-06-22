@@ -106,7 +106,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
                     mesh: meshes.add(Capsule3d::new(0.5, 2.0).mesh()),
                     material: materials.add(StandardMaterial {
                         base_color: navigator.color,
-                        emissive: navigator.color.linear(),
+                        emissive: navigator.color.to_linear(),
                         emissive_exposure_weight: 0.0,
                         ..default()
                     }),
