@@ -36,21 +36,21 @@ pub enum PrimitiveObstacle {
 
 // Functions in this module are copied from Bevy
 mod copypasta {
-    use std::f32::consts::TAU;
+    use std::f64::consts::TAU;
 
     use bevy::math::Vec2;
 
     pub(crate) fn ellipse_inner(half_size: Vec2, resolution: usize) -> impl Iterator<Item = Vec2> {
         (0..resolution + 1).map(move |i| {
-            let angle = i as f32 * TAU / resolution as f32;
+            let angle = i as f64 * TAU / resolution as f64;
             let (x, y) = angle.sin_cos();
-            Vec2::new(x, y) * half_size
+            Vec2::new(x as f32, y as f32) * half_size
         })
     }
 
     pub(crate) fn arc_2d_inner(
-        direction_angle: f32,
-        arc_angle: f32,
+        direction_angle: f64,
+        arc_angle: f64,
         radius: f32,
         resolution: usize,
     ) -> impl Iterator<Item = Vec2> {
@@ -58,9 +58,9 @@ mod copypasta {
             let start = direction_angle - arc_angle / 2.;
 
             let angle =
-                start + (i as f32 * (arc_angle / resolution as f32)) + std::f32::consts::FRAC_PI_2;
+                start + (i as f64 * (arc_angle / resolution as f64)) + std::f64::consts::FRAC_PI_2;
 
-            Vec2::new(angle.cos(), angle.sin()) * radius
+            Vec2::new(angle.cos() as f32, angle.sin() as f32) * radius
         })
     }
 
@@ -69,9 +69,9 @@ mod copypasta {
         resolution: usize,
         nth_point: usize,
     ) -> Vec2 {
-        let angle = nth_point as f32 * TAU / resolution as f32;
+        let angle = nth_point as f64 * TAU / resolution as f64;
         let (x, y) = angle.sin_cos();
-        Vec2::new(x, y) * radius
+        Vec2::new(x as f32, y as f32) * radius
     }
 }
 
@@ -120,33 +120,41 @@ impl ObstacleSource for PrimitiveObstacle {
                     .collect()
             }
             PrimitiveObstacle::CircularSector(primitive) => {
-                let mut arc =
-                    copypasta::arc_2d_inner(0.0, primitive.arc.angle(), primitive.arc.radius, 32)
-                        .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
-                        .collect::<Vec<_>>();
+                let mut arc = copypasta::arc_2d_inner(
+                    0.0,
+                    primitive.arc.angle() as f64,
+                    primitive.arc.radius,
+                    32,
+                )
+                .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
+                .collect::<Vec<_>>();
                 arc.push(to_vec2(transform.translation));
                 arc
             }
             PrimitiveObstacle::CircularSegment(primitive) => {
-                copypasta::arc_2d_inner(0.0, primitive.arc.angle(), primitive.arc.radius, 32)
+                copypasta::arc_2d_inner(0.0, primitive.arc.angle() as f64, primitive.arc.radius, 32)
                     .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                     .collect()
             }
             PrimitiveObstacle::Capsule(primitive) => {
-                let mut points = copypasta::arc_2d_inner(0.0, PI, primitive.radius, 32)
-                    .map(|v| {
-                        to_vec2(
-                            transform
-                                .transform_point(to_navmesh(v + primitive.half_length * Vec2::Y)),
-                        )
-                    })
-                    .collect::<Vec<_>>();
+                let mut points =
+                    copypasta::arc_2d_inner(0.0, std::f64::consts::PI, primitive.radius, 32)
+                        .map(|v| {
+                            to_vec2(
+                                transform.transform_point(to_navmesh(
+                                    v + primitive.half_length * Vec2::Y,
+                                )),
+                            )
+                        })
+                        .collect::<Vec<_>>();
                 points.extend(
-                    copypasta::arc_2d_inner(0.0, PI, primitive.radius, 32).map(|v| {
-                        to_vec2(transform.transform_point(to_navmesh(
-                            (Rot2::radians(PI) * v) - primitive.half_length * Vec2::Y,
-                        )))
-                    }),
+                    copypasta::arc_2d_inner(0.0, std::f64::consts::PI, primitive.radius, 32).map(
+                        |v| {
+                            to_vec2(transform.transform_point(to_navmesh(
+                                (Rot2::radians(PI) * v) - primitive.half_length * Vec2::Y,
+                            )))
+                        },
+                    ),
                 );
                 points
             }
