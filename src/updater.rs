@@ -73,6 +73,8 @@ pub enum NavMeshStatus {
     /// Built and ready to use
     Built,
     /// Last build command failed. The mesh may still be available from a previous build, but it will be out of date.
+    ///
+    /// This can happen if the build takes longer than the `build_timeout` defined in the settings.
     Failed,
 }
 
@@ -97,31 +99,27 @@ fn build_navmesh<T: ObstacleSource>(
     obstacles: Vec<(GlobalTransform, T)>,
     settings: NavMeshSettings,
     mesh_transform: Transform,
-) -> Result<NavMesh, ()> {
+) -> NavMesh {
     let obstacle_aabbs = obstacles
         .iter()
         .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform))
         .filter(|polygon| !polygon.is_empty());
     let mut triangulation = settings.fixed.clone();
     triangulation.add_obstacles(obstacle_aabbs);
-    triangulation.merge_overlapping_obstacles();
     if settings.simplify != 0.0 {
         triangulation.simplify(settings.simplify);
     }
-    if let Some(mut navmesh) = triangulation.as_navmesh() {
-        for _ in 0..settings.merge_steps {
-            if !navmesh.merge_polygons() {
-                break;
-            }
+    let mut navmesh = triangulation.as_navmesh();
+    for _ in 0..settings.merge_steps {
+        if !navmesh.merge_polygons() {
+            break;
         }
-        navmesh.bake();
-        navmesh.set_delta(settings.default_delta);
-        let mut navmesh = NavMesh::from_polyanya_mesh(navmesh);
-        navmesh.set_transform(mesh_transform);
-        Ok(navmesh)
-    } else {
-        Err(())
     }
+    navmesh.bake();
+    navmesh.set_delta(settings.default_delta);
+    let mut navmesh = NavMesh::from_polyanya_mesh(navmesh);
+    navmesh.set_transform(mesh_transform);
+    navmesh
 }
 
 fn drop_dead_tasks(
@@ -149,7 +147,7 @@ fn drop_dead_tasks(
 
 /// Task holder for a navmesh update.
 #[derive(Component, Debug, Clone)]
-pub struct NavmeshUpdateTask(Arc<RwLock<Option<Result<NavMesh, ()>>>>);
+pub struct NavmeshUpdateTask(Arc<RwLock<Option<NavMesh>>>);
 
 type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e, 'f> = Query<
     'world,
@@ -273,17 +271,9 @@ fn update_navmesh_asset(
             let navmesh_built = task.take().unwrap();
             commands.entity(entity).remove::<NavmeshUpdateTask>();
 
-            match navmesh_built {
-                Ok(navmesh) => {
-                    debug!("navmesh built");
-                    navmeshes.insert(handle, navmesh);
-                    *status = NavMeshStatus::Built;
-                }
-                Err(()) => {
-                    warn!("NavMesh build failed for {:?}", entity);
-                    *status = NavMeshStatus::Failed;
-                }
-            }
+            debug!("navmesh built");
+            navmeshes.insert(handle, navmesh_built);
+            *status = NavMeshStatus::Built;
         }
     }
 }
