@@ -16,10 +16,10 @@ categories = ["game-development"]
 itertools = "0.13"
 
 [dependencies.polyanya]
-version = "0.6.2"
+version = "0.7.0"
 
 [dependencies.bevy]
-version = "0.14.0-rc.3"
+version = "0.14.0-rc.4"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
@@ -27,7 +27,7 @@ default-features = false
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.14.0-rc.3"
+version = "0.14.0-rc.4"
 features = [
     "bevy_ui",
     "bevy_text",
@@ -40,8 +40,6 @@ features = [
     "bevy_gizmos",
     # Required for TonyMcMapface
     "tonemapping_luts",
-    "ktx2",
-    "zstd",
     "multi_threaded",
     "bevy_state",
     "default_font",
