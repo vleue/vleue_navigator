@@ -8,7 +8,7 @@ use rand::Rng;
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
-mod agent2d;
+mod agent3d;
 #[path = "helpers/ui.rs"]
 mod ui;
 
@@ -47,7 +47,7 @@ fn main() {
                 setup,
                 ui::setup_stats::<false>,
                 ui::setup_settings,
-                agent2d::setup_agent::<100>,
+                agent3d::setup_agent::<100>,
             ),
         )
         .add_systems(
@@ -58,10 +58,10 @@ fn main() {
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
-                agent2d::give_target_to_navigator::<10, MESH_WIDTH, MESH_HEIGHT>,
-                agent2d::move_navigator,
-                agent2d::display_navigator_path,
-                agent2d::refresh_path::<100, MESH_WIDTH, MESH_HEIGHT>,
+                agent3d::give_target_to_navigator::<10, MESH_WIDTH, MESH_HEIGHT>,
+                agent3d::move_navigator,
+                agent3d::display_navigator_path,
+                agent3d::refresh_path::<100, MESH_WIDTH, MESH_HEIGHT>,
                 life_of_obstacle,
                 ui::toggle_ui,
                 toggle_ui,
@@ -83,13 +83,21 @@ fn life_of_obstacle(
     for (entity, mut lifetime, mut transform) in obstacles.iter_mut() {
         lifetime.0.tick(time.delta());
         if lifetime.0.fraction() < 0.2 {
-            transform.scale = Vec3::splat(lifetime.0.fraction() * 5.0);
+            transform.scale = Vec3::new(
+                lifetime.0.fraction() * 5.0,
+                1.0,
+                lifetime.0.fraction() * 5.0,
+            );
         }
         if lifetime.0.fraction() > 0.8 {
-            transform.scale = Vec3::splat((-lifetime.0.fraction() + 1.0) * 5.0 + 0.01);
+            transform.scale = Vec3::new(
+                (-lifetime.0.fraction() + 1.0) * 5.0 + 0.01,
+                1.0,
+                (-lifetime.0.fraction() + 1.0) * 5.0 + 0.01,
+            );
         }
         if lifetime.0.finished() {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
