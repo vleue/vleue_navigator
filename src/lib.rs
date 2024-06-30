@@ -31,7 +31,8 @@ mod updater;
 pub mod prelude {
     pub use crate::obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
     pub use crate::updater::{
-        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
+        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
+        NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin,
     };
     pub use crate::{NavMesh, VleueNavigatorPlugin};
 }
