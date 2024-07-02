@@ -33,8 +33,8 @@ pub mod prelude {
         cached::CachedObstacle, primitive::PrimitiveObstacle, ObstacleSource,
     };
     pub use crate::updater::{
-        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
-        NAVMESH_BUILD_DURATION,
+        CachableObstacle, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
+        NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
     };
     pub use crate::{NavMesh, VleueNavigatorPlugin};
 }

@@ -16,7 +16,8 @@ categories = ["game-development"]
 itertools = "0.13"
 
 [dependencies.polyanya]
-version = "0.7.0"
+# version = "0.7.0"
+git = "https://github.com/vleue/polyanya"
 
 [dependencies.bevy]
 version = "0.14.0-rc.4"
