@@ -35,7 +35,7 @@ fn main() {
                 ..default()
             }),
             VleueNavigatorPlugin,
-            NavmeshUpdaterPlugin::<CachedObstacle<PrimitiveObstacle>>::default(),
+            NavmeshUpdaterPlugin::<PrimitiveObstacle>::default(),
         ))
         .add_systems(
             Startup,
@@ -50,7 +50,7 @@ fn main() {
             Update,
             (
                 display_mesh,
-                ui::update_stats::<CachedObstacle<PrimitiveObstacle>>,
+                ui::update_stats::<PrimitiveObstacle>,
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
@@ -74,14 +74,9 @@ struct Lifetime(Timer);
 fn life_of_obstacle(
     mut commands: Commands,
     time: Res<Time>,
-    mut obstacles: Query<(
-        Entity,
-        &mut Lifetime,
-        &mut Transform,
-        &mut CachedObstacle<PrimitiveObstacle>,
-    )>,
+    mut obstacles: Query<(Entity, &mut Lifetime, &mut Transform)>,
 ) {
-    for (entity, mut lifetime, mut transform, mut cached) in obstacles.iter_mut() {
+    for (entity, mut lifetime, mut transform) in obstacles.iter_mut() {
         lifetime.0.tick(time.delta());
         if lifetime.0.fraction() < 0.2 {
             transform.scale = Vec3::new(
@@ -89,7 +84,6 @@ fn life_of_obstacle(
                 1.0,
                 lifetime.0.fraction() * 5.0,
             );
-            cached.clear();
         }
         if lifetime.0.fraction() > 0.8 {
             transform.scale = Vec3::new(
@@ -97,7 +91,6 @@ fn life_of_obstacle(
                 1.0,
                 (-lifetime.0.fraction() + 1.0) * 5.0 + 0.01,
             );
-            cached.clear();
         }
         if lifetime.0.finished() {
             commands.entity(entity).despawn_recursive();
@@ -221,7 +214,7 @@ fn new_obstacle(
                 .spawn((
                     transform,
                     GlobalTransform::default(),
-                    CachedObstacle::new(PrimitiveObstacle::Rectangle(larger_primitive)),
+                    PrimitiveObstacle::Rectangle(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -247,7 +240,7 @@ fn new_obstacle(
                 .spawn((
                     transform,
                     GlobalTransform::default(),
-                    CachedObstacle::new(PrimitiveObstacle::Circle(larger_primitive)),
+                    PrimitiveObstacle::Circle(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -273,7 +266,7 @@ fn new_obstacle(
                 .spawn((
                     transform,
                     GlobalTransform::default(),
-                    CachedObstacle::new(PrimitiveObstacle::Ellipse(larger_primitive)),
+                    PrimitiveObstacle::Ellipse(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -296,7 +289,7 @@ fn new_obstacle(
                 .spawn((
                     transform,
                     GlobalTransform::default(),
-                    CachedObstacle::new(PrimitiveObstacle::Capsule(larger_primitive)),
+                    PrimitiveObstacle::Capsule(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -319,7 +312,7 @@ fn new_obstacle(
                 .spawn((
                     transform,
                     GlobalTransform::default(),
-                    CachedObstacle::new(PrimitiveObstacle::RegularPolygon(larger_primitive)),
+                    PrimitiveObstacle::RegularPolygon(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -344,7 +337,7 @@ fn new_obstacle(
                 .spawn((
                     transform,
                     GlobalTransform::default(),
-                    CachedObstacle::new(PrimitiveObstacle::Rhombus(larger_primitive)),
+                    PrimitiveObstacle::Rhombus(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
