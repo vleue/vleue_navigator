@@ -29,7 +29,9 @@ mod updater;
 
 /// Prelude for imports
 pub mod prelude {
-    pub use crate::obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
+    pub use crate::obstacles::{
+        cached::CachedObstacle, primitive::PrimitiveObstacle, ObstacleSource,
+    };
     pub use crate::updater::{
         NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavmeshUpdaterPlugin,
     };

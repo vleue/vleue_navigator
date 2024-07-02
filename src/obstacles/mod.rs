@@ -5,6 +5,7 @@ use bevy::{
 };
 
 mod aabb;
+pub(crate) mod cached;
 pub(crate) mod primitive;
 
 /// Trait to mark a component as the source of position and shape of an obstacle.
