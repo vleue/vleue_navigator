@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock};
 
 use bevy::{
     math::Vec2,
@@ -12,7 +12,7 @@ use super::ObstacleSource;
 /// be recomputed every time. To clear the cache, you can use [`clear`](CachedObstacle::clear).
 #[derive(Clone, Component, Debug)]
 pub struct CachedObstacle<T: ObstacleSource> {
-    polygon: Arc<RwLock<Option<Vec<Vec2>>>>,
+    polygon: Arc<OnceLock<Vec<Vec2>>>,
     source: T,
 }
 
@@ -20,14 +20,14 @@ impl<T: ObstacleSource> CachedObstacle<T> {
     /// Create a new cached obstacle from another obstacle source
     pub fn new(source: T) -> Self {
         Self {
-            polygon: Arc::new(RwLock::new(None)),
+            polygon: Arc::new(OnceLock::new()),
             source,
         }
     }
 
     /// Clear the cache for this obstacle
     pub fn clear(&mut self) {
-        self.polygon = Arc::new(RwLock::new(None));
+        self.polygon = Arc::new(OnceLock::new());
     }
 }
 
@@ -37,12 +37,12 @@ impl<T: ObstacleSource> ObstacleSource for CachedObstacle<T> {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
     ) -> Vec<Vec2> {
-        if let Some(poly) = self.polygon.read().unwrap().as_ref() {
-            return poly.clone();
-        }
-        let poly = T::get_polygon(&self.source, obstacle_transform, navmesh_transform);
-        let mut writer = self.polygon.write().unwrap();
-        *writer = Some(poly.clone());
-        poly
+        self.polygon
+            .get_or_init(|| {
+                T::get_polygon(&self.source, obstacle_transform, navmesh_transform)
+                    .into_iter()
+                    .collect::<Vec<_>>()
+            })
+            .clone()
     }
 }
