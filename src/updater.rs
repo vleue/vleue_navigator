@@ -1,12 +1,19 @@
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
+    time::Duration,
 };
 
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
-use bevy::{ecs::entity::EntityHashMap, prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
+use bevy::{
+    diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
+    ecs::entity::EntityHashMap,
+    prelude::*,
+    tasks::AsyncComputeTaskPool,
+    utils::HashMap,
+};
 use polyanya::Triangulation;
 
 use crate::{obstacles::ObstacleSource, NavMesh};
@@ -147,7 +154,7 @@ fn drop_dead_tasks(
 
 /// Task holder for a navmesh update.
 #[derive(Component, Debug, Clone)]
-pub struct NavmeshUpdateTask(Arc<RwLock<Option<NavMesh>>>);
+pub struct NavmeshUpdateTask(Arc<RwLock<Option<(NavMesh, Duration)>>>);
 
 type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e, 'f> = Query<
     'world,
@@ -239,14 +246,16 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
             if is_blocking.is_some() {
+                let start = bevy::utils::Instant::now();
                 let navmesh = build_navmesh(obstacles_local, settings_local, transform_local);
-                *writer.write().unwrap() = Some(navmesh);
+                *writer.write().unwrap() = Some((navmesh, start.elapsed()));
             } else {
                 AsyncComputeTaskPool::get()
                     .spawn(async move {
+                        let start = bevy::utils::Instant::now();
                         let navmesh =
                             build_navmesh(obstacles_local, settings_local, transform_local);
-                        *writer.write().unwrap() = Some(navmesh);
+                        *writer.write().unwrap() = Some((navmesh, start.elapsed()));
                     })
                     .detach();
             }
@@ -264,16 +273,18 @@ fn update_navmesh_asset(
         &mut NavMeshStatus,
     )>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
+    mut diagnostics: Diagnostics,
 ) {
     for (entity, handle, task, mut status) in &mut live_navmeshes {
         let mut task = task.0.write().unwrap();
         if task.is_some() {
-            let navmesh_built = task.take().unwrap();
+            let (navmesh_built, duration) = task.take().unwrap();
             commands.entity(entity).remove::<NavmeshUpdateTask>();
 
             debug!("navmesh built");
             navmeshes.insert(handle, navmesh_built);
             *status = NavMeshStatus::Built;
+            diagnostics.add_measurement(&NAVMESH_BUILD_DURATION, || duration.as_secs_f64());
         }
     }
 }
@@ -298,12 +309,17 @@ impl<Marker: Component, Obstacle: ObstacleSource> Default
     }
 }
 
+/// Diagnostic path for the duration of navmesh build.
+pub const NAVMESH_BUILD_DURATION: DiagnosticPath =
+    DiagnosticPath::const_new("navmesh_build_duration");
+
 impl<Obstacle: ObstacleSource, Marker: Component> Plugin
     for NavmeshUpdaterPlugin<Obstacle, Marker>
 {
     fn build(&self, app: &mut App) {
         app.add_systems(PostUpdate, trigger_navmesh_build::<Marker, Obstacle>)
             .add_systems(PreUpdate, update_navmesh_asset)
-            .add_systems(Update, drop_dead_tasks);
+            .add_systems(Update, drop_dead_tasks)
+            .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION).with_suffix("s"));
     }
 }

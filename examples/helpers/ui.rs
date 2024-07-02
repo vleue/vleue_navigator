@@ -1,4 +1,4 @@
-use bevy::{color::palettes, prelude::*};
+use bevy::{color::palettes, diagnostic::DiagnosticsStore, prelude::*};
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -219,6 +219,9 @@ pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
                 ("{}", 30.0),
                 ("\nPolygons: ", 30.0),
                 ("{}", 30.0),
+                ("\nBuild Duration: ", 30.0),
+                ("{}", 30.0),
+                ("ms", 30.0),
             ];
             if INTERACTIVE {
                 text.push(("\n\nClick to add an obstacle", 25.0));
@@ -253,6 +256,7 @@ pub fn update_stats<T: Component>(
     obstacles: Query<&T>,
     navmesh: Query<(Ref<NavMeshStatus>, &Handle<NavMesh>)>,
     navmeshes: Res<Assets<NavMesh>>,
+    diagnostics: Res<DiagnosticsStore>,
 ) {
     let (status, handle) = navmesh.single();
 
@@ -274,6 +278,15 @@ pub fn update_stats<T: Component>(
             .get(handle)
             .map(|nm| nm.get().polygons.len())
             .unwrap_or_default()
+    );
+    text.sections[7].value = format!(
+        "{:.3}",
+        diagnostics
+            .get(&NAVMESH_BUILD_DURATION)
+            .unwrap()
+            .smoothed()
+            .unwrap_or_default()
+            * 1000.0
     );
 }
 
