@@ -1,7 +1,8 @@
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::{
-    color::palettes, math::vec2, pbr::NotShadowCaster, prelude::*, render::view::RenderLayers,
+    color::palettes, ecs::entity::EntityHashSet, math::vec2, pbr::NotShadowCaster, prelude::*,
+    render::view::RenderLayers,
 };
 use polyanya::Triangulation;
 use rand::Rng;
@@ -18,6 +19,9 @@ const MESH_HEIGHT: u32 = 100;
 pub const MATERIAL_OBSTACLE_1: Handle<StandardMaterial> = Handle::weak_from_u128(0);
 pub const MATERIAL_OBSTACLE_2: Handle<StandardMaterial> = Handle::weak_from_u128(1);
 pub const MATERIAL_OBSTACLE_3: Handle<StandardMaterial> = Handle::weak_from_u128(2);
+pub const MATERIAL_OBSTACLE_CACHED_1: Handle<StandardMaterial> = Handle::weak_from_u128(10);
+pub const MATERIAL_OBSTACLE_CACHED_2: Handle<StandardMaterial> = Handle::weak_from_u128(11);
+pub const MATERIAL_OBSTACLE_CACHED_3: Handle<StandardMaterial> = Handle::weak_from_u128(12);
 pub const MATERIAL_NAVMESH: Handle<StandardMaterial> = Handle::weak_from_u128(3);
 
 #[derive(Component, Debug)]
@@ -42,7 +46,7 @@ fn main() {
             (
                 setup,
                 ui::setup_stats::<false>,
-                ui::setup_settings,
+                ui::setup_settings::<true>,
                 agent3d::setup_agent::<100>,
             ),
         )
@@ -61,6 +65,8 @@ fn main() {
                 life_of_obstacle,
                 ui::toggle_ui,
                 toggle_ui,
+                pause,
+                cached_material,
             ),
         )
         .add_systems(FixedUpdate, random_obstacle)
@@ -68,32 +74,85 @@ fn main() {
         .run();
 }
 
+fn pause(keyboard_input: Res<ButtonInput<KeyCode>>, mut virtual_time: ResMut<Time<Virtual>>) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        if virtual_time.is_paused() {
+            virtual_time.unpause();
+        } else {
+            virtual_time.pause();
+        }
+    }
+}
+
+fn cached_material(
+    obstacles: Query<(&Children, Option<Ref<CachableObstacle>>)>,
+    mut materials: Query<&mut Handle<StandardMaterial>>,
+    mut removed: RemovedComponents<CachableObstacle>,
+) {
+    for (children, cachable) in &obstacles {
+        if cachable.is_some() && cachable.unwrap().is_added() {
+            let mut material = materials.get_mut(children[0]).unwrap();
+            *material = match rand::thread_rng().gen_range(0..3) {
+                0 => MATERIAL_OBSTACLE_CACHED_1,
+                1 => MATERIAL_OBSTACLE_CACHED_2,
+                2 => MATERIAL_OBSTACLE_CACHED_3,
+                _ => unreachable!(),
+            };
+        }
+    }
+    for removed in removed.read() {
+        let (children, _) = obstacles.get(removed).unwrap();
+        let mut material = materials.get_mut(children[0]).unwrap();
+        *material = match rand::thread_rng().gen_range(0..3) {
+            0 => MATERIAL_OBSTACLE_1,
+            1 => MATERIAL_OBSTACLE_2,
+            2 => MATERIAL_OBSTACLE_3,
+            _ => unreachable!(),
+        };
+    }
+}
+
 #[derive(Component)]
 struct Lifetime(Timer);
 
 fn life_of_obstacle(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Virtual>>,
     mut obstacles: Query<(Entity, &mut Lifetime, &mut Transform)>,
+    mut cachable: Local<EntityHashSet>,
+    example_settings: Res<ui::ExampleSettings>,
 ) {
     for (entity, mut lifetime, mut transform) in obstacles.iter_mut() {
+        // reset cache when settings change
+        if example_settings.is_changed() && !example_settings.cache_enabled {
+            cachable.remove(&entity);
+            commands.entity(entity).remove::<CachableObstacle>();
+        }
         lifetime.0.tick(time.delta());
-        if lifetime.0.fraction() < 0.2 {
-            transform.scale = Vec3::new(
-                lifetime.0.fraction() * 5.0,
-                1.0,
-                lifetime.0.fraction() * 5.0,
-            );
-        }
-        if lifetime.0.fraction() > 0.8 {
-            transform.scale = Vec3::new(
-                (-lifetime.0.fraction() + 1.0) * 5.0 + 0.01,
-                1.0,
-                (-lifetime.0.fraction() + 1.0) * 5.0 + 0.01,
-            );
-        }
+
         if lifetime.0.finished() {
             commands.entity(entity).despawn_recursive();
+        } else if lifetime.0.fraction() < 0.2 {
+            transform.scale = Vec3::new(
+                lifetime.0.fraction() * 4.0,
+                1.0,
+                lifetime.0.fraction() * 4.0,
+            );
+        } else if lifetime.0.fraction() > 0.8 {
+            transform.scale = Vec3::new(
+                (-lifetime.0.fraction() + 1.0) * 4.0 + 0.01,
+                1.0,
+                (-lifetime.0.fraction() + 1.0) * 4.0 + 0.01,
+            );
+            if cachable.remove(&entity) {
+                commands.entity(entity).remove::<CachableObstacle>();
+            }
+        } else {
+            if example_settings.cache_enabled {
+                if cachable.insert(entity) {
+                    commands.entity(entity).insert(CachableObstacle);
+                }
+            }
         }
     }
 }
@@ -187,6 +246,18 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
     materials.insert(
         &MATERIAL_OBSTACLE_3,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::ORANGE_700)),
+    );
+    materials.insert(
+        &MATERIAL_OBSTACLE_CACHED_1,
+        StandardMaterial::from(Color::Srgba(palettes::tailwind::GREEN_600)),
+    );
+    materials.insert(
+        &MATERIAL_OBSTACLE_CACHED_2,
+        StandardMaterial::from(Color::Srgba(palettes::tailwind::GREEN_700)),
+    );
+    materials.insert(
+        &MATERIAL_OBSTACLE_CACHED_3,
+        StandardMaterial::from(Color::Srgba(palettes::tailwind::TEAL_700)),
     );
     materials.insert(
         &MATERIAL_NAVMESH,

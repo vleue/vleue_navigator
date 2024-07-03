@@ -90,6 +90,8 @@ pub enum NavMeshStatus {
     ///
     /// This can happen if the build takes longer than the `build_timeout` defined in the settings.
     Failed,
+    /// Cancelled build task. This can happen if settings changed before the build was completed.
+    Cancelled,
 }
 
 /// Control when to update the navmesh
@@ -153,18 +155,26 @@ fn build_navmesh<T: ObstacleSource>(
 
 fn drop_dead_tasks(
     mut commands: Commands,
-    mut navmeshes: Query<(Entity, &mut NavMeshStatus, &NavMeshSettings), With<NavmeshUpdateTask>>,
+    mut navmeshes: Query<
+        (Entity, &mut NavMeshStatus, Ref<NavMeshSettings>),
+        With<NavmeshUpdateTask>,
+    >,
     time: Res<Time>,
     mut task_ages: Local<EntityHashMap<f32>>,
 ) {
     for (entity, mut status, settings) in &mut navmeshes {
         if status.is_changed() {
             task_ages.insert(entity, time.elapsed_seconds());
-        } else if let Some(age) = task_ages.get(&entity) {
+        } else if let Some(age) = task_ages.get(&entity).cloned() {
+            if settings.is_changed() {
+                *status = NavMeshStatus::Cancelled;
+                commands.entity(entity).remove::<NavmeshUpdateTask>();
+                task_ages.remove(&entity);
+            }
             let Some(timeout) = settings.build_timeout else {
                 continue;
             };
-            if time.elapsed_seconds() - *age > timeout {
+            if time.elapsed_seconds() - age > timeout {
                 *status = NavMeshStatus::Failed;
                 commands.entity(entity).remove::<NavmeshUpdateTask>();
                 task_ages.remove(&entity);
@@ -242,7 +252,13 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
         || cachable_obstacles.iter().any(|(_, _, c)| c.is_added())
     {
         for (_, mut settings, ..) in &mut navmeshes {
-            info!("clear cache");
+            debug!("cache cleared due to cachable obstacle change");
+            settings.cached = None;
+        }
+    }
+    for (_, mut settings, ..) in &mut navmeshes {
+        if settings.is_changed() {
+            debug!("cache cleared due to settings change");
             settings.cached = None;
         }
     }
@@ -367,7 +383,8 @@ fn update_navmesh_asset(
                 to_cache,
             } = task.take().unwrap();
             commands.entity(entity).remove::<NavmeshUpdateTask>();
-            settings.cached = Some(to_cache);
+            // This is internal and shouldn't trigger change detection
+            settings.bypass_change_detection().cached = Some(to_cache);
 
             debug!("navmesh built");
             navmeshes.insert(handle, navmesh);
@@ -406,8 +423,7 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
 {
     fn build(&self, app: &mut App) {
         app.add_systems(PostUpdate, trigger_navmesh_build::<Marker, Obstacle>)
-            .add_systems(PreUpdate, update_navmesh_asset)
-            .add_systems(Update, drop_dead_tasks)
+            .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
             .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));
     }
 }
