@@ -198,16 +198,28 @@ type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e, 'f> = Query<
     ),
 >;
 
-fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
-    mut commands: Commands,
-    dynamic_obstacles: Query<
-        (Ref<GlobalTransform>, &Obstacle),
+type ObstacleQueries<'world, 'state, 'a, 'b, 'c, Obstacle, Marker> = (
+    Query<
+        'world,
+        'state,
+        (Ref<'a, GlobalTransform>, &'b Obstacle),
         (With<Marker>, Without<CachableObstacle>),
     >,
-    cachable_obstacles: Query<
-        (Ref<GlobalTransform>, &Obstacle, Ref<CachableObstacle>),
+    Query<
+        'world,
+        'state,
+        (
+            Ref<'a, GlobalTransform>,
+            &'b Obstacle,
+            Ref<'c, CachableObstacle>,
+        ),
         With<Marker>,
     >,
+);
+
+fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
+    mut commands: Commands,
+    (dynamic_obstacles, cachable_obstacles): ObstacleQueries<Obstacle, Marker>,
     removed_obstacles: RemovedComponents<Marker>,
     removed_cachable_obstacles: RemovedComponents<CachableObstacle>,
     mut navmeshes: NavMeshToUpdateQuery,
