@@ -29,10 +29,12 @@ mod updater;
 
 /// Prelude for imports
 pub mod prelude {
-    pub use crate::obstacles::{primitive::PrimitiveObstacle, ObstacleSource};
+    pub use crate::obstacles::{
+        cached::CachedObstacle, primitive::PrimitiveObstacle, ObstacleSource,
+    };
     pub use crate::updater::{
-        NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
-        NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin,
+        CachableObstacle, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
+        NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
     };
     pub use crate::{NavMesh, VleueNavigatorPlugin};
 }
@@ -128,9 +130,7 @@ impl NavMesh {
     /// Depending on the scale of your mesh, you should change the [`delta`](polyanya::Mesh::delta) value using [`set_delta`].
     pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> NavMesh {
         let mut triangulation = Triangulation::from_outer_edges(&edges);
-        for obstacle in obstacles {
-            triangulation.add_obstacle(obstacle);
-        }
+        triangulation.add_obstacles(obstacles);
 
         let mut mesh: polyanya::Mesh = triangulation.as_navmesh();
         triangulation.simplify(0.001);

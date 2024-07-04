@@ -1,10 +1,11 @@
-use bevy::{color::palettes, prelude::*};
+use bevy::{color::palettes, diagnostic::DiagnosticsStore, prelude::*};
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
 pub enum UiSettings {
     Simplify,
     MergeSteps,
+    Cache,
 }
 
 #[derive(Component)]
@@ -13,6 +14,12 @@ pub enum UiSettingsButtons {
     SimplifyDec,
     MergeStepsInc,
     MergeStepsDec,
+    ToggleCache,
+}
+
+#[derive(Resource, Default)]
+pub struct ExampleSettings {
+    pub cache_enabled: bool,
 }
 
 fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildBuilder) {
@@ -29,7 +36,7 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildBuilder) {
                 },
                 border_color: BorderColor(palettes::tailwind::GRAY_500.into()),
                 border_radius: BorderRadius::MAX,
-                image: UiImage::default().with_color(palettes::tailwind::GRAY_700.into()),
+                background_color: palettes::tailwind::GRAY_700.into(),
                 ..default()
             },
             action,
@@ -45,7 +52,8 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildBuilder) {
         });
 }
 
-pub fn setup_settings(mut commands: Commands) {
+pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
+    commands.init_resource::<ExampleSettings>();
     commands
         .spawn((
             NodeBundle {
@@ -129,12 +137,45 @@ pub fn setup_settings(mut commands: Commands) {
                     button(" - ", UiSettingsButtons::MergeStepsDec, parent);
                     button(" + ", UiSettingsButtons::MergeStepsInc, parent);
                 });
+            if WITH_CACHE {
+                parent
+                    .spawn((
+                        ButtonBundle {
+                            style: Style {
+                                margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
+                                border: UiRect::all(Val::Px(1.0)),
+                                justify_content: JustifyContent::Center,
+                                height: Val::Px(30.0),
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            border_color: BorderColor(palettes::tailwind::GRAY_500.into()),
+                            border_radius: BorderRadius::all(Val::Px(10.0)),
+                            image: UiImage::default()
+                                .with_color(palettes::tailwind::GRAY_700.into()),
+                            ..default()
+                        },
+                        UiSettingsButtons::ToggleCache,
+                        UiSettings::Cache,
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(TextBundle::from_section(
+                            "Cache",
+                            TextStyle {
+                                font_size: 20.0,
+                                ..default()
+                            },
+                        ));
+                    });
+            }
         });
 }
 
 pub fn display_settings(
     settings: Query<Ref<NavMeshSettings>>,
+    example_settings: Res<ExampleSettings>,
     mut texts: Query<(&mut Text, &UiSettings)>,
+    mut buttons: Query<(&mut BackgroundColor, &UiSettings), With<Button>>,
 ) {
     let settings = settings.single();
     if settings.is_changed() {
@@ -146,6 +187,22 @@ pub fn display_settings(
                 UiSettings::MergeSteps => {
                     text.sections[1].value = format!("{}", settings.merge_steps)
                 }
+                UiSettings::Cache => (),
+            }
+        }
+    }
+    if example_settings.is_changed() {
+        for (mut color, param) in &mut buttons {
+            match param {
+                UiSettings::Simplify => (),
+                UiSettings::MergeSteps => (),
+                UiSettings::Cache => {
+                    *color = if example_settings.cache_enabled {
+                        palettes::tailwind::GREEN_400.into()
+                    } else {
+                        palettes::tailwind::RED_600.into()
+                    }
+                }
             }
         }
     }
@@ -153,12 +210,13 @@ pub fn display_settings(
 
 pub fn update_settings<const STEP: u32>(
     mut interaction_query: Query<
-        (&Interaction, &UiSettingsButtons, &mut UiImage),
+        (&Interaction, &UiSettingsButtons, &mut BackgroundColor),
         (Changed<Interaction>, With<Button>),
     >,
     mut settings: Query<&mut NavMeshSettings>,
+    mut example_settings: ResMut<ExampleSettings>,
 ) {
-    for (interaction, button, mut image) in &mut interaction_query {
+    for (interaction, button, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 let mut settings = settings.single_mut();
@@ -167,7 +225,7 @@ pub fn update_settings<const STEP: u32>(
                         settings.simplify = (settings.simplify - STEP as f32 / 1000.0).max(0.0);
                     }
                     UiSettingsButtons::SimplifyInc => {
-                        settings.simplify = (settings.simplify + STEP as f32 / 1000.0).min(0.5);
+                        settings.simplify = (settings.simplify + STEP as f32 / 1000.0).min(10.0);
                     }
                     UiSettingsButtons::MergeStepsDec => {
                         settings.merge_steps = settings.merge_steps.checked_sub(1).unwrap_or(0);
@@ -175,13 +233,20 @@ pub fn update_settings<const STEP: u32>(
                     UiSettingsButtons::MergeStepsInc => {
                         settings.merge_steps = (settings.merge_steps + 1).min(5);
                     }
+                    UiSettingsButtons::ToggleCache => {
+                        example_settings.cache_enabled = !example_settings.cache_enabled;
+                    }
                 }
             }
             Interaction::Hovered => {
-                image.color = palettes::tailwind::GRAY_600.into();
+                if !matches!(button, UiSettingsButtons::ToggleCache) {
+                    *color = palettes::tailwind::GRAY_600.into();
+                }
             }
             Interaction::None => {
-                image.color = palettes::tailwind::GRAY_700.into();
+                if !matches!(button, UiSettingsButtons::ToggleCache) {
+                    *color = palettes::tailwind::GRAY_700.into();
+                }
             }
         }
     }
@@ -219,6 +284,9 @@ pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
                 ("{}", 30.0),
                 ("\nPolygons: ", 30.0),
                 ("{}", 30.0),
+                ("\nBuild Duration: ", 30.0),
+                ("{}", 30.0),
+                ("ms", 30.0),
             ];
             if INTERACTIVE {
                 text.push(("\n\nClick to add an obstacle", 25.0));
@@ -253,6 +321,7 @@ pub fn update_stats<T: Component>(
     obstacles: Query<&T>,
     navmesh: Query<(Ref<NavMeshStatus>, &Handle<NavMesh>)>,
     navmeshes: Res<Assets<NavMesh>>,
+    diagnostics: Res<DiagnosticsStore>,
 ) {
     let (status, handle) = navmesh.single();
 
@@ -266,6 +335,7 @@ pub fn update_stats<T: Component>(
         NavMeshStatus::Building => palettes::tailwind::AMBER_500.into(),
         NavMeshStatus::Built => palettes::tailwind::GREEN_400.into(),
         NavMeshStatus::Failed => palettes::tailwind::RED_600.into(),
+        NavMeshStatus::Cancelled => palettes::tailwind::AMBER_500.into(),
     };
     text.sections[3].value = format!("{}", obstacles.iter().len());
     text.sections[5].value = format!(
@@ -274,6 +344,15 @@ pub fn update_stats<T: Component>(
             .get(handle)
             .map(|nm| nm.get().polygons.len())
             .unwrap_or_default()
+    );
+    text.sections[7].value = format!(
+        "{:.3}",
+        diagnostics
+            .get(&NAVMESH_BUILD_DURATION)
+            .unwrap()
+            .smoothed()
+            .unwrap_or_default()
+            * 1000.0
     );
 }
 

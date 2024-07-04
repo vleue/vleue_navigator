@@ -45,7 +45,7 @@ fn main() {
             (
                 setup,
                 ui::setup_stats::<true>,
-                ui::setup_settings,
+                ui::setup_settings::<false>,
                 agent::setup_agent::<10>,
             ),
         )
