@@ -54,6 +54,9 @@ jobs:
           cargo build --target wasm32-unknown-unknown --release --example primitive_3d --features bevy/webgl2
           wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/primitive_3d.wasm
 
+          cargo build --target wasm32-unknown-unknown --release --example demo --features bevy/webgl2
+          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/demo.wasm
+
       - name: Copy Assets
         run: cp -r assets wasm/
 
