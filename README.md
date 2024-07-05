@@ -18,7 +18,7 @@ Loading a mesh from a gLTF file, then building a `NavMesh` from it and using it 
 
 ### From obstacle components
 
-Spawn entities marked as obstacles, create the NavMesh live from them. See [auto_navmesh_aabb](https://github.com/vleue/vleue_navigator/blob/main/examples/auto_navmesh_aabb.rs) and [`NavMeshUpdaterPlugin`](https://docs.rs/vleue_navigator/0.8.0-rc.4/vleue_navigator/prelude/struct.NavmeshUpdaterPlugin.html).
+Spawn entities marked as obstacles, create the NavMesh live from them. See [auto_navmesh_aabb](https://github.com/vleue/vleue_navigator/blob/main/examples/auto_navmesh_aabb.rs) and [`NavMeshUpdaterPlugin`](https://docs.rs/vleue_navigator/latest/vleue_navigator/prelude/struct.NavmeshUpdaterPlugin.html).
 
 ## Example videos
 
