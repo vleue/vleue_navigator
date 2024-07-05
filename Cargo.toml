@@ -19,7 +19,7 @@ itertools = "0.13"
 version = "0.7.1"
 
 [dependencies.bevy]
-version = "0.14.0-rc.4"
+version = "0.14.0"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
@@ -27,7 +27,7 @@ default-features = false
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.14.0-rc.4"
+version = "0.14.0"
 features = [
     "bevy_ui",
     "bevy_text",
