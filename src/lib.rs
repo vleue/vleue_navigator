@@ -43,10 +43,25 @@ pub mod prelude {
 #[derive(Debug, Clone, Copy)]
 pub struct VleueNavigatorPlugin;
 
+/// Controls wether to display the NavMesh with gizmos.
+/// When this resource is present, the NavMesh will be visible.
+#[cfg(feature = "debug-with-gizmos")]
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct NavMeshDebug(
+    /// Color to display the NavMesh with
+    pub Color,
+);
+
 impl Plugin for VleueNavigatorPlugin {
     fn build(&self, app: &mut App) {
         app.register_asset_loader(asset_loaders::NavMeshPolyanyaLoader)
             .init_asset::<NavMesh>();
+
+        #[cfg(feature = "debug-with-gizmos")]
+        app.add_systems(
+            Update,
+            display_navmesh.run_if(resource_exists::<NavMeshDebug>),
+        );
     }
 }
 
@@ -290,7 +305,7 @@ impl NavMesh {
     }
 
     #[inline]
-    fn inverse_transform(&self) -> Transform {
+    pub(crate) fn inverse_transform(&self) -> Transform {
         Transform {
             translation: -self.transform.translation,
             rotation: self.transform.rotation.inverse(),
@@ -309,6 +324,41 @@ fn get_vectors(
         _ => unreachable!(),
     };
     vectors.iter().cloned().map(Vec3::from)
+}
+
+#[cfg(feature = "debug-with-gizmos")]
+/// Use gizmos to display navmeshes
+pub fn display_navmesh(
+    live_navmeshes: Query<&Handle<NavMesh>>,
+    mut gizmos: Gizmos,
+    navmeshes: Res<Assets<NavMesh>>,
+    controls: Res<NavMeshDebug>,
+) {
+    use bevy::math::vec3;
+    for mesh in &live_navmeshes {
+        if let Some(navmesh) = navmeshes.get(mesh) {
+            let inverse_transform = navmesh.inverse_transform();
+            let navmesh = navmesh.get();
+            for polygon in &navmesh.polygons {
+                let mut v = polygon
+                    .vertices
+                    .iter()
+                    .map(|i| &navmesh.vertices[*i as usize].coords)
+                    .map(|v| inverse_transform.transform_point(vec3(v.x, v.y, 0.0)))
+                    .collect::<Vec<_>>();
+                if !v.is_empty() {
+                    let first = polygon.vertices[0];
+                    let first = &navmesh.vertices[first as usize];
+                    v.push(inverse_transform.transform_point(vec3(
+                        first.coords.x,
+                        first.coords.y,
+                        0.0,
+                    )));
+                    gizmos.linestrip(v, controls.0);
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
