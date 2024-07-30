@@ -1,12 +1,11 @@
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::{
-    color::palettes, ecs::entity::EntityHashSet, math::vec2, pbr::NotShadowCaster, prelude::*,
-    render::view::RenderLayers,
+    color::palettes, ecs::entity::EntityHashSet, math::vec2, prelude::*, render::view::RenderLayers,
 };
 use polyanya::Triangulation;
 use rand::Rng;
-use vleue_navigator::prelude::*;
+use vleue_navigator::{prelude::*, NavMeshDebug};
 
 #[path = "helpers/agent3d.rs"]
 mod agent3d;
@@ -71,6 +70,7 @@ fn main() {
         )
         .add_systems(FixedUpdate, random_obstacle)
         .insert_resource(Time::<Fixed>::from_seconds(0.25))
+        .insert_resource(NavMeshDebug(palettes::tailwind::RED_800.into()))
         .run();
 }
 
@@ -283,8 +283,7 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    transform,
-                    GlobalTransform::default(),
+                    SpatialBundle::from_transform(transform),
                     PrimitiveObstacle::Rectangle(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -309,8 +308,7 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    transform,
-                    GlobalTransform::default(),
+                    SpatialBundle::from_transform(transform),
                     PrimitiveObstacle::Circle(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -335,8 +333,7 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    transform,
-                    GlobalTransform::default(),
+                    SpatialBundle::from_transform(transform),
                     PrimitiveObstacle::Ellipse(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -358,8 +355,7 @@ fn new_obstacle(
                 Capsule2d::new(primitive.radius + radius, primitive.half_length * 2.0);
             commands
                 .spawn((
-                    transform,
-                    GlobalTransform::default(),
+                    SpatialBundle::from_transform(transform),
                     PrimitiveObstacle::Capsule(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -381,8 +377,7 @@ fn new_obstacle(
                 RegularPolygon::new(primitive.circumradius() + radius, primitive.sides);
             commands
                 .spawn((
-                    transform,
-                    GlobalTransform::default(),
+                    SpatialBundle::from_transform(transform),
                     PrimitiveObstacle::RegularPolygon(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -406,8 +401,7 @@ fn new_obstacle(
             );
             commands
                 .spawn((
-                    transform,
-                    GlobalTransform::default(),
+                    SpatialBundle::from_transform(transform),
                     PrimitiveObstacle::Rhombus(larger_primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -439,7 +433,7 @@ fn display_mesh(
         return;
     }
 
-    let Some(navmesh) = navmeshes.get(navmesh_handle) else {
+    if navmeshes.get(navmesh_handle).is_none() {
         return;
     };
     if let Some(entity) = *current_mesh_entity {
@@ -462,22 +456,6 @@ fn display_mesh(
                 )),
                 material: MATERIAL_NAVMESH,
                 ..default()
-            })
-            .with_children(|main_mesh| {
-                main_mesh.spawn((
-                    PbrBundle {
-                        mesh: meshes.add(navmesh.to_wireframe_mesh()).into(),
-                        material: MATERIAL_NAVMESH,
-                        transform: Transform::from_translation(Vec3::new(
-                            -(MESH_WIDTH as f32) / 2.0,
-                            0.1,
-                            -(MESH_HEIGHT as f32) / 2.0,
-                        )),
-                        ..default()
-                    },
-                    NotShadowCaster,
-                    RenderLayers::none().with(1),
-                ));
             })
             .id(),
     );
