@@ -344,7 +344,7 @@ pub fn display_navmesh(
     for (mesh, debug) in &live_navmeshes {
         let Some(color) = debug
             .map(|debug| debug.0)
-            .or_else(|| controls.as_ref().map(|c| c.0).clone())
+            .or_else(|| controls.as_ref().map(|c| c.0))
         else {
             continue;
         };
