@@ -335,13 +335,19 @@ fn get_vectors(
 #[cfg(feature = "debug-with-gizmos")]
 /// Use gizmos to display navmeshes
 pub fn display_navmesh(
-    live_navmeshes: Query<&Handle<NavMesh>>,
+    live_navmeshes: Query<(&Handle<NavMesh>, Option<&NavMeshDebug>)>,
     mut gizmos: Gizmos,
     navmeshes: Res<Assets<NavMesh>>,
-    controls: Res<NavMeshDebug>,
+    controls: Option<Res<NavMeshesDebug>>,
 ) {
     use bevy::math::vec3;
-    for mesh in &live_navmeshes {
+    for (mesh, debug) in &live_navmeshes {
+        let Some(color) = debug
+            .map(|debug| debug.0)
+            .or_else(|| controls.as_ref().map(|c| c.0).clone())
+        else {
+            continue;
+        };
         if let Some(navmesh) = navmeshes.get(mesh) {
             let inverse_transform = navmesh.inverse_transform();
             let navmesh = navmesh.get();
@@ -360,7 +366,7 @@ pub fn display_navmesh(
                         first.coords.y,
                         0.0,
                     )));
-                    gizmos.linestrip(v, controls.0);
+                    gizmos.linestrip(v, color);
                 }
             }
         }
