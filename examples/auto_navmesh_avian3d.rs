@@ -1,10 +1,7 @@
 use std::time::Duration;
 
 use avian3d::{math::*, prelude::*};
-use bevy::{
-    color::palettes, core::TaskPoolThreadAssignmentPolicy, math::vec2, prelude::*,
-    time::common_conditions::on_timer,
-};
+use bevy::{color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer};
 
 use vleue_navigator::prelude::*;
 
