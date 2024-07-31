@@ -36,17 +36,26 @@ pub mod prelude {
         CachableObstacle, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
         NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
     };
-    pub use crate::{NavMesh, NavMeshDebug, Triangulation, VleueNavigatorPlugin};
+    pub use crate::{NavMesh, NavMeshDebug, NavMeshesDebug, Triangulation, VleueNavigatorPlugin};
 }
 
 /// Bevy plugin to add support for the [`NavMesh`] asset type.
 #[derive(Debug, Clone, Copy)]
 pub struct VleueNavigatorPlugin;
 
-/// Controls wether to display the NavMesh with gizmos.
-/// When this resource is present, the NavMesh will be visible.
+/// Controls wether to display all NavMeshes with gizmos.
+/// When this resource is present, all NavMeshes will be visible.
 #[cfg(feature = "debug-with-gizmos")]
 #[derive(Resource, Clone, Copy, Debug)]
+pub struct NavMeshesDebug(
+    /// Color to display the NavMesh with
+    pub Color,
+);
+
+/// Controls wether to display a NavMesh with gizmos.
+/// When this component is present, the NavMesh will be visible.
+#[cfg(feature = "debug-with-gizmos")]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct NavMeshDebug(
     /// Color to display the NavMesh with
     pub Color,
@@ -58,10 +67,7 @@ impl Plugin for VleueNavigatorPlugin {
             .init_asset::<NavMesh>();
 
         #[cfg(feature = "debug-with-gizmos")]
-        app.add_systems(
-            Update,
-            display_navmesh.run_if(resource_exists::<NavMeshDebug>),
-        );
+        app.add_systems(Update, display_navmesh);
     }
 }
 
@@ -81,7 +87,7 @@ pub use polyanya::{Path, Triangulation};
 #[derive(Debug, TypePath, Clone, Asset)]
 pub struct NavMesh {
     mesh: Arc<polyanya::Mesh>,
-    transform: Transform,
+    pub(crate) transform: Transform,
 }
 
 impl NavMesh {

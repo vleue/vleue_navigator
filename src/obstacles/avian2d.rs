@@ -1,9 +1,10 @@
-use avian2d::{parry::shape::TypedShape, prelude::Collider};
+use avian2d::{dynamics::rigid_body::Sleeping, parry::shape::TypedShape, prelude::Collider};
 use bevy::{
-    log::warn,
-    math::{vec3, Vec2, Vec3Swizzles},
-    prelude::{GlobalTransform, Transform},
+    math::{vec3, Vec3Swizzles},
+    prelude::*,
 };
+
+use crate::updater::CachableObstacle;
 
 use super::{ObstacleSource, RESOLUTION};
 
@@ -13,7 +14,7 @@ impl ObstacleSource for Collider {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
     ) -> Vec<Vec2> {
-        self.shape()
+        self.shape_scaled()
             .as_typed_shape()
             .get_polygon(obstacle_transform, navmesh_transform)
     }
@@ -127,4 +128,14 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
         }
     }
+}
+
+pub fn on_sleeping_inserted(trigger: Trigger<OnInsert, Sleeping>, mut commands: Commands) {
+    commands.entity(trigger.entity()).insert(CachableObstacle);
+}
+
+pub fn on_sleeping_removed(trigger: Trigger<OnRemove, Sleeping>, mut commands: Commands) {
+    commands
+        .entity(trigger.entity())
+        .remove::<CachableObstacle>();
 }

@@ -5,7 +5,7 @@ use bevy::{
 };
 use polyanya::Triangulation;
 use rand::Rng;
-use vleue_navigator::{prelude::*, NavMeshDebug};
+use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
 mod agent3d;
@@ -70,7 +70,7 @@ fn main() {
         )
         .add_systems(FixedUpdate, random_obstacle)
         .insert_resource(Time::<Fixed>::from_seconds(0.25))
-        .insert_resource(NavMeshDebug(palettes::tailwind::RED_800.into()))
+        .insert_resource(NavMeshesDebug(palettes::tailwind::RED_800.into()))
         .run();
 }
 
