@@ -32,7 +32,7 @@ jobs:
         run: |
           for example in "auto_navmesh_aabb" "auto_navmesh_primitive" "primitive_3d" "demo" "auto_navmesh_avian2d" "auto_navmesh_avian3d" "many" "lines" "moving" "gltf" "random_obstacles"
           do
-            ehcho "Building $example"
+            echo "Building $example"
             cargo build --target wasm32-unknown-unknown --release --example $example --features "bevy/webgl2,avian2d,avian3d"
             wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/$example.wasm
             wasm-opt -Oz wasm/${example}_bg.wasm --output wasm/${example}-opt.wasm
