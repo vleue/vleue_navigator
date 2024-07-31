@@ -36,7 +36,7 @@ pub mod prelude {
         CachableObstacle, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
         NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
     };
-    pub use crate::{NavMesh, VleueNavigatorPlugin};
+    pub use crate::{NavMesh, NavMeshDebug, Triangulation, VleueNavigatorPlugin};
 }
 
 /// Bevy plugin to add support for the [`NavMesh`] asset type.

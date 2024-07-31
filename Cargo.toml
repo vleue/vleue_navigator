@@ -16,6 +16,12 @@ categories = ["game-development"]
 itertools = "0.13"
 tracing = { version = "0.1", optional = true }
 
+avian2d = { version = "0.1", default-features = false, features = [
+    "2d",
+    "f32",
+    "parry-f32",
+], optional = true }
+
 [dependencies.polyanya]
 version = "0.7.1"
 
@@ -54,3 +60,7 @@ debug-with-gizmos = ["bevy/bevy_gizmos"]
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[[example]]
+name = "auto_navmesh_avian2d"
+required-features = ["avian2d"]
