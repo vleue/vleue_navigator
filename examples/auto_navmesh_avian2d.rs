@@ -1,10 +1,5 @@
-use std::time::Duration;
-
 use avian2d::{math::*, prelude::*};
-use bevy::{
-    color::palettes, math::vec2, prelude::*, sprite::MaterialMesh2dBundle,
-    time::common_conditions::on_timer,
-};
+use bevy::{color::palettes, math::vec2, prelude::*, sprite::MaterialMesh2dBundle};
 use rand::Rng;
 use vleue_navigator::prelude::*;
 
@@ -26,14 +21,10 @@ fn main() {
         .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 100.0))
         .add_systems(Startup, setup)
         .add_systems(
-            Update,
-            spawn_puck.run_if(on_timer(Duration::from_secs_f32(0.5))),
-        )
-        .add_systems(
             PreUpdate,
             (puck_back_to_start, move_puck, display_puck_path),
         )
-        .insert_resource(NavMeshDebug(palettes::tailwind::RED_800.into()))
+        .insert_resource(NavMeshesDebug(palettes::tailwind::RED_800.into()))
         .run();
 }
 
@@ -107,10 +98,30 @@ fn setup(
         }
     }
 
-    commands.insert_resource(PuckHandles {
-        mesh: meshes.add(Circle::new(5.0)),
-        material: materials.add(Color::srgb(0.7, 0.9, 0.2)),
-    });
+    let mesh = meshes.add(Circle::new(5.0));
+    let material = materials.add(Color::srgb(0.7, 0.9, 0.2));
+    for x in (-50..50).step_by(5).skip(1) {
+        let start = Vec3::new(x as f32 * 9.5, 300.0, 0.0);
+        commands.spawn((
+            MaterialMesh2dBundle {
+                mesh: mesh.clone().into(),
+                material: material.clone(),
+                transform: Transform::from_translation(start),
+                ..default()
+            },
+            RigidBody::Dynamic,
+            LinearVelocity(
+                Vec2::new(
+                    rand::thread_rng().gen_range(-1.0..1.0),
+                    rand::thread_rng().gen_range(-1.0..1.0),
+                )
+                .normalize()
+                    * 200.0,
+            ),
+            Collider::circle(5.0 as Scalar),
+            Puck(start),
+        ));
+    }
 
     commands.spawn(NavMeshBundle {
         settings: NavMeshSettings {
@@ -128,41 +139,8 @@ fn setup(
     });
 }
 
-#[derive(Resource)]
-struct PuckHandles {
-    mesh: Handle<Mesh>,
-    material: Handle<ColorMaterial>,
-}
-
 #[derive(Component)]
 struct Puck(Vec3);
-
-fn spawn_puck(mut commands: Commands, handles: Res<PuckHandles>) {
-    let start = Vec3::new(
-        rand::thread_rng().gen_range(-400.0..400.0),
-        40.0 * 6.0 + 30.0,
-        0.0,
-    );
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: handles.mesh.clone().into(),
-            material: handles.material.clone(),
-            transform: Transform::from_translation(start),
-            ..default()
-        },
-        RigidBody::Dynamic,
-        LinearVelocity(
-            Vec2::new(
-                rand::thread_rng().gen_range(-1.0..1.0),
-                rand::thread_rng().gen_range(-1.0..1.0),
-            )
-            .normalize()
-                * 200.0,
-        ),
-        Collider::circle(5.0 as Scalar),
-        Puck(start),
-    ));
-}
 
 fn puck_back_to_start(
     mut commands: Commands,
@@ -204,20 +182,25 @@ pub struct Path {
 
 pub fn move_puck(
     mut commands: Commands,
-    mut navigator: Query<(&mut Transform, &mut Path, Entity)>,
+    mut navigator: Query<(&mut Transform, &mut Path, Entity, &mut LinearVelocity)>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut path, entity) in navigator.iter_mut() {
+    for (mut transform, mut path, entity, mut linvel) in navigator.iter_mut() {
         let move_direction = path.current - transform.translation;
         transform.translation += move_direction.normalize() * time.delta_seconds() * 200.0;
 
         if transform.translation.distance(path.current) < 10.0 {
             if let Some(next) = path.next.pop() {
                 path.current = next;
-            } else {
-                commands.entity(entity).despawn();
-                break;
             }
+        }
+        if transform.translation.distance(path.current) < 50.0 && path.next.is_empty() {
+            commands
+                .entity(entity)
+                .insert(RigidBody::Dynamic)
+                .remove::<Path>();
+            linvel.0 = (path.current - transform.translation).xy() * 10.0;
+            continue;
         }
     }
 }
