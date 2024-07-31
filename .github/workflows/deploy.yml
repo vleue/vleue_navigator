@@ -30,22 +30,23 @@ jobs:
 
       - name: Build
         run: |
-          for example in "auto_navmesh_aabb" "auto_navmesh_primitive" "primitive_3d" "demo" "auto_navmesh_avian2d" "auto_navmesh_avian3d" "many" "lines" "moving" "gltf"
+          for example in "auto_navmesh_aabb" "auto_navmesh_primitive" "primitive_3d" "demo" "auto_navmesh_avian2d" "auto_navmesh_avian3d" "many" "lines" "moving" "gltf" "random_obstacles"
           do
-            cargo build --target wasm32-unknown-unknown --release --example $example --features bevy/webgl2
+            ehcho "Building $example"
+            cargo build --target wasm32-unknown-unknown --release --example $example --features "bevy/webgl2,avian2d,avian3d"
             wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/$example.wasm
-            wasm-opt -Oz wasm/$example.wasm --output wasm/$example.wasm
-            rm wasm/$example.wasm
-            mv wasm/$example-opt.wasm wasm/$example.wasm
-            cp wasm/example.html wasm/$example.html
-            sed -i'' "s/name-of-example/$example/g" wasm/$example.html
+            wasm-opt -Oz wasm/${example}_bg.wasm --output wasm/${example}-opt.wasm
+            rm wasm/${example}_bg.wasm
+            mv wasm/${example}-opt.wasm wasm/${example}_bg.wasm
+            cp wasm/example.html wasm/${example}.html
+            sed -i'' "s/name-of-example/${example}/g" wasm/${example}.html
           done
 
       - name: Copy Assets
         run: cp -r assets wasm/
 
       - name: Copy Screenshots
-        run: cp screenshots/* wasm/
+        run: cp -r screenshots wasm/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
