@@ -350,22 +350,28 @@ pub fn display_navmesh(
         };
         if let Some(navmesh) = navmeshes.get(mesh) {
             let inverse_transform = navmesh.inverse_transform();
+            let transform = navmesh.transform();
             let navmesh = navmesh.get();
             for polygon in &navmesh.polygons {
                 let mut v = polygon
                     .vertices
                     .iter()
                     .map(|i| &navmesh.vertices[*i as usize].coords)
-                    .map(|v| inverse_transform.transform_point(vec3(v.x, v.y, 0.0)))
+                    .map(|v| {
+                        inverse_transform.rotation.mul_vec3(vec3(v.x, v.y, 0.0))
+                            + transform.translation
+                    })
                     .collect::<Vec<_>>();
                 if !v.is_empty() {
                     let first = polygon.vertices[0];
                     let first = &navmesh.vertices[first as usize];
-                    v.push(inverse_transform.transform_point(vec3(
-                        first.coords.x,
-                        first.coords.y,
-                        0.0,
-                    )));
+                    v.push(
+                        inverse_transform.rotation.mul_vec3(vec3(
+                            first.coords.x,
+                            first.coords.y,
+                            0.0,
+                        )) + transform.translation,
+                    );
                     gizmos.linestrip(v, color);
                 }
             }
