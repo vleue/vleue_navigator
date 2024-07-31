@@ -31,6 +31,23 @@ jobs:
         run: |
           cargo clippy --all-features -- -D warnings
 
+  checks:
+    name: Checks
+    strategy:
+      matrix:
+        features: ["--no-default-features", "--features avian2d", "--features avian3d", "--features debug-with-gizmos"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run clippy
+        run: |
+          cargo check ${{ matrix.features }}
+                
   tests:
     name: Tests
     runs-on: ubuntu-latest

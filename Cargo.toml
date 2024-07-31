@@ -64,9 +64,6 @@ default = ["debug-with-gizmos"]
 linuxci = ["bevy/x11"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 
-[profile.dev.package."*"]
-opt-level = 3
-
 [[example]]
 name = "auto_navmesh_avian2d"
 required-features = ["avian2d"]
