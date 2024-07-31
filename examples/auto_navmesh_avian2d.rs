@@ -12,7 +12,14 @@ enum Obstacle {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins,
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
+                ..default()
+            }),
             PhysicsPlugins::default().with_length_unit(20.0),
             VleueNavigatorPlugin,
             NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),

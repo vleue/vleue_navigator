@@ -13,7 +13,7 @@ use bevy::{
     sprite::MaterialMesh2dBundle,
     tasks::AsyncComputeTaskPool,
     utils::Instant,
-    window::{PresentMode, PrimaryWindow, WindowResized},
+    window::{PrimaryWindow, WindowResized},
 };
 use rand::prelude::*;
 
@@ -27,12 +27,11 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Navmesh with Polyanya".to_string(),
-                        present_mode: PresentMode::AutoNoVsync,
+                        fit_canvas_to_parent: true,
                         ..default()
                     }),
                     ..default()
-                })
-                // This example will be async heavy, increase the default threadpool
+                }) // This example will be async heavy, increase the default threadpool
                 .set(TaskPoolPlugin {
                     task_pool_options: TaskPoolOptions {
                         async_compute: TaskPoolThreadAssignmentPolicy {

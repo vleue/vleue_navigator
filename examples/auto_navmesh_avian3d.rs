@@ -14,15 +14,13 @@ struct Obstacle;
 fn main() {
     let mut app = App::new();
     app.add_plugins((
-        DefaultPlugins.set(TaskPoolPlugin {
-            task_pool_options: TaskPoolOptions {
-                async_compute: TaskPoolThreadAssignmentPolicy {
-                    min_threads: 1,
-                    max_threads: usize::MAX,
-                    percent: 1.0,
-                },
+        DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Navmesh with Polyanya".to_string(),
+                fit_canvas_to_parent: true,
                 ..default()
-            },
+            }),
+            ..default()
         }),
         PhysicsPlugins::default().with_length_unit(20.0),
         VleueNavigatorPlugin,

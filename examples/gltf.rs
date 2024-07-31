@@ -18,9 +18,10 @@ fn main() {
         .insert_resource(Msaa::default())
         .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
+            .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
                     ..default()
                 }),
                 ..default()
