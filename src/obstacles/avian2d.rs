@@ -32,7 +32,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
     fn get_polygon(
         &self,
         obstacle_transform: &GlobalTransform,
-        navmesh_transform: &Transform,
+        _navmesh_transform: &Transform,
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
 
@@ -62,13 +62,13 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 .collect(),
             TypedShape::TriMesh(collider) => collider
                 .vertices()
-                .into_iter()
+                .iter()
                 .map(|v| transform.transform_point(vec3(v.x, v.y, 0.0)))
                 .map(|p| p.xy())
                 .collect(),
             TypedShape::Polyline(collider) => collider
                 .vertices()
-                .into_iter()
+                .iter()
                 .map(|v| transform.transform_point(vec3(v.x, v.y, 0.0)))
                 .map(|p| p.xy())
                 .collect(),
@@ -79,12 +79,12 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     // TODO: handle the isometry of each shape
                     shape
                         .as_typed_shape()
-                        .get_polygon(obstacle_transform, navmesh_transform)
+                        .get_polygon(obstacle_transform, _navmesh_transform)
                 })
                 .collect(),
             TypedShape::ConvexPolygon(collider) => collider
                 .points()
-                .into_iter()
+                .iter()
                 .map(|v| transform.transform_point(vec3(v.x, v.y, 0.0)))
                 .map(|p| p.xy())
                 .collect(),

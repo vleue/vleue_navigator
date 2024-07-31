@@ -78,7 +78,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::Ball(collider) => {
@@ -88,7 +88,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::Capsule(collider) => {
@@ -98,7 +98,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::TriMesh(collider) => {
@@ -106,7 +106,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::HeightField(collider) => {
@@ -116,7 +116,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::Compound(collider) => {
@@ -138,7 +138,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::Cylinder(collider) => {
@@ -148,7 +148,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::Cone(collider) => {
@@ -161,7 +161,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     ),
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::RoundCuboid(collider) => {
@@ -171,7 +171,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::RoundCylinder(collider) => {
@@ -181,7 +181,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::RoundCone(collider) => {
@@ -191,7 +191,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::RoundConvexPolyhedron(collider) => {
@@ -201,7 +201,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     &intersection_plane,
                     &Vector3::ith_axis(1),
                     BIAS,
-                    std::f32::EPSILON,
+                    f32::EPSILON,
                 ))]
             }
             TypedShape::Segment(_) => {
