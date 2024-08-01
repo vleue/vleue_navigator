@@ -9,7 +9,7 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
+  build:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -23,45 +23,30 @@ jobs:
         with:
           target: wasm32-unknown-unknown
 
-      - name: Install wasm-bindgen
+      - name: install tools
         run: |
-          cargo install cargo-quickinstall
-          cargo quickinstall wasm-bindgen-cli
+          cargo install wasm-bindgen-cli
+          sudo apt-get install -y binaryen
 
       - name: Build
         run: |
-          cargo build --target wasm32-unknown-unknown --release --example moving --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/moving.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example lines --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/lines.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example many --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/many.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example gltf --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/gltf.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example random_obstacles --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/random_obstacles.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example auto_navmesh_aabb --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/auto_navmesh_aabb.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example auto_navmesh_primitive --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/auto_navmesh_primitive.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example primitive_3d --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/primitive_3d.wasm
-
-          cargo build --target wasm32-unknown-unknown --release --example demo --features bevy/webgl2
-          wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/demo.wasm
+          for example in "auto_navmesh_aabb" "auto_navmesh_primitive" "primitive_3d" "demo" "auto_navmesh_avian2d" "auto_navmesh_avian3d" "many" "lines" "moving" "gltf" "random_obstacles"
+          do
+            echo "Building $example"
+            cargo build --target wasm32-unknown-unknown --release --example $example --features "bevy/webgl2,avian2d,avian3d"
+            wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/$example.wasm
+            wasm-opt -Oz wasm/${example}_bg.wasm --output wasm/${example}-opt.wasm
+            rm wasm/${example}_bg.wasm
+            mv wasm/${example}-opt.wasm wasm/${example}_bg.wasm
+            cp wasm/example.html wasm/${example}.html
+            sed -i'' "s/name-of-example/${example}/g" wasm/${example}.html
+          done
 
       - name: Copy Assets
         run: cp -r assets wasm/
 
       - name: Copy Screenshots
-        run: cp screenshots/* wasm/
+        run: cp -r screenshots wasm/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -71,6 +56,13 @@ jobs:
         with:
           path: "wasm"
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

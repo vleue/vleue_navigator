@@ -16,6 +16,18 @@ categories = ["game-development"]
 itertools = "0.13"
 tracing = { version = "0.1", optional = true }
 
+[dependencies.avian2d]
+version = "0.1"
+features = ["2d", "f32", "parry-f32"]
+default-features = false
+optional = true
+
+[dependencies.avian3d]
+version = "0.1"
+features = ["3d", "f32", "parry-f32"]
+default-features = false
+optional = true
+
 [dependencies.polyanya]
 version = "0.7.1"
 
@@ -52,5 +64,10 @@ default = ["debug-with-gizmos"]
 linuxci = ["bevy/x11"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 
-[profile.dev.package."*"]
-opt-level = 3
+[[example]]
+name = "auto_navmesh_avian2d"
+required-features = ["avian2d"]
+
+[[example]]
+name = "auto_navmesh_avian3d"
+required-features = ["avian3d"]

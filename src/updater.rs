@@ -134,7 +134,8 @@ fn build_navmesh<T: ObstacleSource>(
     let mut triangulation = base.clone();
     let obstacle_aabbs = obstacles
         .iter()
-        .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform));
+        .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform))
+        .filter(|p| !p.is_empty());
     triangulation.add_obstacles(obstacle_aabbs);
 
     if settings.simplify != 0.0 {
@@ -425,5 +426,16 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
         app.add_systems(PostUpdate, trigger_navmesh_build::<Marker, Obstacle>)
             .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
             .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));
+
+        #[cfg(feature = "avian2d")]
+        {
+            app.observe(crate::obstacles::avian2d::on_sleeping_inserted)
+                .observe(crate::obstacles::avian2d::on_sleeping_removed);
+        }
+        #[cfg(feature = "avian3d")]
+        {
+            app.observe(crate::obstacles::avian3d::on_sleeping_inserted)
+                .observe(crate::obstacles::avian3d::on_sleeping_removed);
+        }
     }
 }

@@ -7,7 +7,7 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
 };
 
-use super::ObstacleSource;
+use super::{ObstacleSource, RESOLUTION};
 
 /// A primitive obstacle that can be used to create a [`NavMesh`].
 /// Variants are made from primitive shapes defined in Bevy
@@ -38,7 +38,7 @@ mod copypasta {
 
     use bevy::math::Vec2;
 
-    pub(crate) fn ellipse_inner(half_size: Vec2, resolution: usize) -> impl Iterator<Item = Vec2> {
+    pub(crate) fn ellipse_inner(half_size: Vec2, resolution: u32) -> impl Iterator<Item = Vec2> {
         (0..resolution + 1).map(move |i| {
             let angle = i as f64 * TAU / resolution as f64;
             let (x, y) = angle.sin_cos();
@@ -50,7 +50,7 @@ mod copypasta {
         direction_angle: f64,
         arc_angle: f64,
         radius: f32,
-        resolution: usize,
+        resolution: u32,
     ) -> impl Iterator<Item = Vec2> {
         (0..resolution + 1).map(move |i| {
             let start = direction_angle - arc_angle / 2.;
@@ -62,11 +62,7 @@ mod copypasta {
         })
     }
 
-    pub(crate) fn single_circle_coordinate(
-        radius: f32,
-        resolution: usize,
-        nth_point: usize,
-    ) -> Vec2 {
+    pub(crate) fn single_circle_coordinate(radius: f32, resolution: u32, nth_point: usize) -> Vec2 {
         let angle = nth_point as f64 * TAU / resolution as f64;
         let (x, y) = angle.sin_cos();
         Vec2::new(x as f32, y as f32) * radius
@@ -79,7 +75,6 @@ impl ObstacleSource for PrimitiveObstacle {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
     ) -> Vec<Vec2> {
-        let resolution = 32;
         let transform = obstacle_transform.compute_transform();
         let to_vec2 = |v: Vec3| navmesh_transform.transform_point(v).xy();
         let to_navmesh = |v: Vec2| {
@@ -109,12 +104,12 @@ impl ObstacleSource for PrimitiveObstacle {
                 )))),
             ],
             PrimitiveObstacle::Circle(primitive) => {
-                copypasta::ellipse_inner(vec2(primitive.radius, primitive.radius), resolution)
+                copypasta::ellipse_inner(vec2(primitive.radius, primitive.radius), RESOLUTION)
                     .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                     .collect()
             }
             PrimitiveObstacle::Ellipse(primitive) => {
-                copypasta::ellipse_inner(primitive.half_size, resolution)
+                copypasta::ellipse_inner(primitive.half_size, RESOLUTION)
                     .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                     .collect()
             }
@@ -123,7 +118,7 @@ impl ObstacleSource for PrimitiveObstacle {
                     0.0,
                     primitive.arc.angle() as f64,
                     primitive.arc.radius,
-                    resolution,
+                    RESOLUTION,
                 )
                 .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
                 .collect::<Vec<_>>();
@@ -134,7 +129,7 @@ impl ObstacleSource for PrimitiveObstacle {
                 0.0,
                 primitive.arc.angle() as f64,
                 primitive.arc.radius,
-                resolution,
+                RESOLUTION,
             )
             .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
             .collect(),
@@ -143,7 +138,7 @@ impl ObstacleSource for PrimitiveObstacle {
                     0.0,
                     std::f64::consts::PI,
                     primitive.radius,
-                    resolution,
+                    RESOLUTION,
                 )
                 .map(|v| {
                     to_vec2(
@@ -156,7 +151,7 @@ impl ObstacleSource for PrimitiveObstacle {
                         0.0,
                         std::f64::consts::PI,
                         primitive.radius,
-                        resolution,
+                        RESOLUTION,
                     )
                     .map(|v| {
                         to_vec2(transform.transform_point(to_navmesh(
@@ -171,7 +166,7 @@ impl ObstacleSource for PrimitiveObstacle {
                 .map(|p| {
                     copypasta::single_circle_coordinate(
                         primitive.circumcircle.radius,
-                        primitive.sides,
+                        primitive.sides as u32,
                         p,
                     )
                 })

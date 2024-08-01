@@ -4,7 +4,13 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
 };
 
+const RESOLUTION: u32 = 32;
+
 mod aabb;
+#[cfg(feature = "avian2d")]
+pub(crate) mod avian2d;
+#[cfg(feature = "avian3d")]
+pub(crate) mod avian3d;
 pub(crate) mod cached;
 pub(crate) mod primitive;
 
