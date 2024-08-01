@@ -30,6 +30,7 @@ optional = true
 
 [dependencies.polyanya]
 version = "0.7.1"
+git = "https://github.com/vleue/polyanya"
 
 [dependencies.bevy]
 version = "0.14.0"

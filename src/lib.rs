@@ -13,12 +13,22 @@
 
 use std::sync::Arc;
 
-use bevy::math::Vec3Swizzles;
-use bevy::reflect::TypePath;
-use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
-use bevy::render::render_asset::RenderAssetUsages;
+#[cfg(feature = "debug-with-gizmos")]
 use bevy::{
-    prelude::*,
+    app::Update,
+    asset::{Assets, Handle},
+    color::Color,
+    prelude::{Component, Gizmos, Query, Res, Resource},
+};
+use bevy::{
+    app::{App, Plugin},
+    asset::{Asset, AssetApp},
+    log::{debug, warn},
+    math::{Quat, Vec2, Vec3, Vec3Swizzles},
+    prelude::{Mesh, Transform},
+    reflect::TypePath,
+    render::mesh::{MeshVertexAttributeId, VertexAttributeValues},
+    render::render_asset::RenderAssetUsages,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use itertools::Itertools;
@@ -264,7 +274,7 @@ impl NavMesh {
         let inverse_transform = self.inverse_transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            self.mesh
+            self.mesh.layers[0]
                 .vertices
                 .iter()
                 .map(|v| [v.coords.x, v.coords.y, 0.0])
@@ -272,7 +282,7 @@ impl NavMesh {
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(
-            self.mesh
+            self.mesh.layers[0]
                 .polygons
                 .iter()
                 .flat_map(|p| {
@@ -290,7 +300,7 @@ impl NavMesh {
         let inverse_transform = self.inverse_transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            self.mesh
+            self.mesh.layers[0]
                 .vertices
                 .iter()
                 .map(|v| [v.coords.x, v.coords.y, 0.0])
@@ -298,7 +308,7 @@ impl NavMesh {
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(
-            self.mesh
+            self.mesh.layers[0]
                 .polygons
                 .iter()
                 .flat_map(|p| {
@@ -343,6 +353,7 @@ pub fn display_navmesh(
     controls: Option<Res<NavMeshesDebug>>,
 ) {
     use bevy::math::vec3;
+
     for (mesh, debug) in &live_navmeshes {
         let Some(color) = debug
             .map(|debug| debug.0)
@@ -354,11 +365,11 @@ pub fn display_navmesh(
             let inverse_transform = navmesh.inverse_transform();
             let transform = navmesh.transform();
             let navmesh = navmesh.get();
-            for polygon in &navmesh.polygons {
+            for polygon in &navmesh.layers[0].polygons {
                 let mut v = polygon
                     .vertices
                     .iter()
-                    .map(|i| &navmesh.vertices[*i as usize].coords)
+                    .map(|i| &navmesh.layers[0].vertices[*i as usize].coords)
                     .map(|v| {
                         inverse_transform.rotation.mul_vec3(vec3(v.x, v.y, 0.0))
                             + transform.translation
@@ -366,7 +377,7 @@ pub fn display_navmesh(
                     .collect::<Vec<_>>();
                 if !v.is_empty() {
                     let first = polygon.vertices[0];
-                    let first = &navmesh.vertices[first as usize];
+                    let first = &navmesh.layers[0].vertices[first as usize];
                     v.push(
                         inverse_transform.rotation.mul_vec3(vec3(
                             first.coords.x,
@@ -460,41 +471,46 @@ mod tests {
         let expected_mesh = expected.mesh;
         let actual_mesh = actual.mesh;
 
-        assert_eq!(expected_mesh.polygons, actual_mesh.polygons);
-        for (index, (expected_vertex, actual_vertex)) in expected_mesh
-            .vertices
-            .iter()
-            .zip(actual_mesh.vertices.iter())
-            .enumerate()
-        {
-            let nearly_same_coords =
-                (expected_vertex.coords - actual_vertex.coords).length_squared() < 1e-8;
-            assert!(nearly_same_coords
+        for i in 0..expected_mesh.layers.len() {
+            assert_eq!(
+                expected_mesh.layers[i].polygons,
+                actual_mesh.layers[i].polygons
+            );
+            for (index, (expected_vertex, actual_vertex)) in expected_mesh.layers[i]
+                .vertices
+                .iter()
+                .zip(actual_mesh.layers[i].vertices.iter())
+                .enumerate()
+            {
+                let nearly_same_coords =
+                    (expected_vertex.coords - actual_vertex.coords).length_squared() < 1e-8;
+                assert!(nearly_same_coords
                ,
                 "\nvertex {index} does not have the expected coords.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                expected_mesh.vertices, actual_mesh.vertices
+                expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
             );
 
-            let adjusted_actual = wrap_to_first(&actual_vertex.polygons, |index| *index != -1).unwrap_or_else(||
+                let adjusted_actual = wrap_to_first(&actual_vertex.polygons, |index| *index != u32::MAX).unwrap_or_else(||
                 panic!("vertex {index}: Found only surrounded by obstacles.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                       expected_mesh.vertices, actual_mesh.vertices));
+                       expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices));
 
-            let adjusted_expectation= wrap_to_first(&expected_vertex.polygons, |polygon| {
+                let adjusted_expectation= wrap_to_first(&expected_vertex.polygons, |polygon| {
                 *polygon == adjusted_actual[0]
             })
                 .unwrap_or_else(||
                     panic!("vertex {index}: Failed to expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                           expected_mesh.vertices, actual_mesh.vertices));
+                           expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices));
 
-            assert_eq!(
+                assert_eq!(
                 adjusted_expectation, adjusted_actual,
                 "\nvertex {index} does not have the expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                expected_mesh.vertices, actual_mesh.vertices
+                expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
             );
+            }
         }
     }
 
-    fn wrap_to_first(polygons: &[isize], pred: impl Fn(&isize) -> bool) -> Option<Vec<isize>> {
+    fn wrap_to_first(polygons: &[u32], pred: impl Fn(&u32) -> bool) -> Option<Vec<u32>> {
         let offset = polygons.iter().position(pred)?;
         Some(
             polygons

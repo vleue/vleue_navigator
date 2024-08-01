@@ -342,7 +342,12 @@ pub fn update_stats<T: Component>(
         "{}",
         navmeshes
             .get(handle)
-            .map(|nm| nm.get().polygons.len())
+            .map(|nm| nm
+                .get()
+                .layers
+                .iter()
+                .map(|l| l.polygons.len())
+                .sum::<usize>())
             .unwrap_or_default()
     );
     text.sections[7].value = format!(
