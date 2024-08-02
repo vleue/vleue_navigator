@@ -31,7 +31,7 @@ pub struct NavMeshBundle {
     pub status: NavMeshStatus,
     /// Handle to the navmesh.
     pub handle: Handle<NavMesh>,
-    /// Transform of the navmesh. USed to transform point in 3d to 2d (by ignoring the `z` axis).
+    /// Transform of the navmesh. Used to transform point in 3d to 2d (by ignoring the `z` axis).
     pub transform: Transform,
     /// How to trigger navmesh updates.
     pub update_mode: NavMeshUpdateMode,
