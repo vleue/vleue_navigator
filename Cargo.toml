@@ -30,6 +30,7 @@ optional = true
 
 [dependencies.polyanya]
 version = "0.8"
+git = "https://github.com/vleue/polyanya"
 
 [dependencies.bevy]
 version = "0.14.0"
@@ -71,3 +72,7 @@ required-features = ["avian2d"]
 [[example]]
 name = "auto_navmesh_avian3d"
 required-features = ["avian3d"]
+
+[[example]]
+name = "gltf_avian3d"
+required-features = ["avian3d", "avian3d/collider-from-mesh"]
