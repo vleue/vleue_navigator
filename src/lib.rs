@@ -11,7 +11,7 @@
     missing_docs
 )]
 
-use std::{f32::consts::PI, sync::Arc};
+use std::sync::Arc;
 
 #[cfg(feature = "debug-with-gizmos")]
 use bevy::{
@@ -24,7 +24,7 @@ use bevy::{
     app::{App, Plugin},
     asset::{Asset, AssetApp},
     log::{debug, warn},
-    math::{vec2, Quat, Vec2, Vec3, Vec3Swizzles},
+    math::{Quat, Vec2, Vec3, Vec3Swizzles},
     prelude::{Mesh, Transform},
     reflect::TypePath,
     render::{
@@ -334,13 +334,11 @@ impl NavMesh {
 }
 
 pub(crate) fn mesh_to_world(navmesh_transform: &Transform) -> Transform {
-    let mut transform = Transform {
+    Transform {
         translation: navmesh_transform.translation,
         rotation: navmesh_transform.rotation.inverse(),
         scale: 1.0 / navmesh_transform.scale,
-    };
-    // transform.rotate(Quat::from_rotation_x(std::f32::consts::PI));
-    transform
+    }
 }
 
 fn get_vectors(
