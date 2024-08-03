@@ -107,7 +107,7 @@ fn setup(
         NavMeshBundle {
             settings: NavMeshSettings {
                 // Define the outer borders of the navmesh.
-                fixed: Triangulation::from_outer_edges(&vec![
+                fixed: Triangulation::from_outer_edges(&[
                     vec2(0.0, 0.0),
                     vec2(MESH_WIDTH as f32, 0.0),
                     vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
@@ -129,12 +129,10 @@ fn setup(
     ));
 
     commands.spawn(PbrBundle {
-        mesh: meshes
-            .add(Plane3d::new(
-                Vec3::Y,
-                Vec2::new(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
-            ))
-            .into(),
+        mesh: meshes.add(Plane3d::new(
+            Vec3::Y,
+            Vec2::new(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
+        )),
         transform: Transform::from_translation(Vec3::new(
             MESH_WIDTH as f32 / 2.0,
             0.0,
@@ -163,7 +161,7 @@ fn setup(
             rng.gen_range(0.0..(MESH_HEIGHT as f32)),
         ))
         .with_rotation(Quat::from_rotation_y(rng.gen_range(0.0..PI)));
-        new_obstacle(&mut commands, &mut rng, transform, &mut *meshes, &mat);
+        new_obstacle(&mut commands, &mut rng, transform, &mut meshes, &mat);
     }
 }
 
@@ -371,7 +369,7 @@ fn spawn_obstacle_on_click(
             )));
             let transform = Transform::from_translation(position)
                 .with_rotation(Quat::from_rotation_y(rng.gen_range(0.0..PI)));
-            new_obstacle(&mut commands, &mut rng, transform, &mut *meshes, &mat);
+            new_obstacle(&mut commands, &mut rng, transform, &mut meshes, &mat);
             info!("spawning an obstacle at {}", position);
         }
     }

@@ -71,7 +71,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(NavMeshBundle {
         settings: NavMeshSettings {
             // Define the outer borders of the navmesh.
-            fixed: Triangulation::from_outer_edges(&vec![
+            fixed: Triangulation::from_outer_edges(&[
                 vec2(0.0, 0.0),
                 vec2(MESH_WIDTH as f32, 0.0),
                 vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),

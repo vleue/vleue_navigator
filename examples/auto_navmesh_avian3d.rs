@@ -180,7 +180,7 @@ fn setup(
         commands.spawn((NavMeshBundle {
             settings: NavMeshSettings {
                 // Define the outer borders of the navmesh.
-                fixed: Triangulation::from_outer_edges(&vec![
+                fixed: Triangulation::from_outer_edges(&[
                     vec2(-25.0, -25.0),
                     vec2(25.0, -25.0),
                     vec2(25.0, 25.0),

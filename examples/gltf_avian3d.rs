@@ -7,14 +7,10 @@ use bevy::{
     pbr::NotShadowCaster,
     prelude::*,
     time::common_conditions::on_timer,
-    window::PrimaryWindow,
 };
 use polyanya::Triangulation;
 use rand::Rng;
-use std::{
-    f32::consts::{FRAC_PI_2, FRAC_PI_4, PI},
-    time::Duration,
-};
+use std::{f32::consts::FRAC_PI_2, time::Duration};
 use vleue_navigator::{
     prelude::{NavMeshBundle, NavMeshSettings, NavMeshUpdateMode, NavmeshUpdaterPlugin},
     NavMesh, NavMeshDebug, VleueNavigatorPlugin,
@@ -49,7 +45,6 @@ fn main() {
             Update,
             (
                 give_target_auto,
-                give_target_on_click,
                 move_object,
                 move_hover,
                 target_activity,
@@ -352,31 +347,6 @@ fn refresh_path(
                 next: remaining,
             };
         }
-    }
-}
-
-fn give_target_on_click(
-    mut commands: Commands,
-    mut object_query: Query<(Entity, &Transform, &mut Object)>,
-    targets: Query<Entity, With<Target>>,
-    navmeshes: Res<Assets<NavMesh>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mouse_buttons: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
-    camera: Query<(&Camera, &GlobalTransform)>,
-) {
-    if mouse_buttons.just_pressed(MouseButton::Left) {
-        let navmesh = navmeshes.get(&Handle::default()).unwrap();
-
-        let position = primary_window.single().cursor_position().unwrap();
-        let (camera, transform) = camera.get_single().ok().unwrap();
-        let ray = camera.viewport_to_world(transform, position).unwrap();
-        let denom = Vec3::Y.dot(ray.direction.into());
-        let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;
-        let target = ray.origin + ray.direction * t;
-        let position = navmesh.transformed_is_in_mesh(target).then_some(target);
-        eprintln!("{:?} -> {:?}", target, position);
     }
 }
 

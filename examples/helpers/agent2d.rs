@@ -64,7 +64,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
         };
         if let Some((first, remaining)) = path.path.split_first() {
             let mut remaining = remaining
-                .into_iter()
+                .iter()
                 .map(|p| (p.xy() - Vec2::new(X as f32, Y as f32) / 2.0) * factor)
                 .collect::<Vec<_>>();
             remaining.reverse();
@@ -134,7 +134,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
         };
         if let Some((first, remaining)) = new_path.path.split_first() {
             let mut remaining = remaining
-                .into_iter()
+                .iter()
                 .map(|p| (p.xy() - Vec2::new(X as f32, Y as f32) / 2.0) * factor)
                 .collect::<Vec<_>>();
             remaining.reverse();
@@ -171,10 +171,10 @@ pub fn display_navigator_path(navigator: Query<(&Transform, &Path)>, mut gizmos:
         return;
     };
     let mut to_display = path.next.clone();
-    to_display.push(path.current.clone());
+    to_display.push(path.current);
     to_display.push(transform.translation.xy());
     to_display.reverse();
-    if to_display.len() >= 1 {
+    if !to_display.is_empty() {
         gizmos.linestrip_2d(to_display, palettes::css::YELLOW);
     }
 }

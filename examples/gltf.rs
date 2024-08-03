@@ -313,10 +313,7 @@ fn give_target_auto(
             let target_id = commands
                 .spawn((
                     PbrBundle {
-                        mesh: meshes.add(Mesh::from(Sphere {
-                            radius: 0.5,
-                            ..default()
-                        })),
+                        mesh: meshes.add(Mesh::from(Sphere { radius: 0.5 })),
                         material: materials.add(StandardMaterial {
                             base_color: palettes::css::RED.into(),
                             emissive: (palettes::css::RED * 5.0).into(),
@@ -342,7 +339,7 @@ fn give_target_auto(
                 })
                 .id();
             commands.entity(entity).insert(Path {
-                current: first.clone(),
+                current: *first,
                 next: remaining,
             });
             object.0 = Some(target_id);
@@ -386,10 +383,7 @@ fn give_target_on_click(
                 let target_id = commands
                     .spawn((
                         PbrBundle {
-                            mesh: meshes.add(Mesh::from(Sphere {
-                                radius: 0.5,
-                                ..default()
-                            })),
+                            mesh: meshes.add(Mesh::from(Sphere { radius: 0.5 })),
                             material: materials.add(StandardMaterial {
                                 base_color: palettes::css::RED.into(),
                                 emissive: (palettes::css::RED * 5.0).into(),
@@ -415,7 +409,7 @@ fn give_target_on_click(
                     })
                     .id();
                 commands.entity(entity).insert(Path {
-                    current: first.clone(),
+                    current: *first,
                     next: remaining,
                 });
                 object.0 = Some(target_id);
