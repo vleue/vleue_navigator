@@ -44,9 +44,11 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
 
-        let inverse_navmesh_transform = navmesh_transform.compute_affine().inverse();
+        let mut mostly_inverse_navmesh_transform = navmesh_transform.compute_affine();
+        mostly_inverse_navmesh_transform.translation = -(mostly_inverse_navmesh_transform.matrix3
+            * mostly_inverse_navmesh_transform.translation);
 
-        let to_vec2 = |v: Vec3| inverse_navmesh_transform.transform_point3(v).xz();
+        let to_vec2 = |v: Vec3| mostly_inverse_navmesh_transform.transform_point3(v).xz();
         let intersection_to_polygon = |intersection: IntersectResult<Polyline>| match intersection {
             IntersectResult::Intersect(i) => i
                 .segments()

@@ -83,6 +83,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
         };
         navmesh.set_delta(delta);
 
+        let mut i = 50;
         loop {
             target = Vec3::new(
                 rand::thread_rng().gen_range(0.0..(X as f32)),
@@ -92,6 +93,11 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
 
             if navmesh.transformed_is_in_mesh(target) {
                 break;
+            }
+            i -= 1;
+            if i == 0 {
+                error!("No target found for navigator");
+                return;
             }
         }
 

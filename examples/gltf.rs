@@ -210,7 +210,7 @@ fn setup_scene(
                         20.0,
                         rand::thread_rng().gen_range(-25.0..25.0),
                     )
-                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ..default()
                 },
                 Hover(Vec2::new(
