@@ -11,7 +11,7 @@
     missing_docs
 )]
 
-use std::sync::Arc;
+use std::{f32::consts::PI, sync::Arc};
 
 #[cfg(feature = "debug-with-gizmos")]
 use bevy::{
@@ -24,12 +24,14 @@ use bevy::{
     app::{App, Plugin},
     asset::{Asset, AssetApp},
     log::{debug, warn},
-    math::{Quat, Vec2, Vec3, Vec3Swizzles},
+    math::{vec2, Quat, Vec2, Vec3, Vec3Swizzles},
     prelude::{Mesh, Transform},
     reflect::TypePath,
-    render::mesh::{MeshVertexAttributeId, VertexAttributeValues},
-    render::render_asset::RenderAssetUsages,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
+    render::{
+        mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
+        render_asset::RenderAssetUsages,
+        render_resource::PrimitiveTopology,
+    },
 };
 use itertools::Itertools;
 
@@ -122,6 +124,8 @@ impl NavMesh {
 
         let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
             .map(|vertex| rotation.mul_vec3(vertex))
+            // .map(|vertex| Quat::from_rotation_x(PI).mul_vec3(vertex))
+            // .map(|coords| coords.xy() * vec2(1.0, -1.0))
             .map(|coords| coords.xy())
             .collect();
 
@@ -131,6 +135,7 @@ impl NavMesh {
             .iter()
             .tuples::<(_, _, _)>()
             .map(|(a, b, c)| [a, b, c])
+            // .map(|(a, b, c)| [c, b, a])
             .collect();
 
         let mut polyanya_mesh = Trimesh {
@@ -232,7 +237,7 @@ impl NavMesh {
     }
 
     fn transform_path(&self, path: Path, from: Vec3, to: Vec3) -> TransformedPath {
-        let inverse_transform = self.inverse_transform();
+        let inverse_transform = self.mesh_to_world();
         TransformedPath {
             length: from.distance(to),
             path: path
@@ -271,7 +276,7 @@ impl NavMesh {
     /// This mesh doesn't have normals.
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
-        let inverse_transform = self.inverse_transform();
+        let inverse_transform = self.mesh_to_world();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             self.mesh.layers[0]
@@ -297,7 +302,7 @@ impl NavMesh {
     /// Creates a [`Mesh`] from this [`NavMesh`], showing the wireframe of the polygons
     pub fn to_wireframe_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::all());
-        let inverse_transform = self.inverse_transform();
+        let inverse_transform = self.mesh_to_world();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             self.mesh.layers[0]
@@ -323,13 +328,19 @@ impl NavMesh {
     }
 
     #[inline]
-    pub(crate) fn inverse_transform(&self) -> Transform {
-        Transform {
-            translation: -self.transform.translation,
-            rotation: self.transform.rotation.inverse(),
-            scale: 1.0 / self.transform.scale,
-        }
+    pub(crate) fn mesh_to_world(&self) -> Transform {
+        mesh_to_world(&self.transform)
     }
+}
+
+pub(crate) fn mesh_to_world(navmesh_transform: &Transform) -> Transform {
+    let mut transform = Transform {
+        translation: navmesh_transform.translation,
+        rotation: navmesh_transform.rotation.inverse(),
+        scale: 1.0 / navmesh_transform.scale,
+    };
+    // transform.rotate(Quat::from_rotation_x(std::f32::consts::PI));
+    transform
 }
 
 fn get_vectors(
@@ -362,29 +373,23 @@ pub fn display_navmesh(
             continue;
         };
         if let Some(navmesh) = navmeshes.get(mesh) {
-            let inverse_transform = navmesh.inverse_transform();
-            let transform = navmesh.transform();
+            let mesh_to_world = navmesh.mesh_to_world();
             let navmesh = navmesh.get();
             for polygon in &navmesh.layers[0].polygons {
                 let mut v = polygon
                     .vertices
                     .iter()
                     .map(|i| &navmesh.layers[0].vertices[*i as usize].coords)
-                    .map(|v| {
-                        inverse_transform.rotation.mul_vec3(vec3(v.x, v.y, 0.0))
-                            + transform.translation
-                    })
+                    .map(|v| mesh_to_world.transform_point(vec3(v.x, v.y, 0.0)))
                     .collect::<Vec<_>>();
                 if !v.is_empty() {
                     let first = polygon.vertices[0];
                     let first = &navmesh.layers[0].vertices[first as usize];
-                    v.push(
-                        inverse_transform.rotation.mul_vec3(vec3(
-                            first.coords.x,
-                            first.coords.y,
-                            0.0,
-                        )) + transform.translation,
-                    );
+                    v.push(mesh_to_world.transform_point(vec3(
+                        first.coords.x,
+                        first.coords.y,
+                        0.0,
+                    )));
                     gizmos.linestrip(v, color);
                 }
             }

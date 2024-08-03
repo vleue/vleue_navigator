@@ -116,8 +116,8 @@ fn setup(
 
     let types = [
         (
-            meshes.add(Cuboid::from_length(2.0)),
-            Collider::cuboid(2.0, 2.0, 2.0),
+            meshes.add(Cuboid::from_length(obstacle_size)),
+            Collider::cuboid(obstacle_size, obstacle_size, obstacle_size),
         ),
         (
             meshes.add(Cone {
@@ -126,7 +126,10 @@ fn setup(
             }),
             Collider::cone(2.0, 2.0),
         ),
-        (meshes.add(Sphere::new(1.0)), Collider::sphere(1.0)),
+        (
+            meshes.add(Sphere::new(obstacle_size / 2.0)),
+            Collider::sphere(obstacle_size / 2.0),
+        ),
         (
             meshes.add(Capsule3d::new(1.0, 2.0)),
             Collider::capsule(1.0, 2.0),
@@ -172,7 +175,7 @@ fn setup(
     });
 
     let nb_navmeshes = 3;
-    let height_step = 2.0 / (nb_navmeshes as f32);
+    let height_step = obstacle_size / (nb_navmeshes as f32);
     for idx in 0..nb_navmeshes {
         commands.spawn((NavMeshBundle {
             settings: NavMeshSettings {

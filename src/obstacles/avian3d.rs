@@ -1,14 +1,16 @@
 use avian3d::{
     dynamics::rigid_body::Sleeping,
     parry::{
-        math::Isometry,
         na::{Const, OPoint, Vector3},
         query::IntersectResult,
         shape::{Polyline, TriMesh, TypedShape},
     },
     prelude::Collider,
 };
-use bevy::{math::vec3, prelude::*};
+use bevy::{
+    math::{vec2, vec3},
+    prelude::*,
+};
 
 use crate::updater::CachableObstacle;
 
@@ -34,8 +36,6 @@ trait InnerObstacleSource {
     ) -> Vec<Vec2>;
 }
 
-const BIAS: f32 = 0.0;
-
 impl<'a> InnerObstacleSource for TypedShape<'a> {
     fn get_polygon(
         &self,
@@ -44,82 +44,77 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
 
-        let mut mostly_inverse_navmesh_transform = navmesh_transform.compute_affine();
-        mostly_inverse_navmesh_transform.translation = -(mostly_inverse_navmesh_transform.matrix3
-            * mostly_inverse_navmesh_transform.translation);
-
-        let to_vec2 = |v: Vec3| mostly_inverse_navmesh_transform.transform_point3(v).xz();
         let intersection_to_polygon = |intersection: IntersectResult<Polyline>| match intersection {
             IntersectResult::Intersect(i) => i
                 .segments()
                 .map(|s| s.a)
-                .map(|p| to_vec2(vec3(p[0], p[1], p[2])))
+                .map(|p| vec2(p[0], p[1]))
                 .collect(),
             IntersectResult::Negative => vec![],
             IntersectResult::Positive => vec![],
         };
 
-        let trimesh_to_local = |vertices: Vec<OPoint<f32, Const<3>>>| {
+        let trimesh_to_navmesh = |vertices: Vec<OPoint<f32, Const<3>>>| {
             vertices
                 .iter()
                 .map(|p| transform.transform_point(vec3(p[0], p[1], p[2])))
-                .map(|p| navmesh_transform.transform_point(vec3(p[0], p[1], p[2])))
+                .map(|p| navmesh_transform.rotation.mul_vec3(p))
                 .map(|v| v.into())
                 .collect::<Vec<OPoint<f32, Const<3>>>>()
         };
-
-        let intersection_plane = Isometry::from_parts(
-            navmesh_transform.translation.into(),
-            navmesh_transform.rotation.into(),
-        );
         match self {
             TypedShape::Cuboid(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::Ball(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::Capsule(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::TriMesh(collider) => {
-                vec![intersection_to_polygon(collider.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                vec![intersection_to_polygon(
+                    collider.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::HeightField(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::Compound(collider) => {
                 collider
@@ -135,76 +130,80 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::ConvexPolyhedron(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::Cylinder(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::Cone(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &Isometry::from_parts(
-                        navmesh_transform.translation.into(),
-                        navmesh_transform.rotation.into(),
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
                     ),
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                )]
             }
             TypedShape::RoundCuboid(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::RoundCylinder(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::RoundCone(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::RoundConvexPolyhedron(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_local(vertices), indices);
-                vec![intersection_to_polygon(trimesh.intersection_with_plane(
-                    &intersection_plane,
-                    &Vector3::ith_axis(1),
-                    BIAS,
-                    f32::EPSILON,
-                ))]
+                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
+                vec![intersection_to_polygon(
+                    trimesh.intersection_with_local_plane(
+                        &Vector3::ith_axis(2),
+                        navmesh_transform.translation.y,
+                        f32::EPSILON,
+                    ),
+                )]
             }
             TypedShape::Segment(_) => {
                 warn!("Segment collider not supported for NavMesh obstacle generation");

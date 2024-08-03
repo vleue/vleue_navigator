@@ -11,7 +11,10 @@ use bevy::{
 };
 use polyanya::Triangulation;
 use rand::Rng;
-use std::{f32::consts::FRAC_PI_2, time::Duration};
+use std::{
+    f32::consts::{FRAC_PI_2, FRAC_PI_4, PI},
+    time::Duration,
+};
 use vleue_navigator::{
     prelude::{NavMeshBundle, NavMeshSettings, NavMeshUpdateMode, NavmeshUpdaterPlugin},
     NavMesh, NavMeshDebug, VleueNavigatorPlugin,
@@ -145,6 +148,7 @@ fn setup_scene(
             PbrBundle {
                 mesh: mesh.primitives[0].mesh.clone(),
                 material: materials.add(material),
+                // transform: Transform::from_rotation(Quat::from_rotation_y(PI)),
                 ..default()
             },
             RigidBody::Static,
@@ -364,66 +368,15 @@ fn give_target_on_click(
 ) {
     if mouse_buttons.just_pressed(MouseButton::Left) {
         let navmesh = navmeshes.get(&Handle::default()).unwrap();
-        let Some(target) = (|| {
-            let position = primary_window.single().cursor_position()?;
-            let (camera, transform) = camera.get_single().ok()?;
-            let ray = camera.viewport_to_world(transform, position)?;
-            let denom = Vec3::Y.dot(ray.direction.into());
-            let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;
-            let target = ray.origin + ray.direction * t;
-            navmesh.transformed_is_in_mesh(target).then_some(target)
-        })() else {
-            return;
-        };
 
-        for (entity, transform, mut object) in object_query.iter_mut() {
-            let Some(path) = navmesh.transformed_path(transform.translation, target) else {
-                break;
-            };
-            if let Some((first, remaining)) = path.path.split_first() {
-                let mut remaining = remaining.to_vec();
-                remaining.reverse();
-                let target_id = commands
-                    .spawn((
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(Sphere {
-                                radius: 0.5,
-                                ..default()
-                            })),
-                            material: materials.add(StandardMaterial {
-                                base_color: palettes::css::RED.into(),
-                                emissive: (palettes::css::RED * 5.0).into(),
-                                ..default()
-                            }),
-                            transform: Transform::from_translation(target),
-                            ..Default::default()
-                        },
-                        NotShadowCaster,
-                        Target,
-                    ))
-                    .with_children(|target| {
-                        target.spawn(PointLightBundle {
-                            point_light: PointLight {
-                                color: palettes::css::RED.into(),
-                                shadows_enabled: true,
-                                range: 10.0,
-                                ..default()
-                            },
-                            transform: Transform::from_xyz(0.0, 1.5, 0.0),
-                            ..default()
-                        });
-                    })
-                    .id();
-                commands.entity(entity).insert(Path {
-                    current: first.clone(),
-                    next: remaining,
-                });
-                object.0 = Some(target_id);
-            }
-        }
-        for entity in &targets {
-            commands.entity(entity).despawn_recursive();
-        }
+        let position = primary_window.single().cursor_position().unwrap();
+        let (camera, transform) = camera.get_single().ok().unwrap();
+        let ray = camera.viewport_to_world(transform, position).unwrap();
+        let denom = Vec3::Y.dot(ray.direction.into());
+        let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;
+        let target = ray.origin + ray.direction * t;
+        let position = navmesh.transformed_is_in_mesh(target).then_some(target);
+        eprintln!("{:?} -> {:?}", target, position);
     }
 }
 
