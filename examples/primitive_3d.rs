@@ -1,11 +1,6 @@
 use std::f32::consts::{FRAC_PI_2, PI};
 
-use bevy::{
-    color::palettes,
-    math::{vec2, vec3},
-    prelude::*,
-    window::PrimaryWindow,
-};
+use bevy::{color::palettes, math::vec2, prelude::*, window::PrimaryWindow};
 use polyanya::Triangulation;
 use rand::Rng;
 use vleue_navigator::prelude::*;
@@ -89,7 +84,7 @@ fn setup(
         commands.spawn(PointLightBundle {
             point_light: PointLight {
                 shadows_enabled: true,
-                intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 3_000_00.0,
+                intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 300_000.0,
                 range: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 10.0,
                 ..default()
             },

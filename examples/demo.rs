@@ -201,7 +201,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
         commands.spawn(PointLightBundle {
             point_light: PointLight {
                 shadows_enabled: true,
-                intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 3_000_00.0,
+                intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 300_000.0,
                 range: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 10.0,
                 ..default()
             },

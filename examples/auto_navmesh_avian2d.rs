@@ -172,7 +172,7 @@ fn puck_back_to_start(
                 commands.entity(entity).insert((
                     RigidBody::Static,
                     Path {
-                        current: first.clone(),
+                        current: *first,
                         next: remaining,
                     },
                 ));
@@ -215,10 +215,10 @@ pub fn move_puck(
 pub fn display_puck_path(navigator: Query<(&Transform, &Path)>, mut gizmos: Gizmos) {
     for (transform, path) in &navigator {
         let mut to_display = path.next.iter().map(|v| v.xy()).collect::<Vec<_>>();
-        to_display.push(path.current.clone().xy());
+        to_display.push(path.current.xy());
         to_display.push(transform.translation.xy());
         to_display.reverse();
-        if to_display.len() >= 1 {
+        if !to_display.is_empty() {
             gizmos.linestrip_2d(to_display, palettes::tailwind::YELLOW_400);
         }
     }

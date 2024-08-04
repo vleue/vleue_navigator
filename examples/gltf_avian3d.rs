@@ -290,10 +290,7 @@ fn give_target_auto(
             let target_id = commands
                 .spawn((
                     PbrBundle {
-                        mesh: meshes.add(Mesh::from(Sphere {
-                            radius: 0.5,
-                            ..default()
-                        })),
+                        mesh: meshes.add(Mesh::from(Sphere { radius: 0.5 })),
                         material: materials.add(StandardMaterial {
                             base_color: palettes::css::RED.into(),
                             emissive: (palettes::css::RED * 5.0).into(),
@@ -319,7 +316,7 @@ fn give_target_auto(
                 })
                 .id();
             commands.entity(entity).insert(Path {
-                current: first.clone(),
+                current: *first,
                 next: remaining,
             });
             object.0 = Some(target_id);
@@ -343,7 +340,7 @@ fn refresh_path(
             let mut remaining = remaining.to_vec();
             remaining.reverse();
             *path = Path {
-                current: first.clone(),
+                current: *first,
                 next: remaining,
             };
         }
@@ -430,10 +427,10 @@ fn spawn_obstacles(
 fn display_navigator_path(navigator: Query<(&Transform, &Path)>, mut gizmos: Gizmos) {
     for (transform, path) in &navigator {
         let mut to_display = path.next.clone();
-        to_display.push(path.current.clone());
+        to_display.push(path.current);
         to_display.push(transform.translation.xz().extend(0.2).xzy());
         to_display.reverse();
-        if to_display.len() >= 1 {
+        if !to_display.is_empty() {
             gizmos.linestrip(
                 to_display.iter().map(|xz| Vec3::new(xz.x, 0.2, xz.z)),
                 palettes::tailwind::TEAL_400,

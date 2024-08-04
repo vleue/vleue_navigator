@@ -78,16 +78,11 @@ impl ObstacleSource for PrimitiveObstacle {
         let transform = obstacle_transform.compute_transform();
         let to_vec2 = |v: Vec3| v.xy();
 
-        let to_navmesh_vec3 = |v: Vec3| {
-            let v = navmesh_transform.rotation.mul_vec3(v);
-            v
-        };
-
         let to_navmesh = |v: Vec2| {
             let v = v.extend(0.0);
             let v = navmesh_transform.rotation.inverse().mul_vec3(v);
             let v = transform.transform_point(v);
-            to_navmesh_vec3(v)
+            navmesh_transform.rotation.mul_vec3(v)
         };
 
         match self {
@@ -128,7 +123,9 @@ impl ObstacleSource for PrimitiveObstacle {
                 )
                 .map(|v| to_vec2(to_navmesh(v)))
                 .collect::<Vec<_>>();
-                arc.push(to_vec2(to_navmesh_vec3(transform.translation)));
+                arc.push(to_vec2(
+                    navmesh_transform.rotation.mul_vec3(transform.translation),
+                ));
                 arc
             }
             PrimitiveObstacle::CircularSegment(primitive) => copypasta::arc_2d_inner(

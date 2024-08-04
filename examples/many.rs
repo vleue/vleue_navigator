@@ -42,7 +42,7 @@ fn main() {
                         ..default()
                     },
                 }),
-            FrameTimeDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin,
             LogDiagnosticsPlugin::default(),
             VleueNavigatorPlugin,
         ))
@@ -438,7 +438,7 @@ fn go_somewhere(
             rng.gen_range(0.0..MESH_SIZE.x),
             rng.gen_range(0.0..MESH_SIZE.y),
         );
-        commands.entity(navigator).insert(Target { target: target });
+        commands.entity(navigator).insert(Target { target });
     }
 }
 

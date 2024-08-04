@@ -76,7 +76,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
         let mut target;
         let delta = if !navmesh.transformed_is_in_mesh(transform.translation) {
             let delta = deltas.entry(entity).or_insert(0.0);
-            *delta = *delta + 0.1;
+            *delta += 0.1;
             *delta
         } else {
             0.0
@@ -105,7 +105,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
             continue;
         };
         if let Some((first, remaining)) = path.path.split_first() {
-            let mut remaining = remaining.iter().cloned().collect::<Vec<_>>();
+            let mut remaining = remaining.to_vec();
             remaining.reverse();
             let id = commands
                 .spawn(PbrBundle {
@@ -167,7 +167,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
             continue;
         };
         if let Some((first, remaining)) = new_path.path.split_first() {
-            let mut remaining = remaining.iter().cloned().collect::<Vec<_>>();
+            let mut remaining = remaining.to_vec();
             remaining.reverse();
             path.current = *first;
             path.next = remaining;
