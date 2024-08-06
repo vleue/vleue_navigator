@@ -48,7 +48,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         let to_navmesh =
             |p: OPoint<f32, Const<3>>| world_to_mesh.transform_point3(vec3(p.x, p.y, p.z)).xy();
 
-        let intersection_to_polygon = |intersection: IntersectResult<Polyline>| match intersection {
+        let intersection_to_navmesh = |intersection: IntersectResult<Polyline>| match intersection {
             IntersectResult::Intersect(i) => i.segments().map(|s| s.a).map(to_navmesh).collect(),
             IntersectResult::Negative => vec![],
             IntersectResult::Positive => vec![],
@@ -65,7 +65,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         };
 
         let up_axis = Vector3::ith_axis(1);
-        let trimesh_to_navmesh = |vertices: Vec<OPoint<f32, Const<3>>>| {
+        let trimesh_to_world = |vertices: Vec<OPoint<f32, Const<3>>>| {
             vertices
                 .iter()
                 .map(to_world)
@@ -75,8 +75,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         match self {
             TypedShape::Cuboid(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -86,8 +86,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::Ball(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -97,8 +97,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::Capsule(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -107,7 +107,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 )]
             }
             TypedShape::TriMesh(collider) => {
-                vec![intersection_to_polygon(
+                vec![intersection_to_navmesh(
                     collider.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -117,8 +117,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::HeightField(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -142,8 +142,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::ConvexPolyhedron(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -153,8 +153,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::Cylinder(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -164,8 +164,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::Cone(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -175,8 +175,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::RoundCuboid(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -186,8 +186,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::RoundCylinder(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -197,8 +197,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::RoundCone(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
@@ -208,8 +208,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             }
             TypedShape::RoundConvexPolyhedron(collider) => {
                 let (vertices, indices) = collider.inner_shape.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
-                vec![intersection_to_polygon(
+                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
+                vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
                         navmesh_transform.translation.y,
