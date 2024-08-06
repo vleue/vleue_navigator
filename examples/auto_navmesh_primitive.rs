@@ -287,15 +287,11 @@ fn spawn_obstacle_on_click(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
             .map(|ray| ray.origin.truncate())
         {
-            let screen = Vec2::new(window.width(), window.height());
-            let factor = (screen.x / (MESH_WIDTH as f32)).min(screen.y / (MESH_HEIGHT as f32));
-
-            let in_mesh = position / factor + vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32) / 2.0;
             let mut rng = rand::thread_rng();
-            let transform = Transform::from_translation(in_mesh.extend(0.0))
+            let transform = Transform::from_translation(position.extend(0.0))
                 .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
             new_obstacle(&mut commands, &mut rng, transform);
-            info!("spawning an obstacle at {}", in_mesh);
+            info!("spawning an obstacle at {}", position);
         }
     }
 }

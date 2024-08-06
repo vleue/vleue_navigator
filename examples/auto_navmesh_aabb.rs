@@ -23,6 +23,8 @@ const MESH_HEIGHT: u32 = 10;
 #[derive(Component, Debug)]
 struct Obstacle;
 
+const FACTOR: f32 = 70.0;
+
 fn main() {
     App::new()
         .insert_resource(ClearColor(palettes::css::BLACK.into()))
@@ -86,6 +88,12 @@ fn setup(mut commands: Commands) {
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
         update_mode: NavMeshUpdateMode::Direct,
+        transform: Transform::from_translation(Vec3::new(
+            -(MESH_WIDTH as f32) / 2.0 * FACTOR,
+            -(MESH_HEIGHT as f32) / 2.0 * FACTOR,
+            0.0,
+        ))
+        .with_scale(Vec3::splat(FACTOR)),
         ..default()
     });
 
@@ -101,15 +109,18 @@ fn setup(mut commands: Commands) {
             Obstacle,
             Aabb::from_min_max(
                 Vec3::ZERO,
-                Vec3::new(rng.gen_range(0.1..0.5), rng.gen_range(0.1..0.5), 0.0),
+                Vec3::new(rng.gen_range(10.0..50.0), rng.gen_range(10.0..50.0), 0.0),
             ),
-            Transform::from_translation(Vec3::new(
-                rng.gen_range(0.0..(MESH_WIDTH as f32)),
-                rng.gen_range(0.0..(MESH_HEIGHT as f32)),
-                0.0,
-            ))
-            .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
-            GlobalTransform::default(),
+            TransformBundle::from_transform(
+                Transform::from_translation(
+                    Vec3::new(
+                        rng.gen_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
+                        rng.gen_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
+                        0.0,
+                    ) * FACTOR,
+                )
+                .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
+            ),
         ));
     }
 }
@@ -120,7 +131,6 @@ fn display_mesh(
     navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
 ) {
@@ -135,19 +145,11 @@ fn display_mesh(
     if let Some(entity) = *current_mesh_entity {
         commands.entity(entity).despawn_recursive();
     }
-    let window = primary_window.single();
-    let factor = (window.width() / (MESH_WIDTH as f32)).min(window.height() / (MESH_HEIGHT as f32));
 
     *current_mesh_entity = Some(
         commands
             .spawn(MaterialMesh2dBundle {
                 mesh: meshes.add(navmesh.to_mesh()).into(),
-                transform: Transform::from_translation(Vec3::new(
-                    -(MESH_WIDTH as f32) / 2.0 * factor,
-                    -(MESH_HEIGHT as f32) / 2.0 * factor,
-                    0.0,
-                ))
-                .with_scale(Vec3::splat(factor)),
                 material: materials.add(ColorMaterial::from(Color::Srgba(
                     palettes::tailwind::BLUE_800,
                 ))),
@@ -186,22 +188,18 @@ fn spawn_obstacle_on_click(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
             .map(|ray| ray.origin.truncate())
         {
-            let screen = Vec2::new(window.width(), window.height());
-            let factor = (screen.x / 15.0).min(screen.y / 10.0);
-
-            let in_mesh = position / factor + vec2(15.0, 10.0) / 2.0;
             let mut rng = rand::thread_rng();
             commands.spawn((
                 Obstacle,
                 Aabb::from_min_max(
                     Vec3::ZERO,
-                    Vec3::new(rng.gen_range(0.1..0.5), rng.gen_range(0.1..0.5), 0.0),
+                    Vec3::new(rng.gen_range(10.0..50.), rng.gen_range(10.0..50.0), 0.0),
                 ),
-                Transform::from_translation(in_mesh.extend(0.0))
+                Transform::from_translation(position.extend(0.0))
                     .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
                 GlobalTransform::default(),
             ));
-            info!("spawning an obstacle at {}", in_mesh);
+            info!("spawning an obstacle at {}", position);
         }
     }
 }
