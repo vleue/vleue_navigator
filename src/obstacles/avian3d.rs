@@ -40,7 +40,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        _up: Dir3,
+        up: Dir3,
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);
@@ -54,7 +54,15 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             IntersectResult::Positive => vec![],
         };
 
-        let to_world = |p: &OPoint<f32, Const<3>>| transform.transform_point(vec3(p.x, p.y, p.z));
+        let to_world = |p: &OPoint<f32, Const<3>>| {
+            let mut v = vec3(p.x, p.y, p.z);
+            v = if up.is_negative_bitmask().count_ones() % 2 == 1 {
+                Quat::from_rotation_arc(-Vec3::Y, up.into()).mul_vec3(v)
+            } else {
+                Quat::from_rotation_arc(Vec3::Y, up.into()).mul_vec3(v)
+            };
+            transform.transform_point(v)
+        };
 
         let up_axis = Vector3::ith_axis(1);
         let trimesh_to_navmesh = |vertices: Vec<OPoint<f32, Const<3>>>| {
@@ -81,7 +89,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -92,7 +100,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -101,7 +109,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             TypedShape::TriMesh(collider) => {
                 vec![intersection_to_polygon(
                     collider.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -112,7 +120,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -127,7 +135,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                         shape.as_typed_shape().get_polygon(
                             obstacle_transform,
                             navmesh_transform,
-                            _up,
+                            up,
                         )
                     })
                     .collect()
@@ -137,7 +145,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -148,7 +156,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -159,7 +167,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -170,7 +178,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -181,7 +189,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -192,7 +200,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),
@@ -203,7 +211,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 let trimesh = TriMesh::new(trimesh_to_navmesh(vertices), indices);
                 vec![intersection_to_polygon(
                     trimesh.intersection_with_local_plane(
-                        &Vector3::ith_axis(1),
+                        &up_axis,
                         navmesh_transform.translation.y,
                         f32::EPSILON,
                     ),

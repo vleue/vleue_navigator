@@ -215,6 +215,7 @@ fn setup_scene(
                     settings: NavMeshSettings {
                         fixed: Triangulation::from_mesh(navmesh.get().as_ref(), 0),
                         build_timeout: Some(5.0),
+                        up: Some(Dir3::Y),
                         ..default()
                     },
                     transform: Transform::from_xyz(0.0, 0.2, 0.0)
