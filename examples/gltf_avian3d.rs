@@ -218,7 +218,7 @@ fn setup_scene(
                         ..default()
                     },
                     transform: Transform::from_xyz(0.0, 0.2, 0.0)
-                        .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                        .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
                     // update_mode: NavMeshUpdateMode::Debounced(1.0),
                     update_mode: NavMeshUpdateMode::Direct,
                     ..default()
