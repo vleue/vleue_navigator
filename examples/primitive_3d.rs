@@ -103,17 +103,22 @@ fn setup(
             settings: NavMeshSettings {
                 // Define the outer borders of the navmesh.
                 fixed: Triangulation::from_outer_edges(&[
-                    vec2(0.0, 0.0),
-                    vec2(MESH_WIDTH as f32, 0.0),
-                    vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
-                    vec2(0.0, MESH_HEIGHT as f32),
+                    vec2(-(MESH_WIDTH as f32 / 2.0), -(MESH_HEIGHT as f32 / 2.0)),
+                    vec2(MESH_WIDTH as f32 / 2.0, -(MESH_HEIGHT as f32 / 2.0)),
+                    vec2(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
+                    vec2(-(MESH_WIDTH as f32 / 2.0), MESH_HEIGHT as f32 / 2.0),
                 ]),
                 simplify: 0.001,
                 merge_steps: 0,
 
                 ..default()
             },
-            transform: Transform::from_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+            transform: Transform::from_translation(Vec3::new(
+                MESH_WIDTH as f32 / 2.0,
+                0.0,
+                MESH_HEIGHT as f32 / 2.0,
+            ))
+            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
             // Mark it for update as soon as obstacles are changed.
             // Other modes can be debounced or manually triggered.
             update_mode: NavMeshUpdateMode::Direct,
@@ -125,14 +130,15 @@ fn setup(
 
     commands.spawn(PbrBundle {
         mesh: meshes.add(Plane3d::new(
-            Vec3::Y,
+            Vec3::Z,
             Vec2::new(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
         )),
         transform: Transform::from_translation(Vec3::new(
             MESH_WIDTH as f32 / 2.0,
             0.0,
             MESH_HEIGHT as f32 / 2.0,
-        )),
+        ))
+        .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
         material: materials.add(StandardMaterial::from(Color::Srgba(
             palettes::tailwind::BLUE_800,
         ))),

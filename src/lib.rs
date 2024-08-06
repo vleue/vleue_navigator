@@ -24,8 +24,8 @@ use bevy::{
     app::{App, Plugin},
     asset::{Asset, AssetApp},
     log::{debug, warn},
-    math::{Quat, Vec2, Vec3, Vec3Swizzles},
-    prelude::{Mesh, Transform},
+    math::{Affine3A, Quat, Vec2, Vec3, Vec3Swizzles},
+    prelude::{Mesh, Transform, TransformPoint},
     reflect::TypePath,
     render::{
         mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
@@ -214,10 +214,10 @@ impl NavMesh {
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub async fn get_transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
-        let inner_from = self.transform.transform_point(from).xy();
-        let inner_to = self.transform.transform_point(to).xy();
+        let inner_from = self.world_to_mesh().transform_point(from).xy();
+        let inner_to = self.world_to_mesh().transform_point(to).xy();
         let path = self.mesh.get_path(inner_from, inner_to).await;
-        path.map(|path| self.transform_path(path, from, to))
+        path.map(|path| self.transform_path(path))
     }
 
     /// Get a path between two points
@@ -230,28 +230,29 @@ impl NavMesh {
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
-        let inner_from = self.transform.transform_point(from).xy();
-        let inner_to = self.transform.transform_point(to).xy();
+        let inner_from = self.world_to_mesh().transform_point(from).xy();
+        let inner_to = self.world_to_mesh().transform_point(to).xy();
         let path = self.mesh.path(inner_from, inner_to);
-        path.map(|path| self.transform_path(path, from, to))
+        path.map(|path| self.transform_path(path))
     }
 
-    fn transform_path(&self, path: Path, from: Vec3, to: Vec3) -> TransformedPath {
-        let inverse_transform = self.mesh_to_world();
+    fn transform_path(&self, path: Path) -> TransformedPath {
+        let transform = self.transform();
         TransformedPath {
-            length: from.distance(to),
+            // TODO: recompute length
+            length: path.length,
             path: path
                 .path
                 .into_iter()
-                .map(|coords| inverse_transform.transform_point((coords, 0.).into()))
+                .map(|coords| transform.transform_point(coords.extend(0.0)))
                 .collect(),
         }
     }
 
     /// Check if a 3d point is in a navigationable part of the mesh, using the [`Mesh::transform`]
     pub fn transformed_is_in_mesh(&self, point: Vec3) -> bool {
-        let point = self.transform.transform_point(point).xy();
-        self.mesh.point_in_mesh(point)
+        let point_in_navmesh = self.world_to_mesh().transform_point(point).xy();
+        self.mesh.point_in_mesh(point_in_navmesh)
     }
 
     /// Check if a point is in a navigationable part of the mesh
@@ -276,14 +277,14 @@ impl NavMesh {
     /// This mesh doesn't have normals.
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
-        let inverse_transform = self.mesh_to_world();
+        let mesh_to_world = self.transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             self.mesh.layers[0]
                 .vertices
                 .iter()
-                .map(|v| [v.coords.x, v.coords.y, 0.0])
-                .map(|coords| inverse_transform.transform_point(coords.into()).into())
+                .map(|v| v.coords.extend(0.0))
+                .map(|coords| mesh_to_world.transform_point(coords).into())
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(
@@ -302,14 +303,14 @@ impl NavMesh {
     /// Creates a [`Mesh`] from this [`NavMesh`], showing the wireframe of the polygons
     pub fn to_wireframe_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::all());
-        let inverse_transform = self.mesh_to_world();
+        let mesh_to_world = self.transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             self.mesh.layers[0]
                 .vertices
                 .iter()
                 .map(|v| [v.coords.x, v.coords.y, 0.0])
-                .map(|coords| inverse_transform.transform_point(coords.into()).into())
+                .map(|coords| mesh_to_world.transform_point(coords.into()).into())
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(
@@ -327,18 +328,15 @@ impl NavMesh {
         new_mesh
     }
 
+    /// TODO: write docs
     #[inline]
-    pub(crate) fn mesh_to_world(&self) -> Transform {
-        mesh_to_world(&self.transform)
+    pub fn world_to_mesh(&self) -> Affine3A {
+        world_to_mesh(&self.transform)
     }
 }
 
-pub(crate) fn mesh_to_world(navmesh_transform: &Transform) -> Transform {
-    Transform {
-        translation: navmesh_transform.translation,
-        rotation: navmesh_transform.rotation.inverse(),
-        scale: 1.0 / navmesh_transform.scale,
-    }
+pub(crate) fn world_to_mesh(navmesh_transform: &Transform) -> Affine3A {
+    navmesh_transform.compute_affine().inverse()
 }
 
 fn get_vectors(
@@ -361,8 +359,6 @@ pub fn display_navmesh(
     navmeshes: Res<Assets<NavMesh>>,
     controls: Option<Res<NavMeshesDebug>>,
 ) {
-    use bevy::math::vec3;
-
     for (mesh, debug) in &live_navmeshes {
         let Some(color) = debug
             .map(|debug| debug.0)
@@ -371,23 +367,19 @@ pub fn display_navmesh(
             continue;
         };
         if let Some(navmesh) = navmeshes.get(mesh) {
-            let mesh_to_world = navmesh.mesh_to_world();
+            let mesh_to_world = navmesh.transform();
             let navmesh = navmesh.get();
             for polygon in &navmesh.layers[0].polygons {
                 let mut v = polygon
                     .vertices
                     .iter()
                     .map(|i| &navmesh.layers[0].vertices[*i as usize].coords)
-                    .map(|v| mesh_to_world.transform_point(vec3(v.x, v.y, 0.0)))
+                    .map(|v| mesh_to_world.transform_point(v.extend(0.0)))
                     .collect::<Vec<_>>();
                 if !v.is_empty() {
                     let first = polygon.vertices[0];
                     let first = &navmesh.layers[0].vertices[first as usize];
-                    v.push(mesh_to_world.transform_point(vec3(
-                        first.coords.x,
-                        first.coords.y,
-                        0.0,
-                    )));
+                    v.push(mesh_to_world.transform_point(first.coords.extend(0.0)));
                     gizmos.linestrip(v, color);
                 }
             }

@@ -49,6 +49,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                display_obstacle,
                 display_mesh,
                 spawn_obstacle_on_click.after(ui::update_settings::<10>),
                 ui::update_stats::<PrimitiveObstacle>,
@@ -64,6 +65,8 @@ fn main() {
         .run();
 }
 
+const FACTOR: f32 = 7.0;
+
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
@@ -71,6 +74,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(NavMeshBundle {
         settings: NavMeshSettings {
             // Define the outer borders of the navmesh.
+            // This will be in navmesh coordinates
             fixed: Triangulation::from_outer_edges(&[
                 vec2(0.0, 0.0),
                 vec2(MESH_WIDTH as f32, 0.0),
@@ -86,18 +90,99 @@ fn setup(mut commands: Commands) {
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
         update_mode: NavMeshUpdateMode::Direct,
+        // This transform places the (0, 0) point of the navmesh, and is used to transform coordinates from the world to the navmesh.
+        transform: Transform::from_translation(Vec3::new(
+            -(MESH_WIDTH as f32) / 2.0 * FACTOR,
+            -(MESH_HEIGHT as f32) / 2.0 * FACTOR,
+            0.0,
+        ))
+        .with_scale(Vec3::splat(FACTOR)),
         ..default()
     });
 
     let mut rng = rand::thread_rng();
     for _ in 0..50 {
-        let transform = Transform::from_translation(Vec3::new(
-            rng.gen_range(0.0..(MESH_WIDTH as f32)),
-            rng.gen_range(0.0..(MESH_HEIGHT as f32)),
-            0.0,
-        ))
+        // Obstacles are spawn in world coordinates.
+        let transform = Transform::from_translation(
+            Vec3::new(
+                rng.gen_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
+                rng.gen_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
+                0.0,
+            ) * FACTOR,
+        )
         .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
         new_obstacle(&mut commands, &mut rng, transform);
+    }
+}
+
+fn display_obstacle(mut gizmos: Gizmos, query: Query<(&PrimitiveObstacle, &Transform)>) {
+    for (prim, transform) in &query {
+        match prim {
+            PrimitiveObstacle::Rectangle(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::Circle(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::Ellipse(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::CircularSector(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::CircularSegment(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::Capsule(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::RegularPolygon(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::Rhombus(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    transform.translation.xy(),
+                    transform.rotation.to_axis_angle().1,
+                    palettes::tailwind::RED_600,
+                );
+            }
+        }
     }
 }
 
@@ -105,38 +190,37 @@ fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transfo
     commands.spawn((
         match rng.gen_range(0..8) {
             0 => PrimitiveObstacle::Rectangle(Rectangle {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
+                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)) * FACTOR,
             }),
             1 => PrimitiveObstacle::Circle(Circle {
-                radius: rng.gen_range(1.0..5.0),
+                radius: rng.gen_range(1.0..5.0) * FACTOR,
             }),
             2 => PrimitiveObstacle::Ellipse(Ellipse {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
+                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)) * FACTOR,
             }),
             3 => PrimitiveObstacle::CircularSector(CircularSector::new(
-                rng.gen_range(1.5..5.0),
+                rng.gen_range(1.5..5.0) * FACTOR,
                 rng.gen_range(0.5..PI),
             )),
             4 => PrimitiveObstacle::CircularSegment(CircularSegment::new(
-                rng.gen_range(1.5..5.0),
+                rng.gen_range(1.5..5.0) * FACTOR,
                 rng.gen_range(1.0..PI),
             )),
             5 => PrimitiveObstacle::Capsule(Capsule2d::new(
-                rng.gen_range(1.0..3.0),
-                rng.gen_range(1.5..5.0),
+                rng.gen_range(1.0..3.0) * FACTOR,
+                rng.gen_range(1.5..5.0) * FACTOR,
             )),
             6 => PrimitiveObstacle::RegularPolygon(RegularPolygon::new(
-                rng.gen_range(1.0..5.0),
+                rng.gen_range(1.0..5.0) * FACTOR,
                 rng.gen_range(3..8),
             )),
             7 => PrimitiveObstacle::Rhombus(Rhombus::new(
-                rng.gen_range(3.0..6.0),
-                rng.gen_range(2.0..3.0),
+                rng.gen_range(3.0..6.0) * FACTOR,
+                rng.gen_range(2.0..3.0) * FACTOR,
             )),
             _ => unreachable!(),
         },
-        transform,
-        GlobalTransform::default(),
+        SpatialBundle::from_transform(transform),
     ));
 }
 
@@ -146,7 +230,6 @@ fn display_mesh(
     navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
 ) {
@@ -161,19 +244,11 @@ fn display_mesh(
     if let Some(entity) = *current_mesh_entity {
         commands.entity(entity).despawn_recursive();
     }
-    let window = primary_window.single();
-    let factor = (window.width() / (MESH_WIDTH as f32)).min(window.height() / (MESH_HEIGHT as f32));
 
     *current_mesh_entity = Some(
         commands
             .spawn(MaterialMesh2dBundle {
                 mesh: meshes.add(navmesh.to_mesh()).into(),
-                transform: Transform::from_translation(Vec3::new(
-                    -(MESH_WIDTH as f32) / 2.0 * factor,
-                    -(MESH_HEIGHT as f32) / 2.0 * factor,
-                    0.0,
-                ))
-                .with_scale(Vec3::splat(factor)),
                 material: materials.add(ColorMaterial::from(Color::Srgba(
                     palettes::tailwind::BLUE_800,
                 ))),

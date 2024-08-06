@@ -64,6 +64,10 @@ pub struct NavMeshSettings {
     pub build_timeout: Option<f32>,
     /// Cache from the last build from obstacles that are [`CachableObstacle`]
     pub cached: Option<Triangulation>,
+    /// Direction considered up for the navmesh. If none, it will be extracted from the mesh transform.
+    ///
+    /// This is useful when the mesh is not parallel to the "ground".
+    pub up: Option<Dir3>,
 }
 
 impl Default for NavMeshSettings {
@@ -75,6 +79,7 @@ impl Default for NavMeshSettings {
             fixed: Triangulation::from_outer_edges(&[]),
             build_timeout: None,
             cached: None,
+            up: None,
         }
     }
 }
@@ -117,11 +122,12 @@ fn build_navmesh<T: ObstacleSource>(
     settings: NavMeshSettings,
     mesh_transform: Transform,
 ) -> (Triangulation, NavMesh) {
+    let up = settings.up.unwrap_or_else(|| mesh_transform.up());
     let base = if settings.cached.is_none() {
         let mut base = settings.fixed;
         let obstacle_aabbs = cached_obstacles
             .iter()
-            .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform));
+            .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform, up));
         base.add_obstacles(obstacle_aabbs);
         if settings.simplify != 0.0 {
             base.simplify(settings.simplify);
@@ -134,7 +140,7 @@ fn build_navmesh<T: ObstacleSource>(
     let mut triangulation = base.clone();
     let obstacle_aabbs = obstacles
         .iter()
-        .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform))
+        .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform, up))
         .filter(|p| !p.is_empty());
     triangulation.add_obstacles(obstacle_aabbs);
 

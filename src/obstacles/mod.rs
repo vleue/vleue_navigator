@@ -1,5 +1,5 @@
 use bevy::{
-    math::Vec2,
+    math::{Dir3, Vec2},
     prelude::Component,
     transform::components::{GlobalTransform, Transform},
 };
@@ -21,5 +21,6 @@ pub trait ObstacleSource: Component + Clone {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
+        up: Dir3,
     ) -> Vec<Vec2>;
 }
