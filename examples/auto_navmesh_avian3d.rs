@@ -189,11 +189,11 @@ fn setup(
                 build_timeout: Some(1.0),
                 simplify: 0.005,
                 merge_steps: 0,
-                up: Some(Dir3::Y),
+                up: Some((Dir3::Y, 0.1)),
                 ..default()
             },
             update_mode: NavMeshUpdateMode::Direct,
-            transform: Transform::from_xyz(0.0, 0.1 + idx as f32 * height_step, 0.0)
+            transform: Transform::from_xyz(0.0, idx as f32 * height_step, 0.0)
                 .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             handle: Handle::<NavMesh>::weak_from_u128(idx as u128),
 

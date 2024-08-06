@@ -67,7 +67,7 @@ pub struct NavMeshSettings {
     /// Direction considered up for the navmesh. If none, it will be extracted from the mesh transform.
     ///
     /// This is useful when the mesh is not parallel to the "ground".
-    pub up: Option<Dir3>,
+    pub up: Option<(Dir3, f32)>,
 }
 
 impl Default for NavMeshSettings {
@@ -122,7 +122,7 @@ fn build_navmesh<T: ObstacleSource>(
     settings: NavMeshSettings,
     mesh_transform: Transform,
 ) -> (Triangulation, NavMesh) {
-    let up = settings.up.unwrap_or_else(|| mesh_transform.up());
+    let up = settings.up.unwrap_or_else(|| (mesh_transform.up(), 0.0));
     let base = if settings.cached.is_none() {
         let mut base = settings.fixed;
         let obstacle_aabbs = cached_obstacles

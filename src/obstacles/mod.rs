@@ -21,6 +21,6 @@ pub trait ObstacleSource: Component + Clone {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        up: (Dir3, f32),
     ) -> Vec<Vec2>;
 }

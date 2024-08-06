@@ -13,7 +13,7 @@ impl ObstacleSource for Aabb {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        (up, _shift): (Dir3, f32),
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);

@@ -354,12 +354,16 @@ fn get_vectors(
 #[cfg(feature = "debug-with-gizmos")]
 /// Use gizmos to display navmeshes
 pub fn display_navmesh(
-    live_navmeshes: Query<(&Handle<NavMesh>, Option<&NavMeshDebug>)>,
+    live_navmeshes: Query<(
+        &Handle<NavMesh>,
+        Option<&NavMeshDebug>,
+        &updater::NavMeshSettings,
+    )>,
     mut gizmos: Gizmos,
     navmeshes: Res<Assets<NavMesh>>,
     controls: Option<Res<NavMeshesDebug>>,
 ) {
-    for (mesh, debug) in &live_navmeshes {
+    for (mesh, debug, settings) in &live_navmeshes {
         let Some(color) = debug
             .map(|debug| debug.0)
             .or_else(|| controls.as_ref().map(|c| c.0))
@@ -382,6 +386,10 @@ pub fn display_navmesh(
                     v.push(mesh_to_world.transform_point(first.coords.extend(0.0)));
                     gizmos.linestrip(v, color);
                 }
+            }
+            if let Some(up) = settings.up {
+                let center = mesh_to_world.transform_point(Vec3::ZERO);
+                gizmos.arrow(center, center + up.0.as_vec3() * 20.0, color);
             }
         }
     }

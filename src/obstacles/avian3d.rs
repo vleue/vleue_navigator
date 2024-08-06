@@ -18,7 +18,7 @@ impl ObstacleSource for Collider {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        up: (Dir3, f32),
     ) -> Vec<Vec2> {
         self.shape_scaled()
             .as_typed_shape()
@@ -31,7 +31,7 @@ trait InnerObstacleSource {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        up: (Dir3, f32),
     ) -> Vec<Vec2>;
 }
 
@@ -40,7 +40,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        (up, shift): (Dir3, f32),
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);
@@ -79,7 +79,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -90,7 +90,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -101,7 +101,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -110,7 +110,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     collider.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -121,7 +121,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -135,7 +135,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                         shape.as_typed_shape().get_polygon(
                             obstacle_transform,
                             navmesh_transform,
-                            up,
+                            (up, shift),
                         )
                     })
                     .collect()
@@ -146,7 +146,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -157,7 +157,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -168,7 +168,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -179,7 +179,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -190,7 +190,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -201,7 +201,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]
@@ -212,7 +212,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 vec![intersection_to_navmesh(
                     trimesh.intersection_with_local_plane(
                         &up_axis,
-                        navmesh_transform.translation.y,
+                        navmesh_transform.translation.y + shift,
                         f32::EPSILON,
                     ),
                 )]

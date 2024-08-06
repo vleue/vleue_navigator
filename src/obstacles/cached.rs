@@ -36,7 +36,7 @@ impl<T: ObstacleSource> ObstacleSource for CachedObstacle<T> {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        up: (Dir3, f32),
     ) -> Vec<Vec2> {
         self.polygon
             .get_or_init(|| {
