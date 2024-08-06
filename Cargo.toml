@@ -29,8 +29,7 @@ default-features = false
 optional = true
 
 [dependencies.polyanya]
-version = "0.8"
-git = "https://github.com/vleue/polyanya"
+version = "0.8.1"
 
 [dependencies.bevy]
 version = "0.14.0"
