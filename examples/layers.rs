@@ -1,6 +1,6 @@
 use std::{f32::consts::FRAC_PI_2, time::Duration};
 
-use avian3d::prelude::*;
+use avian3d::{math::Vector, prelude::*};
 use bevy::{
     color::palettes,
     math::{vec2, vec3},
@@ -14,7 +14,7 @@ use vleue_navigator::prelude::*;
 const MESH_UNIT: u32 = 100;
 
 #[derive(Component)]
-struct Obstacle;
+struct Obstacle(Timer);
 
 fn main() {
     App::new()
@@ -32,8 +32,9 @@ fn main() {
             VleueNavigatorPlugin,
             NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
         ))
+        .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 10.0))
         .add_systems(Startup, (setup,))
-        .add_systems(Update, rotate_camera)
+        .add_systems(Update, (rotate_camera, despawn_obstacles))
         .add_systems(
             Update,
             spawn_obstacles.run_if(on_timer(Duration::from_secs_f32(0.5))),
@@ -53,7 +54,7 @@ fn setup(
             -(MESH_UNIT as f32) * 1.5,
         )
         .looking_at(
-            vec3(MESH_UNIT as f32 * 2.0, 0.0, MESH_UNIT as f32 * 2.0),
+            vec3(MESH_UNIT as f32 * 1.0, 0.0, MESH_UNIT as f32 * 1.0),
             Vec3::Y,
         ),
         ..Default::default()
@@ -367,30 +368,48 @@ fn spawn_obstacles(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    navmeshes: Res<Assets<NavMesh>>,
 ) {
     let cube_size = 10.0;
-    commands.spawn((
-        PbrBundle {
-            mesh: meshes.add(Cuboid::new(cube_size, cube_size, cube_size)),
-            material: materials.add(Color::srgb(0.2, 0.7, 0.9)),
-            transform: Transform::from_xyz(
-                rand::thread_rng().gen_range(-0.0..(MESH_UNIT as f32 * 3.0)),
-                50.0,
-                rand::thread_rng().gen_range(-0.0..(MESH_UNIT as f32 * 3.0)),
-            )
-            .looking_to(
-                Vec3::new(
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                )
-                .normalize(),
-                Vec3::Y,
-            ),
-            ..default()
-        },
-        RigidBody::Dynamic,
-        Collider::cuboid(cube_size, cube_size, cube_size),
-        Obstacle,
-    ));
+    loop {
+        let x = rand::thread_rng().gen_range(0.0..(MESH_UNIT as f32 * 3.0));
+        let z = rand::thread_rng().gen_range(0.0..(MESH_UNIT as f32 * 3.0));
+        if navmeshes
+            .iter()
+            .any(|(_, nm)| nm.transformed_is_in_mesh(vec3(x, 0.0, z)))
+        {
+            commands.spawn((
+                PbrBundle {
+                    mesh: meshes.add(Cuboid::new(cube_size, cube_size, cube_size)),
+                    material: materials.add(Color::srgb(0.2, 0.7, 0.9)),
+                    transform: Transform::from_xyz(x, 50.0, z).looking_to(
+                        Vec3::new(
+                            rand::thread_rng().gen_range(-1.0..1.0),
+                            rand::thread_rng().gen_range(-1.0..1.0),
+                            rand::thread_rng().gen_range(-1.0..1.0),
+                        )
+                        .normalize(),
+                        Vec3::Y,
+                    ),
+                    ..default()
+                },
+                RigidBody::Dynamic,
+                Collider::cuboid(cube_size, cube_size, cube_size),
+                Obstacle(Timer::from_seconds(30.0, TimerMode::Once)),
+            ));
+            return;
+        }
+    }
+}
+
+fn despawn_obstacles(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Obstacle)>,
+) {
+    for (entity, mut obstacle) in &mut query {
+        if obstacle.0.tick(time.delta()).just_finished() {
+            commands.entity(entity).despawn();
+        }
+    }
 }

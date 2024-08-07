@@ -159,40 +159,6 @@ fn setup_scene(
         });
     }
 
-    {
-        #[cfg(target_arch = "wasm32")]
-        const NB_HOVER: usize = 5;
-        #[cfg(not(target_arch = "wasm32"))]
-        const NB_HOVER: usize = 10;
-
-        for _i in 0..NB_HOVER {
-            commands.spawn((
-                SpotLightBundle {
-                    spot_light: SpotLight {
-                        intensity: 1000000.0,
-                        color: palettes::css::SEA_GREEN.into(),
-                        shadows_enabled: true,
-                        inner_angle: 0.5,
-                        outer_angle: 0.8,
-                        range: 250.0,
-                        ..default()
-                    },
-                    transform: Transform::from_xyz(
-                        rand::thread_rng().gen_range(-50.0..50.0),
-                        20.0,
-                        rand::thread_rng().gen_range(-25.0..25.0),
-                    )
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                    ..default()
-                },
-                Hover(Vec2::new(
-                    rand::thread_rng().gen_range(-50.0..50.0),
-                    rand::thread_rng().gen_range(-25.0..25.0),
-                )),
-            ));
-        }
-    }
-
     if let Some(gltf) = gltfs.get(gltf.id()) {
         {
             let navmesh = vleue_navigator::NavMesh::from_bevy_mesh(
@@ -215,10 +181,10 @@ fn setup_scene(
                     settings: NavMeshSettings {
                         fixed: Triangulation::from_mesh(navmesh.get().as_ref(), 0),
                         build_timeout: Some(5.0),
-                        up: Some(Dir3::Y),
+                        up: Some((Dir3::Y, 0.5)),
                         ..default()
                     },
-                    transform: Transform::from_xyz(0.0, 0.2, 0.0)
+                    transform: Transform::from_xyz(0.0, 0.1, 0.0)
                         .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
                     // update_mode: NavMeshUpdateMode::Debounced(1.0),
                     update_mode: NavMeshUpdateMode::Direct,

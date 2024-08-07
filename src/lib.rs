@@ -389,7 +389,7 @@ pub fn display_navmesh(
             }
             if let Some(up) = settings.up {
                 let center = mesh_to_world.transform_point(Vec3::ZERO);
-                gizmos.arrow(center, center + up.0.as_vec3() * 20.0, color);
+                gizmos.arrow(center, center + up.0.as_vec3() * 5.0, color);
             }
         }
     }

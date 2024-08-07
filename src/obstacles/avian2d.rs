@@ -20,7 +20,7 @@ impl ObstacleSource for Collider {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        up: (Dir3, f32),
     ) -> Vec<Vec2> {
         self.shape_scaled()
             .as_typed_shape()
@@ -33,7 +33,7 @@ trait InnerObstacleSource {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        up: (Dir3, f32),
     ) -> Vec<Vec2>;
 }
 
@@ -42,7 +42,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
-        up: Dir3,
+        (up, _shift): (Dir3, f32),
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);
@@ -101,9 +101,11 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 .iter()
                 .flat_map(|(_iso, shape)| {
                     // TODO: handle the isometry of each shape
-                    shape
-                        .as_typed_shape()
-                        .get_polygon(obstacle_transform, navmesh_transform, up)
+                    shape.as_typed_shape().get_polygon(
+                        obstacle_transform,
+                        navmesh_transform,
+                        (up, _shift),
+                    )
                 })
                 .collect(),
             TypedShape::ConvexPolygon(collider) => collider
