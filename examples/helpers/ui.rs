@@ -228,7 +228,7 @@ pub fn update_settings<const STEP: u32>(
                         settings.simplify = (settings.simplify + STEP as f32 / 1000.0).min(10.0);
                     }
                     UiSettingsButtons::MergeStepsDec => {
-                        settings.merge_steps = settings.merge_steps.checked_sub(1).unwrap_or(0);
+                        settings.merge_steps = settings.merge_steps.saturating_sub(1);
                     }
                     UiSettingsButtons::MergeStepsInc => {
                         settings.merge_steps = (settings.merge_steps + 1).min(5);
@@ -342,7 +342,12 @@ pub fn update_stats<T: Component>(
         "{}",
         navmeshes
             .get(handle)
-            .map(|nm| nm.get().polygons.len())
+            .map(|nm| nm
+                .get()
+                .layers
+                .iter()
+                .map(|l| l.polygons.len())
+                .sum::<usize>())
             .unwrap_or_default()
     );
     text.sections[7].value = format!(

@@ -1,7 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
 use bevy::{
-    math::Vec2,
+    math::{Dir3, Vec2},
     prelude::Component,
     transform::components::{GlobalTransform, Transform},
 };
@@ -36,10 +36,11 @@ impl<T: ObstacleSource> ObstacleSource for CachedObstacle<T> {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
+        up: (Dir3, f32),
     ) -> Vec<Vec2> {
         self.polygon
             .get_or_init(|| {
-                T::get_polygon(&self.source, obstacle_transform, navmesh_transform)
+                T::get_polygon(&self.source, obstacle_transform, navmesh_transform, up)
                     .into_iter()
                     .collect::<Vec<_>>()
             })

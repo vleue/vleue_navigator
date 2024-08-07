@@ -76,13 +76,14 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
         let mut target;
         let delta = if !navmesh.transformed_is_in_mesh(transform.translation) {
             let delta = deltas.entry(entity).or_insert(0.0);
-            *delta = *delta + 0.1;
+            *delta += 0.1;
             *delta
         } else {
             0.0
         };
         navmesh.set_delta(delta);
 
+        let mut i = 50;
         loop {
             target = Vec3::new(
                 rand::thread_rng().gen_range(0.0..(X as f32)),
@@ -93,13 +94,18 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
             if navmesh.transformed_is_in_mesh(target) {
                 break;
             }
+            i -= 1;
+            if i == 0 {
+                error!("No target found for navigator");
+                return;
+            }
         }
 
         let Some(path) = navmesh.transformed_path(transform.translation, target) else {
             continue;
         };
         if let Some((first, remaining)) = path.path.split_first() {
-            let mut remaining = remaining.into_iter().cloned().collect::<Vec<_>>();
+            let mut remaining = remaining.to_vec();
             remaining.reverse();
             let id = commands
                 .spawn(PbrBundle {
@@ -145,7 +151,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
         navmesh.set_delta(0.0);
         if !navmesh.transformed_is_in_mesh(transform.translation) {
             let delta_for_entity = deltas.entry(entity).or_insert(0.0);
-            *delta_for_entity = *delta_for_entity + 0.1;
+            *delta_for_entity += 0.1;
             navmesh.set_delta(*delta_for_entity);
             continue;
         }
@@ -161,7 +167,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
             continue;
         };
         if let Some((first, remaining)) = new_path.path.split_first() {
-            let mut remaining = remaining.into_iter().cloned().collect::<Vec<_>>();
+            let mut remaining = remaining.to_vec();
             remaining.reverse();
             path.current = *first;
             path.next = remaining;
@@ -197,10 +203,10 @@ pub fn display_navigator_path(
 ) {
     for (transform, path, navigator) in &navigator {
         let mut to_display = path.next.clone();
-        to_display.push(path.current.clone());
+        to_display.push(path.current);
         to_display.push(transform.translation);
         to_display.reverse();
-        if to_display.len() >= 1 {
+        if !to_display.is_empty() {
             gizmos.linestrip(
                 to_display.iter().map(|xz| Vec3::new(xz.x, 0.1, xz.z)),
                 navigator.color,
