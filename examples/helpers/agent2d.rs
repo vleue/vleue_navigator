@@ -42,9 +42,9 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
         let Some(navmesh) = navmeshes.get(navmesh.single()) else {
             continue;
         };
-        let mut x;
-        let mut y;
-        loop {
+        let mut x = 1.0;
+        let mut y = 1.0;
+        for _ in 0..10 {
             x = rand::thread_rng().gen_range(0.0..(X as f32));
             y = rand::thread_rng().gen_range(0.0..(Y as f32));
 
@@ -53,7 +53,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
             }
         }
         let Some(path) = navmesh.transformed_path(
-            transform.translation,
+            transform.translation.xyz(),
             navmesh.transform().transform_point(Vec3::new(x, y, 0.0)),
         ) else {
             break;

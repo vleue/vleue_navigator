@@ -20,8 +20,8 @@ use vleue_navigator::{
 struct Obstacle(Timer);
 
 fn main() {
-    App::new()
-        .insert_resource(Msaa::default())
+    let mut app = App::new();
+    app.insert_resource(Msaa::default())
         .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
@@ -60,8 +60,16 @@ fn main() {
         .add_systems(
             Update,
             refresh_path.run_if(on_timer(Duration::from_secs_f32(0.1))),
-        )
-        .run();
+        );
+
+    let mut config_store = app
+        .world_mut()
+        .get_resource_mut::<GizmoConfigStore>()
+        .unwrap();
+    for (_, config, _) in config_store.iter_mut() {
+        config.depth_bias = -1.0;
+    }
+    app.run();
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, States, Default)]
@@ -181,11 +189,12 @@ fn setup_scene(
                     settings: NavMeshSettings {
                         fixed: Triangulation::from_mesh(navmesh.get().as_ref(), 0),
                         build_timeout: Some(5.0),
-                        up: Some((Dir3::Y, 0.5)),
+                        // up: Some((Dir3::Y, 0.5)),
+                        upward_shift: 0.5,
                         ..default()
                     },
-                    transform: Transform::from_xyz(0.0, 0.1, 0.0)
-                        .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                    // transform: navmesh.transform(),
+                    transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     // update_mode: NavMeshUpdateMode::Debounced(1.0),
                     update_mode: NavMeshUpdateMode::Direct,
                     ..default()
@@ -236,9 +245,9 @@ fn give_target_auto(
         let Some(navmesh) = navmeshes.get(&Handle::default()) else {
             continue;
         };
-        let mut x;
-        let mut z;
-        loop {
+        let mut x = 0.0;
+        let mut z = 0.0;
+        for _ in 0..50 {
             x = rand::thread_rng().gen_range(-50.0..50.0);
             z = rand::thread_rng().gen_range(-25.0..25.0);
 
@@ -365,9 +374,10 @@ fn spawn_obstacles(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    let size = rand::thread_rng().gen_range(1.5..2.0);
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Cuboid::new(2.0, 2.0, 2.0)),
+            mesh: meshes.add(Cuboid::new(size, size, size)),
             material: materials.add(Color::srgb(0.2, 0.7, 0.9)),
             transform: Transform::from_xyz(
                 rand::thread_rng().gen_range(-50.0..50.0),
@@ -386,7 +396,7 @@ fn spawn_obstacles(
             ..default()
         },
         RigidBody::Dynamic,
-        Collider::cuboid(2.0, 2.0, 2.0),
+        Collider::cuboid(size, size, size),
         Obstacle(Timer::from_seconds(30.0, TimerMode::Once)),
     ));
 }

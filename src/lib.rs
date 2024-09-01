@@ -92,16 +92,26 @@ pub struct TransformedPath {
     pub length: f32,
     /// Coordinates for each step of the path. The destination is the last step.
     pub path: Vec<Vec3>,
+    /// Coordinates for each step of the path. The destination is the last step.
+    #[cfg(feature = "detailed-layers")]
+    pub path_with_layers: Vec<(Vec3, u8)>,
 }
 
 use polyanya::Trimesh;
 pub use polyanya::{Path, Triangulation};
 
+#[derive(Debug, Clone)]
+pub(crate) struct BuildingMesh {
+    pub(crate) mesh: polyanya::Mesh,
+    pub(crate) failed_stitches: Vec<(u8, u8)>,
+}
+
 /// A navigation mesh
 #[derive(Debug, TypePath, Clone, Asset)]
 pub struct NavMesh {
     mesh: Arc<polyanya::Mesh>,
-    pub(crate) transform: Transform,
+    building: Option<BuildingMesh>,
+    transform: Transform,
 }
 
 impl NavMesh {
@@ -109,6 +119,7 @@ impl NavMesh {
     pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> NavMesh {
         NavMesh {
             mesh: Arc::new(mesh),
+            building: None,
             transform: Transform::IDENTITY,
         }
     }
@@ -121,11 +132,10 @@ impl NavMesh {
     pub fn from_bevy_mesh_and_then(mesh: &Mesh, callback: impl Fn(&mut polyanya::Mesh)) -> NavMesh {
         let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).next().unwrap();
         let rotation = Quat::from_rotation_arc(normal, Vec3::Z);
+        let rotation_reverse = rotation.inverse();
 
         let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
-            .map(|vertex| rotation.mul_vec3(vertex))
-            // .map(|vertex| Quat::from_rotation_x(PI).mul_vec3(vertex))
-            // .map(|coords| coords.xy() * vec2(1.0, -1.0))
+            .map(|vertex| rotation_reverse.mul_vec3(vertex))
             .map(|coords| coords.xy())
             .collect();
 
@@ -134,8 +144,7 @@ impl NavMesh {
             .expect("No polygon indices found in mesh")
             .iter()
             .tuples::<(_, _, _)>()
-            .map(|(a, b, c)| [a, b, c])
-            // .map(|(a, b, c)| [c, b, a])
+            .map(|(a, b, c)| [c, b, a])
             .collect();
 
         let mut polyanya_mesh = Trimesh {
@@ -230,8 +239,28 @@ impl NavMesh {
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
+        // println!("====================");
+        // for layer in &self.mesh.layers {
+        //     println!("----------------");
+        //     println!("  {:?}", layer.polygons);
+        //     for vertex in &layer.vertices {
+        //         println!("    {:?}", vertex);
+        //     }
+        // }
         let inner_from = self.world_to_mesh().transform_point(from).xy();
+        // println!(
+        //     "{:?} -> {:?} : {:?}",
+        //     from,
+        //     inner_from,
+        //     self.mesh.point_in_mesh(inner_from)
+        // );
         let inner_to = self.world_to_mesh().transform_point(to).xy();
+        // println!(
+        //     "   {:?} -> {:?} : {:?}",
+        //     to,
+        //     inner_to,
+        //     self.mesh.point_in_mesh(inner_to)
+        // );
         let path = self.mesh.path(inner_from, inner_to);
         path.map(|path| self.transform_path(path))
     }
@@ -245,6 +274,12 @@ impl NavMesh {
                 .path
                 .into_iter()
                 .map(|coords| transform.transform_point(coords.extend(0.0)))
+                .collect(),
+            #[cfg(feature = "detailed-layers")]
+            path_with_layers: path
+                .path_with_layers
+                .into_iter()
+                .map(|(coords, layer)| (transform.transform_point(coords.extend(0.0)), layer))
                 .collect(),
         }
     }
@@ -331,7 +366,7 @@ impl NavMesh {
     /// TODO: write docs
     #[inline]
     pub fn world_to_mesh(&self) -> Affine3A {
-        world_to_mesh(&self.transform)
+        world_to_mesh(&self.transform())
     }
 }
 
@@ -345,7 +380,7 @@ fn get_vectors(
 ) -> impl Iterator<Item = Vec3> + '_ {
     let vectors = match mesh.attribute(id).unwrap() {
         VertexAttributeValues::Float32x3(values) => values,
-        // Guaranteed by Bevy
+        // Guaranteed by Bevy for the attributes requested in this context
         _ => unreachable!(),
     };
     vectors.iter().cloned().map(Vec3::from)
@@ -357,13 +392,14 @@ pub fn display_navmesh(
     live_navmeshes: Query<(
         &Handle<NavMesh>,
         Option<&NavMeshDebug>,
+        &bevy::prelude::GlobalTransform,
         &updater::NavMeshSettings,
     )>,
     mut gizmos: Gizmos,
     navmeshes: Res<Assets<NavMesh>>,
     controls: Option<Res<NavMeshesDebug>>,
 ) {
-    for (mesh, debug, settings) in &live_navmeshes {
+    for (mesh, debug, mesh_to_world, settings) in &live_navmeshes {
         let Some(color) = debug
             .map(|debug| debug.0)
             .or_else(|| controls.as_ref().map(|c| c.0))
@@ -371,25 +407,29 @@ pub fn display_navmesh(
             continue;
         };
         if let Some(navmesh) = navmeshes.get(mesh) {
-            let mesh_to_world = navmesh.transform();
             let navmesh = navmesh.get();
-            for polygon in &navmesh.layers[0].polygons {
+            let layer = &navmesh.layers[settings.layer.unwrap_or(0) as usize];
+            #[cfg(feature = "detailed-layers")]
+            let scale = layer.scale;
+            #[cfg(not(feature = "detailed-layers"))]
+            let scale = Vec2::ONE;
+            // println!("====================");
+            // println!("{:?}", layer.vertices);
+            // println!("{:?}", layer.polygons);
+            for polygon in &layer.polygons {
                 let mut v = polygon
                     .vertices
                     .iter()
-                    .map(|i| &navmesh.layers[0].vertices[*i as usize].coords)
+                    .filter(|i| **i != u32::MAX)
+                    .map(|i| layer.vertices[*i as usize].coords * scale)
                     .map(|v| mesh_to_world.transform_point(v.extend(0.0)))
                     .collect::<Vec<_>>();
                 if !v.is_empty() {
                     let first = polygon.vertices[0];
-                    let first = &navmesh.layers[0].vertices[first as usize];
-                    v.push(mesh_to_world.transform_point(first.coords.extend(0.0)));
+                    let first = &layer.vertices[first as usize];
+                    v.push(mesh_to_world.transform_point((first.coords * scale).extend(0.0)));
                     gizmos.linestrip(v, color);
                 }
-            }
-            if let Some(up) = settings.up {
-                let center = mesh_to_world.transform_point(Vec3::ZERO);
-                gizmos.arrow(center, center + up.0.as_vec3() * 5.0, color);
             }
         }
     }

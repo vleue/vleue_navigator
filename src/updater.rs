@@ -12,9 +12,10 @@ use bevy::{
     ecs::entity::EntityHashMap,
     prelude::*,
     tasks::AsyncComputeTaskPool,
+    transform::systems::sync_simple_transforms,
     utils::HashMap,
 };
-use polyanya::Triangulation;
+use polyanya::{Layer, Mesh, Triangulation};
 
 use crate::{obstacles::ObstacleSource, NavMesh};
 
@@ -33,6 +34,8 @@ pub struct NavMeshBundle {
     pub handle: Handle<NavMesh>,
     /// Transform of the navmesh. Used to transform point in 3d to 2d (by ignoring the `z` axis).
     pub transform: Transform,
+    /// Global Transform of the navmesh.
+    pub global_transform: GlobalTransform,
     /// How to trigger navmesh updates.
     pub update_mode: NavMeshUpdateMode,
 }
@@ -41,9 +44,10 @@ impl Default for NavMeshBundle {
     fn default() -> Self {
         Self {
             settings: NavMeshSettings::default(),
-            status: NavMeshStatus::Building,
+            status: NavMeshStatus::Invalid,
             handle: Default::default(),
             transform: Default::default(),
+            global_transform: Default::default(),
             update_mode: NavMeshUpdateMode::OnDemand(false),
         }
     }
@@ -64,10 +68,14 @@ pub struct NavMeshSettings {
     pub build_timeout: Option<f32>,
     /// Cache from the last build from obstacles that are [`CachableObstacle`]
     pub cached: Option<Triangulation>,
-    /// Direction considered up for the navmesh. If none, it will be extracted from the mesh transform.
-    ///
-    /// This is useful when the mesh is not parallel to the "ground".
-    pub up: Option<(Dir3, f32)>,
+    /// Upward shift to sample obstacle from the ground
+    pub upward_shift: f32,
+    /// Specific layer to update. If none, the first layer will be updated.
+    pub layer: Option<u8>,
+    /// If there are several layers, stitch them together with these segments.
+    pub stitches: Vec<((u8, u8), [Vec2; 2])>,
+    /// Scale of this navmesh. Defaults to `Vec2::ONE`.
+    pub scale: Vec2,
 }
 
 impl Default for NavMeshSettings {
@@ -79,7 +87,10 @@ impl Default for NavMeshSettings {
             fixed: Triangulation::from_outer_edges(&[]),
             build_timeout: None,
             cached: None,
-            up: None,
+            upward_shift: 0.0,
+            layer: None,
+            stitches: vec![],
+            scale: Vec2::ONE,
         }
     }
 }
@@ -95,6 +106,10 @@ pub enum NavMeshStatus {
     ///
     /// This can happen if the build takes longer than the `build_timeout` defined in the settings.
     Failed,
+    /// Last build command failed, and the resulting mesh is invalid and can't be used for pathfinding.
+    ///
+    /// This can happen if the mesh has different layers that have not yet all been built.
+    Invalid,
     /// Cancelled build task. This can happen if settings changed before the build was completed.
     Cancelled,
 }
@@ -121,14 +136,14 @@ fn build_navmesh<T: ObstacleSource>(
     cached_obstacles: Vec<(GlobalTransform, T)>,
     settings: NavMeshSettings,
     mesh_transform: Transform,
-) -> (Triangulation, NavMesh) {
-    let up = settings.up.unwrap_or_else(|| (mesh_transform.up(), 0.0));
+) -> (Triangulation, Layer) {
+    let up = (mesh_transform.forward(), settings.upward_shift);
     let base = if settings.cached.is_none() {
         let mut base = settings.fixed;
-        let obstacle_aabbs = cached_obstacles
+        let obstacle_polys = cached_obstacles
             .iter()
             .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform, up));
-        base.add_obstacles(obstacle_aabbs);
+        base.add_obstacles(obstacle_polys);
         if settings.simplify != 0.0 {
             base.simplify(settings.simplify);
         }
@@ -138,26 +153,34 @@ fn build_navmesh<T: ObstacleSource>(
         settings.cached.unwrap()
     };
     let mut triangulation = base.clone();
-    let obstacle_aabbs = obstacles
+    let scale = settings.scale;
+    let obstacle_polys = obstacles
         .iter()
-        .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform, up))
-        .filter(|p| !p.is_empty());
-    triangulation.add_obstacles(obstacle_aabbs);
+        .map(|(transform, obstacle)| {
+            obstacle
+                .get_polygon(transform, &mesh_transform, up)
+                .into_iter()
+                .map(|v| v / scale)
+                .collect()
+        })
+        .filter(|p: &Vec<Vec2>| !p.is_empty());
+    triangulation.add_obstacles(obstacle_polys);
 
     if settings.simplify != 0.0 {
         triangulation.simplify(settings.simplify);
     }
-    let mut navmesh = triangulation.as_navmesh();
+    let mut layer = triangulation.as_layer();
+
     for _ in 0..settings.merge_steps {
-        if !navmesh.merge_polygons() {
-            break;
-        }
+        layer.merge_polygons();
     }
-    navmesh.bake();
-    navmesh.set_delta(settings.default_delta);
-    let mut navmesh = NavMesh::from_polyanya_mesh(navmesh);
-    navmesh.set_transform(mesh_transform);
-    (base, navmesh)
+    // layer.offset = mesh_transform.translation.xz() / mesh_transform.scale.xz();
+    #[cfg(feature = "detailed-layers")]
+    {
+        layer.scale = scale;
+    }
+    layer.remove_useless_vertices();
+    (base, layer)
 }
 
 fn drop_dead_tasks(
@@ -196,7 +219,7 @@ fn drop_dead_tasks(
 pub struct NavmeshUpdateTask(Arc<RwLock<Option<TaskResult>>>);
 
 struct TaskResult {
-    navmesh: NavMesh,
+    layer: Layer,
     duration: Duration,
     to_cache: Triangulation,
 }
@@ -207,7 +230,7 @@ type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e, 'f> = Query<
     (
         Entity,
         &'a mut NavMeshSettings,
-        Ref<'b, Transform>,
+        Ref<'b, GlobalTransform>,
         &'c NavMeshUpdateMode,
         &'d mut NavMeshStatus,
         Option<&'e NavMeshUpdateModeBlocking>,
@@ -277,9 +300,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             if settings.is_changed()
                 || has_removed_obstacles
                 || matches!(mode, NavMeshUpdateMode::OnDemand(true))
-                || dynamic_obstacles
-                    .iter()
-                    .any(|(t, _)| t.is_changed() && !t.is_added())
+                || dynamic_obstacles.iter().any(|(t, _)| t.is_changed())
             {
                 Some(entity)
             } else {
@@ -291,8 +312,15 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     to_check.sort_unstable();
     to_check.dedup();
     for entity in to_check.into_iter() {
-        if let Ok((entity, settings, transform, update_mode, mut status, is_blocking, updating)) =
-            navmeshes.get_mut(entity)
+        if let Ok((
+            entity,
+            settings,
+            global_transform,
+            update_mode,
+            mut status,
+            is_blocking,
+            updating,
+        )) = navmeshes.get_mut(entity)
         {
             if let Some(val) = ready_to_update.get_mut(&entity) {
                 val.1 = true;
@@ -328,21 +356,21 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                 .map(|(t, o)| (*t, o.clone()))
                 .collect::<Vec<_>>();
             let settings_local = settings.clone();
-            let transform_local = *transform;
+            let transform_local = global_transform.compute_transform();
 
             *status = NavMeshStatus::Building;
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
             if is_blocking.is_some() {
                 let start = bevy::utils::Instant::now();
-                let (to_cache, navmesh) = build_navmesh(
+                let (to_cache, layer) = build_navmesh(
                     obstacles_local,
                     cached_obstacles,
                     settings_local,
                     transform_local,
                 );
                 *writer.write().unwrap() = Some(TaskResult {
-                    navmesh,
+                    layer,
                     duration: start.elapsed(),
                     to_cache,
                 });
@@ -350,14 +378,14 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                 AsyncComputeTaskPool::get()
                     .spawn(async move {
                         let start = bevy::utils::Instant::now();
-                        let (to_cache, navmesh) = build_navmesh(
+                        let (to_cache, layer) = build_navmesh(
                             obstacles_local,
                             cached_obstacles,
                             settings_local,
                             transform_local,
                         );
                         *writer.write().unwrap() = Some(TaskResult {
-                            navmesh,
+                            layer,
                             duration: start.elapsed(),
                             to_cache,
                         });
@@ -375,27 +403,158 @@ fn update_navmesh_asset(
         Entity,
         &Handle<NavMesh>,
         &NavmeshUpdateTask,
+        &GlobalTransform,
         &mut NavMeshStatus,
         &mut NavMeshSettings,
     )>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
     mut diagnostics: Diagnostics,
 ) {
-    for (entity, handle, task, mut status, mut settings) in &mut live_navmeshes {
+    for (entity, handle, task, global_transform, mut status, mut settings) in &mut live_navmeshes {
         let mut task = task.0.write().unwrap();
-        if task.is_some() {
-            let TaskResult {
-                navmesh,
-                duration,
-                to_cache,
-            } = task.take().unwrap();
+        if let Some(TaskResult {
+            layer,
+            duration,
+            to_cache,
+        }) = task.take()
+        {
+            let mut failed_stitches = vec![];
             commands.entity(entity).remove::<NavmeshUpdateTask>();
             // This is internal and shouldn't trigger change detection
             settings.bypass_change_detection().cached = Some(to_cache);
+            debug!(
+                "navmesh {:?} ({:?}) built{}",
+                handle,
+                entity,
+                if let Some(layer) = &settings.layer {
+                    format!(" (layer {})", layer)
+                } else {
+                    "".to_string()
+                }
+            );
+            let (previous_navmesh_transform, mut mesh, mut previously_failed) =
+                if let Some(navmesh) = navmeshes.get(handle) {
+                    if let Some(mesh) = navmesh.building.as_ref().take() {
+                        (
+                            navmesh.transform(),
+                            mesh.mesh.clone(),
+                            mesh.failed_stitches.clone(),
+                        )
+                    } else {
+                        (navmesh.transform(), (*navmesh.get()).clone(), vec![])
+                    }
+                } else {
+                    (
+                        Transform::IDENTITY,
+                        Mesh {
+                            layers: vec![],
+                            delta: settings.default_delta,
+                        },
+                        vec![],
+                    )
+                };
 
-            debug!("navmesh built");
-            navmeshes.insert(handle, navmesh);
-            *status = NavMeshStatus::Built;
+            if let Some(layer_id) = &settings.layer {
+                *status = NavMeshStatus::Built;
+
+                if mesh.layers.len() < *layer_id as usize + 1 {
+                    mesh.layers.resize(
+                        mesh.layers.len().max(*layer_id as usize + 1),
+                        Layer::default(),
+                    );
+                }
+                mesh.remove_stitches_to_layer(*layer_id);
+                mesh.layers[*layer_id as usize] = layer;
+                // TODO: rotate this to get the value in the correct space
+                mesh.layers[*layer_id as usize].offset = global_transform.translation().xz();
+
+                let stitch_segments =
+                    settings
+                        .stitches
+                        .iter()
+                        .filter_map(|((from, to), segment)| {
+                            let other = if from == layer_id {
+                                to
+                            } else if to == layer_id {
+                                from
+                            } else {
+                                return None;
+                            };
+                            Some((other, [segment[0], segment[1]]))
+                        });
+                let layer_from = &mesh.layers[*layer_id as usize];
+                let mut stitch_vertices = vec![];
+                for (target_layer, stitch_segment) in stitch_segments {
+                    if mesh.layers.len() < *target_layer as usize + 1 {
+                        *status = NavMeshStatus::Invalid;
+                        continue;
+                    }
+                    if mesh.layers[*target_layer as usize].vertices.is_empty() {
+                        *status = NavMeshStatus::Invalid;
+                        continue;
+                    }
+                    let layer_to = &mesh.layers[*target_layer as usize];
+
+                    let indices_from = layer_from.get_vertices_on_segment(
+                        stitch_segment[0] - layer_from.offset,
+                        stitch_segment[1] - layer_from.offset,
+                    );
+                    let indices_to = layer_to.get_vertices_on_segment(
+                        stitch_segment[0] - layer_to.offset,
+                        stitch_segment[1] - layer_to.offset,
+                    );
+                    if indices_from.len() != indices_to.len() {
+                        warn!(
+                            "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?}",
+                            handle, entity, layer_id, target_layer
+                        );
+                        *status = NavMeshStatus::Failed;
+                        failed_stitches.push((*layer_id, *target_layer));
+                        continue;
+                    }
+
+                    previously_failed
+                        .retain(|(from, to)| !(*from == *layer_id && *to == *target_layer));
+                    previously_failed
+                        .retain(|(from, to)| !(*to == *layer_id && *from == *target_layer));
+                    let stitch_indices = indices_from
+                        .into_iter()
+                        .zip(indices_to.into_iter())
+                        .collect::<Vec<_>>();
+                    stitch_vertices.push(((*layer_id, *target_layer), stitch_indices));
+                }
+                mesh.restitch_layer_at_vertices(*layer_id, stitch_vertices, false);
+
+                if matches!(*status, NavMeshStatus::Built) && previously_failed.is_empty() {
+                    let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
+                    if *layer_id == 0 {
+                        navmesh.set_transform(global_transform.compute_transform());
+                    } else {
+                        navmesh.set_transform(previous_navmesh_transform);
+                    }
+                    navmeshes.insert(handle, navmesh);
+                } else {
+                    if let Some(navmesh) = navmeshes.get_mut(handle) {
+                        failed_stitches.extend(previously_failed);
+                        failed_stitches.sort_unstable();
+                        failed_stitches.dedup();
+                        navmesh.building = Some(crate::BuildingMesh {
+                            mesh,
+                            failed_stitches,
+                        });
+                    } else {
+                        let navmesh = NavMesh::from_polyanya_mesh(mesh);
+                        navmeshes.insert(handle, navmesh);
+                        *status = NavMeshStatus::Invalid;
+                    }
+                }
+            } else {
+                mesh.layers = vec![layer];
+                let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
+                navmesh.set_transform(global_transform.compute_transform());
+                navmeshes.insert(handle, navmesh);
+                *status = NavMeshStatus::Built;
+            }
             diagnostics.add_measurement(&NAVMESH_BUILD_DURATION, || duration.as_secs_f64());
         }
     }
@@ -429,9 +588,12 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
     for NavmeshUpdaterPlugin<Obstacle, Marker>
 {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, trigger_navmesh_build::<Marker, Obstacle>)
-            .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
-            .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));
+        app.add_systems(
+            PostUpdate,
+            trigger_navmesh_build::<Marker, Obstacle>.after(sync_simple_transforms),
+        )
+        .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
+        .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));
 
         #[cfg(feature = "avian2d")]
         {

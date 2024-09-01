@@ -82,11 +82,11 @@ impl ObstacleSource for PrimitiveObstacle {
         let world_to_mesh = world_to_mesh(navmesh_transform);
 
         let to_world = |v: Vec2| {
-            let mut v = v.extend(0.0);
+            let mut v = v.extend(0.0).xzy();
             v = if up.is_negative_bitmask().count_ones() % 2 == 1 {
-                Quat::from_rotation_arc(-Vec3::Y, up.into()).mul_vec3(v)
-            } else {
                 Quat::from_rotation_arc(Vec3::Y, up.into()).mul_vec3(v)
+            } else {
+                Quat::from_rotation_arc(-Vec3::Y, up.into()).mul_vec3(v)
             };
             transform.transform_point(v)
         };

@@ -19,6 +19,7 @@ impl ObstacleSource for Aabb {
         let world_to_mesh = world_to_mesh(navmesh_transform);
 
         let to_world = |v: Vec3| {
+            let v = v.xzy();
             let v = if up.is_negative_bitmask().count_ones() % 2 == 1 {
                 Quat::from_rotation_arc(-Vec3::Y, up.into()).mul_vec3(v)
             } else {

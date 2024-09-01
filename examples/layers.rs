@@ -34,7 +34,7 @@ fn main() {
         ))
         .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 10.0))
         .add_systems(Startup, (setup,))
-        .add_systems(Update, (rotate_camera, despawn_obstacles))
+        .add_systems(Update, (rotate_camera, despawn_obstacles, display_path))
         .add_systems(
             Update,
             spawn_obstacles.run_if(on_timer(Duration::from_secs_f32(0.5))),
@@ -69,14 +69,13 @@ fn setup(
         ..default()
     });
 
-    // GROUND LEVEL
-    {
-        commands.spawn((
+    // ground level
+    commands.spawn(SpatialBundle::default()).with_children(|p| {
+        p.spawn((
             NavMeshBundle {
                 settings: NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(-(MESH_UNIT as f32 / 2.0), -(MESH_UNIT as f32 * 2.0)),
-                        vec2(MESH_UNIT as f32 / 2.0, -(MESH_UNIT as f32 * 2.0)),
                         vec2(MESH_UNIT as f32 * 2.5, -(MESH_UNIT as f32 * 2.0)),
                         vec2(MESH_UNIT as f32 * 2.5, -(MESH_UNIT as f32 * 2.5)),
                         vec2(MESH_UNIT as f32 * 2.5, -(MESH_UNIT as f32 * 3.5)),
@@ -90,7 +89,32 @@ fn setup(
                     ]),
                     simplify: 0.001,
                     merge_steps: 0,
-                    up: Some((Dir3::Y, 1.0)),
+                    // up: Some((Dir3::Y, 1.0)),
+                    upward_shift: 1.0,
+                    layer: Some(0),
+                    stitches: vec![
+                        (
+                            (0, 2),
+                            [
+                                vec2(MESH_UNIT as f32 / 2.0, -(MESH_UNIT as f32 / 2.0)),
+                                vec2(MESH_UNIT as f32 / 2.0, MESH_UNIT as f32 / 2.0),
+                            ],
+                        ),
+                        (
+                            (0, 3),
+                            [
+                                vec2(MESH_UNIT as f32 * 2.5, -(MESH_UNIT as f32 * 2.5)),
+                                vec2(MESH_UNIT as f32 * 2.5, -(MESH_UNIT as f32 * 3.5)),
+                            ],
+                        ),
+                        (
+                            (1, 2),
+                            [
+                                vec2(MESH_UNIT as f32 * 2.5, -(MESH_UNIT as f32 * 2.5)),
+                                vec2(MESH_UNIT as f32 * 2.5, -(MESH_UNIT as f32 * 3.5)),
+                            ],
+                        ),
+                    ],
                     ..default()
                 },
                 transform: Transform::from_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
@@ -100,7 +124,7 @@ fn setup(
             },
             NavMeshDebug(palettes::tailwind::FUCHSIA_600.into()),
         ));
-        commands.spawn((
+        p.spawn((
             PbrBundle {
                 mesh: meshes.add(Plane3d::new(
                     Vec3::Z,
@@ -117,7 +141,7 @@ fn setup(
             RigidBody::Static,
             Collider::cuboid(MESH_UNIT as f32, MESH_UNIT as f32 * 2.5, 0.01),
         ));
-        commands.spawn((
+        p.spawn((
             PbrBundle {
                 mesh: meshes.add(Plane3d::new(
                     Vec3::Z,
@@ -137,7 +161,7 @@ fn setup(
             RigidBody::Static,
             Collider::cuboid(MESH_UNIT as f32 * 2.0, MESH_UNIT as f32, 0.1),
         ));
-        commands.spawn((
+        p.spawn((
             PbrBundle {
                 mesh: meshes.add(Plane3d::new(
                     Vec3::Z,
@@ -157,202 +181,197 @@ fn setup(
             RigidBody::Static,
             Collider::cuboid(MESH_UNIT as f32, MESH_UNIT as f32 * 2.5, 0.1),
         ));
-    }
+    });
 
-    // UPPER LEVEL
-    {
-        commands.spawn((
-            NavMeshBundle {
-                settings: NavMeshSettings {
-                    fixed: Triangulation::from_outer_edges(&[
-                        vec2(-(MESH_UNIT as f32 / 2.0), MESH_UNIT as f32 * 1.0),
-                        vec2(-(MESH_UNIT as f32 / 2.0), -(MESH_UNIT as f32 * 2.0)),
-                        vec2(MESH_UNIT as f32 / 2.0, -(MESH_UNIT as f32 * 2.0)),
-                        vec2(MESH_UNIT as f32 / 2.0, -(MESH_UNIT as f32)),
-                        vec2(MESH_UNIT as f32 / 2.0, MESH_UNIT as f32 * 2.0),
-                        vec2(-(MESH_UNIT as f32 / 2.0), MESH_UNIT as f32 * 2.0),
-                    ]),
-                    simplify: 0.001,
-                    merge_steps: 0,
-                    up: Some((Dir3::Y, 1.0)),
+    // upper level
+    commands
+        .spawn(SpatialBundle::from_transform(
+            Transform::from_translation(vec3(
+                MESH_UNIT as f32 * 3.0 / 2.0,
+                MESH_UNIT as f32 / 4.0,
+                MESH_UNIT as f32 * 3.0 / 2.0,
+            ))
+            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+        ))
+        .with_children(|p| {
+            p.spawn((
+                NavMeshBundle {
+                    settings: NavMeshSettings {
+                        fixed: Triangulation::from_outer_edges(&[
+                            vec2(-(MESH_UNIT as f32 / 2.0), MESH_UNIT as f32 * 1.0),
+                            vec2(-(MESH_UNIT as f32 / 2.0), -(MESH_UNIT as f32 * 2.0)),
+                            vec2(MESH_UNIT as f32 / 2.0, -(MESH_UNIT as f32 * 2.0)),
+                            vec2(MESH_UNIT as f32 / 2.0, -(MESH_UNIT as f32)),
+                            vec2(MESH_UNIT as f32 / 2.0, MESH_UNIT as f32 * 2.0),
+                            vec2(-(MESH_UNIT as f32 / 2.0), MESH_UNIT as f32 * 2.0),
+                        ]),
+                        simplify: 0.001,
+                        merge_steps: 0,
+                        upward_shift: 1.0,
+                        // up: Some((Dir3::Y, 1.0)),
+                        layer: Some(1),
+                        ..default()
+                    },
+                    update_mode: NavMeshUpdateMode::Direct,
+                    handle: Handle::<NavMesh>::weak_from_u128(0),
                     ..default()
                 },
-                transform: Transform::from_translation(vec3(
-                    MESH_UNIT as f32 * 3.0 / 2.0,
-                    MESH_UNIT as f32 / 4.0,
-                    MESH_UNIT as f32 * 3.0 / 2.0,
-                ))
-                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                update_mode: NavMeshUpdateMode::Direct,
-                handle: Handle::<NavMesh>::weak_from_u128(1),
-                ..default()
-            },
-            NavMeshDebug(palettes::tailwind::YELLOW_600.into()),
-        ));
-        commands.spawn((
-            PbrBundle {
-                mesh: meshes.add(Plane3d::new(
-                    Vec3::Z,
-                    Vec2::new(MESH_UNIT as f32 / 2.0, MESH_UNIT as f32 * 2.0),
-                )),
-                material: materials.add(StandardMaterial::from(Color::Srgba(
-                    palettes::tailwind::BLUE_800.with_alpha(1.0),
-                ))),
-                transform: Transform::from_translation(vec3(
-                    MESH_UNIT as f32 * 3.0 / 2.0,
-                    MESH_UNIT as f32 / 4.0,
-                    MESH_UNIT as f32 * 3.0 / 2.0,
-                ))
-                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                ..default()
-            },
-            RigidBody::Static,
-            Collider::cuboid(MESH_UNIT as f32, MESH_UNIT as f32 * 4.0, 0.01),
-        ));
-    }
+                NavMeshDebug(palettes::tailwind::YELLOW_600.into()),
+            ));
+            p.spawn((
+                PbrBundle {
+                    mesh: meshes.add(Plane3d::new(
+                        Vec3::Z,
+                        Vec2::new(MESH_UNIT as f32 / 2.0, MESH_UNIT as f32 * 2.0),
+                    )),
+                    material: materials.add(StandardMaterial::from(Color::Srgba(
+                        palettes::tailwind::BLUE_800.with_alpha(1.0),
+                    ))),
+                    ..default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(MESH_UNIT as f32, MESH_UNIT as f32 * 4.0, 0.01),
+            ));
+        });
 
     // RAMPS
-    {
-        commands.spawn((
-            NavMeshBundle {
-                settings: NavMeshSettings {
-                    fixed: Triangulation::from_outer_edges(&[
-                        vec2(
-                            -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
-                            -(MESH_UNIT as f32 / 2.0),
-                        ),
-                        vec2(
-                            MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
-                            -(MESH_UNIT as f32 / 2.0),
-                        ),
-                        vec2(
-                            MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
-                            MESH_UNIT as f32 / 2.0,
-                        ),
-                        vec2(
-                            -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
-                            MESH_UNIT as f32 / 2.0,
-                        ),
-                    ]),
-                    simplify: 0.001,
-                    merge_steps: 0,
-                    up: Some((Dir3::new(vec3(-1.0, 2.0, 0.0)).unwrap(), 0.1)),
+    commands
+        .spawn(SpatialBundle::from_transform(
+            Transform::from_translation(vec3(
+                MESH_UNIT as f32 / 2.0 + MESH_UNIT as f32 / 4.0,
+                MESH_UNIT as f32 / 8.0,
+                0.0,
+            ))
+            .with_rotation(
+                Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_y((-0.5_f32).atan()),
+            ),
+        ))
+        .with_children(|p| {
+            p.spawn((
+                NavMeshBundle {
+                    settings: NavMeshSettings {
+                        fixed: Triangulation::from_outer_edges(&[
+                            vec2(
+                                -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
+                                -(MESH_UNIT as f32 / 2.0),
+                            ),
+                            vec2(
+                                MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
+                                -(MESH_UNIT as f32 / 2.0),
+                            ),
+                            vec2(
+                                MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
+                                MESH_UNIT as f32 / 2.0,
+                            ),
+                            vec2(
+                                -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
+                                MESH_UNIT as f32 / 2.0,
+                            ),
+                        ]),
+                        simplify: 0.001,
+                        merge_steps: 0,
+                        // up: Some((Dir3::new(vec3(-1.0, 2.0, 0.0)).unwrap(), 0.5)),
+                        upward_shift: 0.5,
+                        layer: Some(2),
+                        ..default()
+                    },
+                    update_mode: NavMeshUpdateMode::Direct,
+                    handle: Handle::<NavMesh>::weak_from_u128(0),
                     ..default()
                 },
-                transform: Transform::from_translation(vec3(
-                    MESH_UNIT as f32 / 2.0 + MESH_UNIT as f32 / 4.0,
-                    MESH_UNIT as f32 / 8.0,
-                    0.0,
-                ))
-                .with_rotation(
-                    Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_y((-0.5_f32).atan()),
+                NavMeshDebug(palettes::tailwind::RED_600.into()),
+            ));
+            p.spawn((
+                PbrBundle {
+                    mesh: meshes.add(Plane3d::new(
+                        Vec3::Z,
+                        Vec2::new(
+                            MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
+                            MESH_UNIT as f32 / 2.0,
+                        ),
+                    )),
+                    material: materials.add(StandardMaterial::from(Color::Srgba(
+                        palettes::tailwind::BLUE_800,
+                    ))),
+                    ..default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(
+                    MESH_UNIT as f32 / 2.0 / (0.5_f32).atan().cos(),
+                    MESH_UNIT as f32,
+                    0.01,
                 ),
-                update_mode: NavMeshUpdateMode::Direct,
-                handle: Handle::<NavMesh>::weak_from_u128(2),
-                ..default()
-            },
-            NavMeshDebug(palettes::tailwind::RED_600.into()),
-        ));
-        commands.spawn((
-            PbrBundle {
-                mesh: meshes.add(Plane3d::new(
-                    Vec3::Z,
-                    Vec2::new(
-                        MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
-                        MESH_UNIT as f32 / 2.0,
-                    ),
-                )),
-                material: materials.add(StandardMaterial::from(Color::Srgba(
-                    palettes::tailwind::BLUE_800,
-                ))),
-                transform: Transform::from_translation(vec3(
-                    MESH_UNIT as f32 / 2.0 + MESH_UNIT as f32 / 4.0,
-                    MESH_UNIT as f32 / 8.0,
-                    0.0,
-                ))
-                .with_rotation(
-                    Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_y((-0.5_f32).atan()),
-                ),
-                ..default()
-            },
-            RigidBody::Static,
-            Collider::cuboid(
-                MESH_UNIT as f32 / 2.0 / (0.5_f32).atan().cos(),
-                MESH_UNIT as f32,
-                0.01,
-            ),
-        ));
+            ));
+        });
 
-        commands.spawn((
-            NavMeshBundle {
-                settings: NavMeshSettings {
-                    fixed: Triangulation::from_outer_edges(&[
-                        vec2(
-                            -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
-                            -(MESH_UNIT as f32 / 2.0),
-                        ),
-                        vec2(
-                            MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
-                            -(MESH_UNIT as f32 / 2.0),
-                        ),
-                        vec2(
-                            MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
-                            MESH_UNIT as f32 / 2.0,
-                        ),
-                        vec2(
-                            -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
-                            MESH_UNIT as f32 / 2.0,
-                        ),
-                    ]),
-                    simplify: 0.001,
-                    merge_steps: 0,
-                    up: Some((Dir3::new(vec3(1.0, 2.0, 0.0)).unwrap(), 0.1)),
+    commands
+        .spawn(SpatialBundle::from_transform(
+            Transform::from_translation(vec3(
+                MESH_UNIT as f32 / 2.0 + MESH_UNIT as f32 / 4.0 + MESH_UNIT as f32 * 3.0 / 2.0,
+                MESH_UNIT as f32 / 8.0,
+                MESH_UNIT as f32 * 3.0,
+            ))
+            .with_rotation(
+                Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_y(0.5_f32.atan()),
+            ),
+        ))
+        .with_children(|p| {
+            p.spawn((
+                NavMeshBundle {
+                    settings: NavMeshSettings {
+                        fixed: Triangulation::from_outer_edges(&[
+                            vec2(
+                                -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
+                                -(MESH_UNIT as f32 / 2.0),
+                            ),
+                            vec2(
+                                MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
+                                -(MESH_UNIT as f32 / 2.0),
+                            ),
+                            vec2(
+                                MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
+                                MESH_UNIT as f32 / 2.0,
+                            ),
+                            vec2(
+                                -(MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos()),
+                                MESH_UNIT as f32 / 2.0,
+                            ),
+                        ]),
+                        simplify: 0.001,
+                        merge_steps: 0,
+                        // up: Some((Dir3::new(vec3(1.0, 2.0, 0.0)).unwrap(), 0.5)),
+                        upward_shift: 0.5,
+                        layer: Some(3),
+                        ..default()
+                    },
+                    update_mode: NavMeshUpdateMode::Direct,
+                    handle: Handle::<NavMesh>::weak_from_u128(0),
                     ..default()
                 },
-                transform: Transform::from_translation(vec3(
-                    MESH_UNIT as f32 / 2.0 + MESH_UNIT as f32 / 4.0 + MESH_UNIT as f32 * 3.0 / 2.0,
-                    MESH_UNIT as f32 / 8.0,
-                    MESH_UNIT as f32 * 3.0,
-                ))
-                .with_rotation(
-                    Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_y(0.5_f32.atan()),
+                NavMeshDebug(palettes::tailwind::RED_600.into()),
+            ));
+            p.spawn((
+                PbrBundle {
+                    mesh: meshes.add(Plane3d::new(
+                        Vec3::Z,
+                        Vec2::new(
+                            MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
+                            MESH_UNIT as f32 / 2.0,
+                        ),
+                    )),
+                    material: materials.add(StandardMaterial::from(Color::Srgba(
+                        palettes::tailwind::BLUE_800,
+                    ))),
+                    ..default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(
+                    MESH_UNIT as f32 / 2.0 / (0.5_f32).atan().cos(),
+                    MESH_UNIT as f32,
+                    0.01,
                 ),
-                update_mode: NavMeshUpdateMode::Direct,
-                handle: Handle::<NavMesh>::weak_from_u128(3),
-                ..default()
-            },
-            NavMeshDebug(palettes::tailwind::RED_600.into()),
-        ));
-        commands.spawn((
-            PbrBundle {
-                mesh: meshes.add(Plane3d::new(
-                    Vec3::Z,
-                    Vec2::new(
-                        MESH_UNIT as f32 / 4.0 / (0.5_f32).atan().cos(),
-                        MESH_UNIT as f32 / 2.0,
-                    ),
-                )),
-                material: materials.add(StandardMaterial::from(Color::Srgba(
-                    palettes::tailwind::BLUE_800,
-                ))),
-                transform: Transform::from_translation(vec3(
-                    MESH_UNIT as f32 / 2.0 + MESH_UNIT as f32 / 4.0 + MESH_UNIT as f32 * 3.0 / 2.0,
-                    MESH_UNIT as f32 / 8.0,
-                    MESH_UNIT as f32 * 3.0,
-                ))
-                .with_rotation(
-                    Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_y(0.5_f32.atan()),
-                ),
-                ..default()
-            },
-            RigidBody::Static,
-            Collider::cuboid(
-                MESH_UNIT as f32 / 2.0 / (0.5_f32).atan().cos(),
-                MESH_UNIT as f32,
-                0.01,
-            ),
-        ));
-    }
+            ));
+        });
 }
 
 fn rotate_camera(time: Res<Time>, mut query: Query<&mut Transform, With<Camera3d>>) {
@@ -411,5 +430,27 @@ fn despawn_obstacles(
         if obstacle.0.tick(time.delta()).just_finished() {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos) {
+    let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
+        return;
+    };
+    for points in [(
+        vec2(0.0, 0.0),
+        vec2(MESH_UNIT as f32 * 3.0, -(MESH_UNIT as f32 * 3.0)),
+    )] {
+        let Some(path) = navmesh.path(points.0, points.1) else {
+            println!("zut");
+            continue;
+        };
+        let mut path = path
+            .path
+            .iter()
+            .map(|v| vec3(v.x, 0.5, -v.y))
+            .collect::<Vec<_>>();
+        path.insert(0, vec3(points.0.x, 0.5, -points.0.y));
+        gizmos.linestrip(path, palettes::tailwind::RED_600);
     }
 }

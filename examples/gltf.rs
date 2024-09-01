@@ -260,7 +260,7 @@ fn setup_scene(
                         emissive: (palettes::css::BLUE * 5.0).into(),
                         ..default()
                     }),
-                    transform: Transform::from_xyz(-1.0, 0.0, -2.0),
+                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
                     ..Default::default()
                 },
                 Object(None),

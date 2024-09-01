@@ -336,6 +336,7 @@ pub fn update_stats<T: Component>(
         NavMeshStatus::Built => palettes::tailwind::GREEN_400.into(),
         NavMeshStatus::Failed => palettes::tailwind::RED_600.into(),
         NavMeshStatus::Cancelled => palettes::tailwind::AMBER_500.into(),
+        NavMeshStatus::Invalid => palettes::tailwind::RED_800.into(),
     };
     text.sections[3].value = format!("{}", obstacles.iter().len());
     text.sections[5].value = format!(

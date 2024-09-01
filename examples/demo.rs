@@ -232,7 +232,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
         transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
-        update_mode: NavMeshUpdateMode::Debounced(0.2),
+        update_mode: NavMeshUpdateMode::Direct,
         ..default()
     });
 

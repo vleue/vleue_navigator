@@ -63,6 +63,7 @@ default-features = false
 default = ["debug-with-gizmos", "avian3d"]
 linuxci = ["bevy/x11"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
+detailed-layers = ["polyanya/detailed-layers"]
 
 [[example]]
 name = "auto_navmesh_avian2d"
@@ -79,3 +80,7 @@ required-features = ["avian3d", "avian3d/collider-from-mesh"]
 [[example]]
 name = "layers"
 required-features = ["avian3d"]
+
+[[example]]
+name = "layers_inclined"
+required-features = ["avian3d", "detailed-layers"]
