@@ -505,9 +505,12 @@ fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos) {
         //     vec2(MESH_UNIT as f32 * 3.0, MESH_UNIT as f32 * 3.0),
         // ),
         (
-            vec2((MESH_UNIT as f32) / 4.0, -(MESH_UNIT as f32) / 4.0),
-            // vec2(MESH_UNIT as f32 * 1.25, MESH_UNIT as f32 * 0.9),
-            vec2(MESH_UNIT as f32 * 2.75, MESH_UNIT as f32 * 3.25),
+            vec2((MESH_UNIT as f32) * 1.5, -(MESH_UNIT as f32) / 4.0),
+            vec2(MESH_UNIT as f32 * 1.5, MESH_UNIT as f32 * 3.25),
+        ),
+        (
+            vec2(MESH_UNIT as f32 * 1.5, MESH_UNIT as f32 * 3.25),
+            vec2((MESH_UNIT as f32) * 1.5, -(MESH_UNIT as f32) / 4.0),
         ),
     ] {
         let start = navmesh.get().get_point_layer(points.0)[0];
@@ -537,10 +540,13 @@ fn point_to_height(point: Vec2, layer: u8) -> f32 {
     match layer {
         0 => 0.5,
         1 => top + 0.5,
-        // TODO: check those
-        2 => (point.x - (MESH_UNIT as f32 / 2.0)) / MESH_UNIT as f32 * top + 0.5,
-        // TODO: those are definitely wrong
-        3 => (point.x - MESH_UNIT as f32) / MESH_UNIT as f32 * top + 0.5,
+        2 => (point.x - (MESH_UNIT as f32 / 2.0)) / (MESH_UNIT as f32 / 2.0) * top + 0.5,
+        3 => {
+            (MESH_UNIT as f32 / 2.0 - (point.x - (MESH_UNIT as f32 * 2.0)))
+                / (MESH_UNIT as f32 / 2.0)
+                * top
+                + 0.5
+        }
         x => unreachable!("layer {:?}", x),
     }
 }
