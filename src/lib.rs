@@ -408,7 +408,9 @@ pub fn display_navmesh(
         };
         if let Some(navmesh) = navmeshes.get(mesh) {
             let navmesh = navmesh.get();
-            let layer = &navmesh.layers[settings.layer.unwrap_or(0) as usize];
+            let Some(layer) = &navmesh.layers.get(settings.layer.unwrap_or(0) as usize) else {
+                continue;
+            };
             #[cfg(feature = "detailed-layers")]
             let scale = layer.scale;
             #[cfg(not(feature = "detailed-layers"))]
