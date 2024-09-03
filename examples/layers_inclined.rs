@@ -3,7 +3,6 @@ use std::{f32::consts::FRAC_PI_2, time::Duration};
 use avian3d::{math::Vector, prelude::*};
 use bevy::{
     color::palettes,
-    input::common_conditions::input_just_pressed,
     math::{vec2, vec3},
     prelude::*,
     time::common_conditions::on_timer,
