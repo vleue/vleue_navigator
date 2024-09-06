@@ -239,28 +239,8 @@ impl NavMesh {
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
-        // println!("====================");
-        // for layer in &self.mesh.layers {
-        //     println!("----------------");
-        //     println!("  {:?}", layer.polygons);
-        //     for vertex in &layer.vertices {
-        //         println!("    {:?}", vertex);
-        //     }
-        // }
         let inner_from = self.world_to_mesh().transform_point(from).xy();
-        // println!(
-        //     "{:?} -> {:?} : {:?}",
-        //     from,
-        //     inner_from,
-        //     self.mesh.point_in_mesh(inner_from)
-        // );
         let inner_to = self.world_to_mesh().transform_point(to).xy();
-        // println!(
-        //     "   {:?} -> {:?} : {:?}",
-        //     to,
-        //     inner_to,
-        //     self.mesh.point_in_mesh(inner_to)
-        // );
         let path = self.mesh.path(inner_from, inner_to);
         path.map(|path| self.transform_path(path))
     }
@@ -415,9 +395,6 @@ pub fn display_navmesh(
             let scale = layer.scale;
             #[cfg(not(feature = "detailed-layers"))]
             let scale = Vec2::ONE;
-            // println!("====================");
-            // println!("{:?}", layer.vertices);
-            // println!("{:?}", layer.polygons);
             for polygon in &layer.polygons {
                 let mut v = polygon
                     .vertices

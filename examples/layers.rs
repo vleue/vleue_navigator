@@ -489,7 +489,6 @@ fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos) {
             continue;
         };
         let Some(path) = navmesh.path(points.0, points.1) else {
-            println!("zut");
             continue;
         };
         let mut path = path
