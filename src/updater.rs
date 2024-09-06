@@ -397,16 +397,22 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     }
 }
 
+type NavMeshWaitingUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
+    'world,
+    'state,
+    (
+        Entity,
+        &'a Handle<NavMesh>,
+        &'b NavmeshUpdateTask,
+        &'c GlobalTransform,
+        &'d mut NavMeshStatus,
+        &'e mut NavMeshSettings,
+    ),
+>;
+
 fn update_navmesh_asset(
     mut commands: Commands,
-    mut live_navmeshes: Query<(
-        Entity,
-        &Handle<NavMesh>,
-        &NavmeshUpdateTask,
-        &GlobalTransform,
-        &mut NavMeshStatus,
-        &mut NavMeshSettings,
-    )>,
+    mut live_navmeshes: NavMeshWaitingUpdateQuery,
     mut navmeshes: ResMut<Assets<NavMesh>>,
     mut diagnostics: Diagnostics,
 ) {
@@ -434,7 +440,7 @@ fn update_navmesh_asset(
             );
             let (previous_navmesh_transform, mut mesh, mut previously_failed) =
                 if let Some(navmesh) = navmeshes.get(handle) {
-                    if let Some(mesh) = navmesh.building.as_ref().take() {
+                    if let Some(mesh) = navmesh.building.as_ref() {
                         (
                             navmesh.transform(),
                             mesh.mesh.clone(),

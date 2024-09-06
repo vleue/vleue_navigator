@@ -13,15 +13,15 @@ use vleue_navigator::prelude::*;
 
 const MESH_UNIT: u32 = 100;
 const UPDATE_MODE: NavMeshUpdateMode = NavMeshUpdateMode::Direct;
-const UP_SHIFT: f32 = 1.0;
+const UP_SHIFT: f32 = 0.1;
 const RATIO: f32 = 0.8;
 
 #[derive(Component)]
 struct Obstacle(Timer);
 
 fn main() {
-    let mut app = App::new();
-    app.insert_resource(ClearColor(palettes::css::BLACK.into()))
+    App::new()
+        .insert_resource(ClearColor(palettes::css::BLACK.into()))
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -42,17 +42,8 @@ fn main() {
         .add_systems(
             Update,
             spawn_obstacles.run_if(on_timer(Duration::from_secs_f32(0.5))),
-        );
-
-    // let mut config_store = app
-    //     .world_mut()
-    //     .get_resource_mut::<GizmoConfigStore>()
-    //     .unwrap();
-    // for (_, config, _) in config_store.iter_mut() {
-    //     config.depth_bias = -1.0;
-    // }
-
-    app.run();
+        )
+        .run();
 }
 
 fn rotate_camera(time: Res<Time>, mut query: Query<&mut Transform, With<Camera3d>>) {
@@ -101,7 +92,6 @@ fn setup(
                         ]),
                         simplify: 0.001,
                         merge_steps: 3,
-                        // up: Some((Dir3::Y, UP_SHIFT)),
                         upward_shift: UP_SHIFT,
                         layer: Some(0),
                         stitches: vec![
@@ -166,7 +156,6 @@ fn setup(
                         ]),
                         simplify: 0.001,
                         merge_steps: 3,
-                        // up: Some((Dir3::new(vec3(-2.0 * RATIO, 2.0, 0.0)).unwrap(), UP_SHIFT)),
                         upward_shift: UP_SHIFT,
                         layer: Some(1),
                         scale: vec2(length / MESH_UNIT as f32, 1.0),
@@ -234,7 +223,6 @@ fn setup(
                         ]),
                         simplify: 0.001,
                         merge_steps: 3,
-                        // up: Some((Dir3::Y, UP_SHIFT)),
                         upward_shift: UP_SHIFT,
                         layer: Some(2),
                         stitches: vec![
@@ -403,7 +391,6 @@ fn display_path(
         .iter()
         .any(|status| matches!(status, NavMeshStatus::Invalid))
     {
-        warn!("skipping pathfinding, at least one mesh is invalid");
         return;
     }
     let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
