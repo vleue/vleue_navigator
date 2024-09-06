@@ -249,7 +249,7 @@ fn setup(
             ));
         });
 
-    // RAMPS
+    // Ramps
     commands
         .spawn(SpatialBundle::from_transform(
             Transform::from_translation(vec3(
