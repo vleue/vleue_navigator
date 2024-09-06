@@ -321,11 +321,8 @@ fn on_click(
                                 custom_size: Some(Vec2::ONE),
                                 ..default()
                             },
-                            transform: Transform::from_translation(
-                                position.extend(1.0),
-                                // (position - screen / 2.0).extend(1.0),
-                            )
-                            .with_scale(Vec3::splat(5.0)),
+                            transform: Transform::from_translation(position.extend(1.0))
+                                .with_scale(Vec3::splat(5.0)),
                             ..default()
                         },
                         Navigator { speed: 100.0 },

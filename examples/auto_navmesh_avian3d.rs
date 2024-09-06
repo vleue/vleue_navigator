@@ -189,8 +189,6 @@ fn setup(
                 build_timeout: Some(1.0),
                 simplify: 0.005,
                 merge_steps: 0,
-                // up: Some((Dir3::Y, 0.1)),
-                // upward_shift: 0.0,
                 ..default()
             },
             update_mode: NavMeshUpdateMode::Direct,

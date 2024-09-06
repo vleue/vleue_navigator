@@ -10,38 +10,29 @@ use vleue_navigator::prelude::*;
 struct Obstacle;
 
 fn main() {
-    let mut app = App::new();
-    app.add_plugins((
-        DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Navmesh with Polyanya".to_string(),
-                fit_canvas_to_parent: true,
+    App::new()
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }),
-        PhysicsPlugins::default().with_length_unit(20.0),
-        VleueNavigatorPlugin,
-        NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
-    ))
-    .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.1)))
-    .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 0.8))
-    .add_systems(Startup, setup)
-    .add_systems(Update, (despawn, rotate_camera))
-    .add_systems(
-        Update,
-        spawn_obstacles.run_if(on_timer(Duration::from_secs_f32(2.0))),
-    );
-
-    // let mut config_store = app
-    //     .world_mut()
-    //     .get_resource_mut::<GizmoConfigStore>()
-    //     .unwrap();
-    // for (_, config, _) in config_store.iter_mut() {
-    //     config.depth_bias = -1.0;
-    // }
-
-    app.run();
+            PhysicsPlugins::default().with_length_unit(20.0),
+            VleueNavigatorPlugin,
+            NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
+        ))
+        .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.1)))
+        .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 0.8))
+        .add_systems(Startup, setup)
+        .add_systems(Update, (despawn, rotate_camera))
+        .add_systems(
+            Update,
+            spawn_obstacles.run_if(on_timer(Duration::from_secs_f32(2.0))),
+        )
+        .run();
 }
 
 pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> = Handle::weak_from_u128(0);
@@ -103,7 +94,6 @@ fn setup(
                 simplify: 0.005,
                 merge_steps: 0,
                 upward_shift: 1.0,
-                // up: Some((Dir3::new(vec3(0.0, ANGLE.cos(), ANGLE.sin())).unwrap(), 1.0)),
                 ..default()
             },
             update_mode: NavMeshUpdateMode::Direct,
@@ -137,7 +127,6 @@ fn spawn_obstacles(
             transform: Transform::from_xyz(
                 rand::thread_rng().gen_range(-25.0..25.0),
                 50.0,
-                // 10.0 * ANGLE.signum(),
                 rand::thread_rng().gen_range(-25.0..-10.0),
             )
             .looking_to(

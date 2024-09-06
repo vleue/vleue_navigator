@@ -33,7 +33,6 @@ fn main() {
                 ..default()
             }),
             PhysicsPlugins::default().with_length_unit(20.0),
-            // PhysicsDebugPlugin::default(),
             VleueNavigatorPlugin,
             NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
         ))
@@ -151,7 +150,6 @@ fn setup_scene(
             PbrBundle {
                 mesh: mesh.primitives[0].mesh.clone(),
                 material: materials.add(material),
-                // transform: Transform::from_rotation(Quat::from_rotation_y(PI)),
                 ..default()
             },
             RigidBody::Static,
@@ -189,13 +187,10 @@ fn setup_scene(
                     settings: NavMeshSettings {
                         fixed: Triangulation::from_mesh(navmesh.get().as_ref(), 0),
                         build_timeout: Some(5.0),
-                        // up: Some((Dir3::Y, 0.5)),
                         upward_shift: 0.5,
                         ..default()
                     },
-                    // transform: navmesh.transform(),
                     transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                    // update_mode: NavMeshUpdateMode::Debounced(1.0),
                     update_mode: NavMeshUpdateMode::Direct,
                     ..NavMeshBundle::with_default_id()
                 },

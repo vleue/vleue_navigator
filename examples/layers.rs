@@ -224,7 +224,6 @@ fn setup(
                         simplify: 0.001,
                         merge_steps: 2,
                         upward_shift: 1.0,
-                        // up: Some((Dir3::Y, 1.0)),
                         layer: Some(1),
                         stitches: stitches.clone(),
                         ..default()
@@ -331,7 +330,6 @@ fn setup(
                         ]),
                         simplify: 0.001,
                         merge_steps: 2,
-                        // up: Some((Dir3::new(vec3(1.0, 2.0, 0.0)).unwrap(), 0.5)),
                         upward_shift: 0.5,
                         layer: Some(3),
                         scale: vec2(1.0 / (0.5_f32).atan().cos(), 1.0),
