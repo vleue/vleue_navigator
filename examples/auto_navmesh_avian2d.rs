@@ -73,17 +73,17 @@ fn setup(
         Obstacle::Wall,
     ));
 
-    let marble_radius = 15.0;
+    let peg_radius = 15.0;
     let step = 10;
-    let marble_mesh = meshes.add(Circle::new(marble_radius));
-    let marble_material = materials.add(Color::srgb(0.2, 0.7, 0.9));
+    let peg_mesh = meshes.add(Circle::new(peg_radius));
+    let peg_material = materials.add(Color::srgb(0.2, 0.7, 0.9));
 
     for x in (-50..50).step_by(step).skip(1) {
         for (yi, y) in (-50..50).step_by(step).skip(1).enumerate() {
             commands.spawn((
                 MaterialMesh2dBundle {
-                    mesh: marble_mesh.clone().into(),
-                    material: marble_material.clone(),
+                    mesh: peg_mesh.clone().into(),
+                    material: peg_material.clone(),
                     transform: Transform::from_xyz(
                         (x as f32
                             + if yi % 2 == 0 {
@@ -99,20 +99,20 @@ fn setup(
                     ..default()
                 },
                 RigidBody::Static,
-                Collider::circle(marble_radius as Scalar),
+                Collider::circle(peg_radius as Scalar),
                 Obstacle::Peg,
             ));
         }
     }
 
-    let mesh = meshes.add(Circle::new(5.0));
-    let material = materials.add(Color::srgb(0.7, 0.9, 0.2));
+    let marble_mesh = meshes.add(Circle::new(5.0));
+    let marble_material = materials.add(Color::srgb(0.7, 0.9, 0.2));
     for x in (-50..50).step_by(5).skip(1) {
         let start = Vec3::new(x as f32 * 9.5, 300.0, 0.0);
         commands.spawn((
             MaterialMesh2dBundle {
-                mesh: mesh.clone().into(),
-                material: material.clone(),
+                mesh: marble_mesh.clone().into(),
+                material: marble_material.clone(),
                 transform: Transform::from_translation(start),
                 ..default()
             },
