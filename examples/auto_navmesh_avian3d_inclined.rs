@@ -110,8 +110,7 @@ fn setup(
             transform: Transform::from_xyz(0.0, 0.1, 5.0)
                 .with_rotation(Quat::from_rotation_x(ANGLE) * Quat::from_rotation_x(FRAC_PI_2)),
             handle: Handle::<NavMesh>::weak_from_u128(0),
-
-            ..default()
+            ..NavMeshBundle::with_default_id()
         },
         NavMeshDebug(palettes::tailwind::RED_600.into()),
     ));

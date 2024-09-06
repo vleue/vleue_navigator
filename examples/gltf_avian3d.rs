@@ -197,7 +197,7 @@ fn setup_scene(
                     transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     // update_mode: NavMeshUpdateMode::Debounced(1.0),
                     update_mode: NavMeshUpdateMode::Direct,
-                    ..default()
+                    ..NavMeshBundle::with_default_id()
                 },
                 NavMeshDebug(palettes::tailwind::RED_400.into()),
             ));

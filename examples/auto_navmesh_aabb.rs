@@ -94,7 +94,7 @@ fn setup(mut commands: Commands) {
             0.0,
         ))
         .with_scale(Vec3::splat(FACTOR)),
-        ..default()
+        ..NavMeshBundle::with_default_id()
     });
 
     // Spawn a few obstacles to start with.

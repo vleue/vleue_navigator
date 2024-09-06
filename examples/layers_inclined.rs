@@ -113,8 +113,7 @@ fn setup(
                         ..default()
                     },
                     update_mode: UPDATE_MODE,
-                    handle: Handle::<NavMesh>::weak_from_u128(0),
-                    ..default()
+                    ..NavMeshBundle::with_unique_id(0)
                 },
                 NavMeshDebug(palettes::tailwind::YELLOW_600.into()),
             ));
@@ -178,8 +177,7 @@ fn setup(
                         ..default()
                     },
                     update_mode: UPDATE_MODE,
-                    handle: Handle::<NavMesh>::weak_from_u128(0),
-                    ..default()
+                    ..NavMeshBundle::with_unique_id(0)
                 },
                 NavMeshDebug(palettes::tailwind::BLUE_600.into()),
             ));
@@ -244,8 +242,7 @@ fn setup(
                         ..default()
                     },
                     update_mode: UPDATE_MODE,
-                    handle: Handle::<NavMesh>::weak_from_u128(0),
-                    ..default()
+                    ..NavMeshBundle::with_unique_id(0)
                 },
                 NavMeshDebug(palettes::tailwind::LIME_600.into()),
             ));

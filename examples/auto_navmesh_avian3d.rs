@@ -197,8 +197,7 @@ fn setup(
             transform: Transform::from_xyz(0.0, idx as f32 * height_step + 0.1, 0.0)
                 .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             handle: Handle::<NavMesh>::weak_from_u128(idx as u128),
-
-            ..default()
+            ..NavMeshBundle::with_default_id()
         },));
     }
 }

@@ -142,7 +142,7 @@ fn setup(
             ..default()
         },
         update_mode: NavMeshUpdateMode::Direct,
-        ..default()
+        ..NavMeshBundle::with_default_id()
     });
 }
 

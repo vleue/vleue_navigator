@@ -233,7 +233,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
         update_mode: NavMeshUpdateMode::Direct,
-        ..default()
+        ..NavMeshBundle::with_default_id()
     });
 
     materials.insert(

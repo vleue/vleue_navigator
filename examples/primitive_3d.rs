@@ -117,7 +117,7 @@ fn setup(
             // Mark it for update as soon as obstacles are changed.
             // Other modes available are debounced or manual trigger.
             update_mode: NavMeshUpdateMode::Direct,
-            ..default()
+            ..NavMeshBundle::with_default_id()
         },
         NavMeshDebug(palettes::tailwind::SLATE_800.into()),
     ));

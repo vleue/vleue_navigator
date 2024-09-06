@@ -40,8 +40,21 @@ pub struct NavMeshBundle {
     pub update_mode: NavMeshUpdateMode,
 }
 
-impl Default for NavMeshBundle {
-    fn default() -> Self {
+impl NavMeshBundle {
+    /// Create a new `NavMeshBundle` with the provided id used for the handle of the `NavMesh`.
+    ///
+    /// In case there are several `NavMeshBundle`s with the same handle, they will overwrite each others unless they target different layers.
+    pub fn with_unique_id(id: u128) -> Self {
+        Self {
+            handle: Handle::<NavMesh>::weak_from_u128(id),
+            ..Self::with_default_id()
+        }
+    }
+
+    /// Create a new `NavMeshBundle` with the default handle for the `NavMesh`.
+    ///
+    /// In case there are several `NavMeshBundle`s with the same handle, they will overwrite each others unless they target different layers.
+    pub fn with_default_id() -> Self {
         Self {
             settings: NavMeshSettings::default(),
             status: NavMeshStatus::Invalid,
@@ -174,7 +187,6 @@ fn build_navmesh<T: ObstacleSource>(
     for _ in 0..settings.merge_steps {
         layer.merge_polygons();
     }
-    // layer.offset = mesh_transform.translation.xz() / mesh_transform.scale.xz();
     #[cfg(feature = "detailed-layers")]
     {
         layer.scale = scale;

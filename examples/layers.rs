@@ -140,8 +140,7 @@ fn setup(
                         ..default()
                     },
                     update_mode: NavMeshUpdateMode::Direct,
-                    handle: Handle::<NavMesh>::weak_from_u128(0),
-                    ..default()
+                    ..NavMeshBundle::with_unique_id(0)
                 },
                 NavMeshDebug(palettes::tailwind::FUCHSIA_800.into()),
             ));
@@ -231,8 +230,7 @@ fn setup(
                         ..default()
                     },
                     update_mode: NavMeshUpdateMode::Direct,
-                    handle: Handle::<NavMesh>::weak_from_u128(0),
-                    ..default()
+                    ..NavMeshBundle::with_unique_id(0)
                 },
                 NavMeshDebug(palettes::tailwind::YELLOW_800.into()),
             ));
@@ -283,8 +281,7 @@ fn setup(
                         ..default()
                     },
                     update_mode: NavMeshUpdateMode::Direct,
-                    handle: Handle::<NavMesh>::weak_from_u128(0),
-                    ..default()
+                    ..NavMeshBundle::with_unique_id(0)
                 },
                 NavMeshDebug(palettes::tailwind::TEAL_800.into()),
             ));
@@ -342,8 +339,7 @@ fn setup(
                         ..default()
                     },
                     update_mode: NavMeshUpdateMode::Direct,
-                    handle: Handle::<NavMesh>::weak_from_u128(0),
-                    ..default()
+                    ..NavMeshBundle::with_unique_id(0)
                 },
                 NavMeshDebug(palettes::tailwind::TEAL_800.into()),
             ));
