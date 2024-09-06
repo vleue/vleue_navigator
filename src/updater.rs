@@ -490,14 +490,14 @@ fn update_navmesh_asset(
                         });
                 let layer_from = &mesh.layers[*layer_id as usize];
                 let mut stitch_vertices = vec![];
-                for (target_layer, stitch_segment) in stitch_segments {
+                'stitching: for (target_layer, stitch_segment) in stitch_segments {
                     if mesh.layers.len() < *target_layer as usize + 1 {
                         *status = NavMeshStatus::Invalid;
-                        continue;
+                        continue 'stitching;
                     }
                     if mesh.layers[*target_layer as usize].vertices.is_empty() {
                         *status = NavMeshStatus::Invalid;
-                        continue;
+                        continue 'stitching;
                     }
                     let layer_to = &mesh.layers[*target_layer as usize];
 
@@ -510,23 +510,38 @@ fn update_navmesh_asset(
                         stitch_segment[1] - layer_to.offset,
                     );
                     if indices_from.len() != indices_to.len() {
-                        warn!(
-                            "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?}",
+                        debug!(
+                            "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?} (different number of stitching points on each side)",
                             handle, entity, layer_id, target_layer
                         );
                         *status = NavMeshStatus::Failed;
                         failed_stitches.push((*layer_id, *target_layer));
-                        continue;
+                        continue 'stitching;
+                    }
+
+                    let stitch_indices = indices_from
+                        .into_iter()
+                        .zip(indices_to.into_iter())
+                        .collect::<Vec<_>>();
+                    for indices in &stitch_indices {
+                        if (layer_from.vertices[indices.0].coords + layer_from.offset)
+                            .distance_squared(layer_to.vertices[indices.1].coords + layer_to.offset)
+                            > 0.001
+                        {
+                            debug!(
+                                "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?} (stitching points don't match)",
+                                handle, entity, layer_id, target_layer
+                            );
+                            *status = NavMeshStatus::Failed;
+                            failed_stitches.push((*layer_id, *target_layer));
+                            continue 'stitching;
+                        }
                     }
 
                     previously_failed
                         .retain(|(from, to)| !(*from == *layer_id && *to == *target_layer));
                     previously_failed
                         .retain(|(from, to)| !(*to == *layer_id && *from == *target_layer));
-                    let stitch_indices = indices_from
-                        .into_iter()
-                        .zip(indices_to.into_iter())
-                        .collect::<Vec<_>>();
                     stitch_vertices.push(((*layer_id, *target_layer), stitch_indices));
                 }
                 mesh.restitch_layer_at_vertices(*layer_id, stitch_vertices, false);
