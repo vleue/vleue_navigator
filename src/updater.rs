@@ -539,20 +539,18 @@ fn update_navmesh_asset(
                         navmesh.set_transform(previous_navmesh_transform);
                     }
                     navmeshes.insert(handle, navmesh);
+                } else if let Some(navmesh) = navmeshes.get_mut(handle) {
+                    failed_stitches.extend(previously_failed);
+                    failed_stitches.sort_unstable();
+                    failed_stitches.dedup();
+                    navmesh.building = Some(crate::BuildingMesh {
+                        mesh,
+                        failed_stitches,
+                    });
                 } else {
-                    if let Some(navmesh) = navmeshes.get_mut(handle) {
-                        failed_stitches.extend(previously_failed);
-                        failed_stitches.sort_unstable();
-                        failed_stitches.dedup();
-                        navmesh.building = Some(crate::BuildingMesh {
-                            mesh,
-                            failed_stitches,
-                        });
-                    } else {
-                        let navmesh = NavMesh::from_polyanya_mesh(mesh);
-                        navmeshes.insert(handle, navmesh);
-                        *status = NavMeshStatus::Invalid;
-                    }
+                    let navmesh = NavMesh::from_polyanya_mesh(mesh);
+                    navmeshes.insert(handle, navmesh);
+                    *status = NavMeshStatus::Invalid;
                 }
             } else {
                 mesh.layers = vec![layer];
