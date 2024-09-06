@@ -42,7 +42,8 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         navmesh_transform: &Transform,
         (up, shift): (Dir3, f32),
     ) -> Vec<Vec2> {
-        let transform = obstacle_transform.compute_transform();
+        let mut transform = obstacle_transform.compute_transform();
+        transform.scale = Vec3::ONE;
         let world_to_mesh = world_to_mesh(navmesh_transform);
 
         let to_navmesh =
