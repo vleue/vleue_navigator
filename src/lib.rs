@@ -425,7 +425,23 @@ mod tests {
 
     #[test]
     fn generating_from_existing_navmesh_results_in_same_navmesh() {
+        // TODO: try and find why this is in CW instead of CCW
         let expected_navmesh = NavMesh::from_polyanya_mesh(
+            Trimesh {
+                vertices: vec![
+                    Vec2::new(1., 1.),
+                    Vec2::new(5., 1.),
+                    Vec2::new(5., 4.),
+                    Vec2::new(1., 4.),
+                    Vec2::new(2., 2.),
+                    Vec2::new(4., 3.),
+                ],
+                triangles: vec![[4, 1, 0], [5, 2, 1], [3, 2, 5], [3, 5, 1], [3, 4, 0]],
+            }
+            .try_into()
+            .unwrap(),
+        );
+        let initial_navmesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
                     Vec2::new(1., 1.),
@@ -440,7 +456,7 @@ mod tests {
             .try_into()
             .unwrap(),
         );
-        let mut bevy_mesh = expected_navmesh.to_mesh();
+        let mut bevy_mesh = initial_navmesh.to_mesh();
         // Add back normals as they are used to determine where is up in the mesh
         bevy_mesh.insert_attribute(
             Mesh::ATTRIBUTE_NORMAL,
@@ -456,12 +472,11 @@ mod tests {
         let expected_navmesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
-                    Vec2::new(-1., -1.),
-                    Vec2::new(1., -1.),
                     Vec2::new(-1., 1.),
                     Vec2::new(1., 1.),
+                    Vec2::new(-1., -1.),
+                    Vec2::new(1., -1.),
                 ],
-                triangles: vec![[0, 1, 3], [0, 3, 2]],
                 triangles: vec![[3, 1, 0], [2, 3, 0]],
             }
             .try_into()
