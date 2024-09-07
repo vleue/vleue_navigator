@@ -348,7 +348,7 @@ impl NavMesh {
         new_mesh
     }
 
-    /// TODO: write docs
+    /// Return the transform that would convert world coordinates into mesh coordinates.
     #[inline]
     pub fn world_to_mesh(&self) -> Affine3A {
         world_to_mesh(&self.transform())
