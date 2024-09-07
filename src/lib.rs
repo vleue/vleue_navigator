@@ -10,16 +10,29 @@
     unused_qualifications,
     missing_docs
 )]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use std::sync::Arc;
 
-use bevy::math::Vec3Swizzles;
-use bevy::reflect::TypePath;
-use bevy::render::mesh::{MeshVertexAttributeId, VertexAttributeValues};
-use bevy::render::render_asset::RenderAssetUsages;
+#[cfg(feature = "debug-with-gizmos")]
 use bevy::{
-    prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
+    app::Update,
+    asset::{Assets, Handle},
+    color::Color,
+    prelude::{Component, Gizmos, Query, Res, Resource},
+};
+use bevy::{
+    app::{App, Plugin},
+    asset::{Asset, AssetApp},
+    log::{debug, warn},
+    math::{Affine3A, Quat, Vec2, Vec3, Vec3Swizzles},
+    prelude::{Mesh, Transform, TransformPoint},
+    reflect::TypePath,
+    render::{
+        mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
+        render_asset::RenderAssetUsages,
+        render_resource::PrimitiveTopology,
+    },
 };
 use itertools::Itertools;
 
@@ -80,16 +93,27 @@ pub struct TransformedPath {
     pub length: f32,
     /// Coordinates for each step of the path. The destination is the last step.
     pub path: Vec<Vec3>,
+    /// Coordinates for each step of the path. The destination is the last step.
+    #[cfg(feature = "detailed-layers")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "detailed-layers")))]
+    pub path_with_layers: Vec<(Vec3, u8)>,
 }
 
 use polyanya::Trimesh;
 pub use polyanya::{Path, Triangulation};
 
+#[derive(Debug, Clone)]
+pub(crate) struct BuildingMesh {
+    pub(crate) mesh: polyanya::Mesh,
+    pub(crate) failed_stitches: Vec<(u8, u8)>,
+}
+
 /// A navigation mesh
 #[derive(Debug, TypePath, Clone, Asset)]
 pub struct NavMesh {
     mesh: Arc<polyanya::Mesh>,
-    pub(crate) transform: Transform,
+    building: Option<BuildingMesh>,
+    transform: Transform,
 }
 
 impl NavMesh {
@@ -97,6 +121,7 @@ impl NavMesh {
     pub fn from_polyanya_mesh(mesh: polyanya::Mesh) -> NavMesh {
         NavMesh {
             mesh: Arc::new(mesh),
+            building: None,
             transform: Transform::IDENTITY,
         }
     }
@@ -107,11 +132,15 @@ impl NavMesh {
     ///
     /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
     pub fn from_bevy_mesh_and_then(mesh: &Mesh, callback: impl Fn(&mut polyanya::Mesh)) -> NavMesh {
-        let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).next().unwrap();
+        let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL)
+            .and_then(|mut i| i.next())
+            .unwrap_or(Vec3::Z);
         let rotation = Quat::from_rotation_arc(normal, Vec3::Z);
+        let rotation_reverse = rotation.inverse();
 
         let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
-            .map(|vertex| rotation.mul_vec3(vertex))
+            .expect("can't extract a navmesh from a mesh without `Mesh::ATTRIBUTE_POSITION`")
+            .map(|vertex| rotation_reverse.mul_vec3(vertex))
             .map(|coords| coords.xy())
             .collect();
 
@@ -120,7 +149,7 @@ impl NavMesh {
             .expect("No polygon indices found in mesh")
             .iter()
             .tuples::<(_, _, _)>()
-            .map(|(a, b, c)| [a, b, c])
+            .map(|(a, b, c)| [c, b, a])
             .collect();
 
         let mut polyanya_mesh = Trimesh {
@@ -199,10 +228,10 @@ impl NavMesh {
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub async fn get_transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
-        let inner_from = self.transform.transform_point(from).xy();
-        let inner_to = self.transform.transform_point(to).xy();
+        let inner_from = self.world_to_mesh().transform_point(from).xy();
+        let inner_to = self.world_to_mesh().transform_point(to).xy();
         let path = self.mesh.get_path(inner_from, inner_to).await;
-        path.map(|path| self.transform_path(path, from, to))
+        path.map(|path| self.transform_path(path))
     }
 
     /// Get a path between two points
@@ -215,28 +244,35 @@ impl NavMesh {
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
-        let inner_from = self.transform.transform_point(from).xy();
-        let inner_to = self.transform.transform_point(to).xy();
+        let inner_from = self.world_to_mesh().transform_point(from).xy();
+        let inner_to = self.world_to_mesh().transform_point(to).xy();
         let path = self.mesh.path(inner_from, inner_to);
-        path.map(|path| self.transform_path(path, from, to))
+        path.map(|path| self.transform_path(path))
     }
 
-    fn transform_path(&self, path: Path, from: Vec3, to: Vec3) -> TransformedPath {
-        let inverse_transform = self.inverse_transform();
+    fn transform_path(&self, path: Path) -> TransformedPath {
+        let transform = self.transform();
         TransformedPath {
-            length: from.distance(to),
+            // TODO: recompute length
+            length: path.length,
             path: path
                 .path
                 .into_iter()
-                .map(|coords| inverse_transform.transform_point((coords, 0.).into()))
+                .map(|coords| transform.transform_point(coords.extend(0.0)))
+                .collect(),
+            #[cfg(feature = "detailed-layers")]
+            path_with_layers: path
+                .path_with_layers
+                .into_iter()
+                .map(|(coords, layer)| (transform.transform_point(coords.extend(0.0)), layer))
                 .collect(),
         }
     }
 
     /// Check if a 3d point is in a navigationable part of the mesh, using the [`Mesh::transform`]
     pub fn transformed_is_in_mesh(&self, point: Vec3) -> bool {
-        let point = self.transform.transform_point(point).xy();
-        self.mesh.point_in_mesh(point)
+        let point_in_navmesh = self.world_to_mesh().transform_point(point).xy();
+        self.mesh.point_in_mesh(point_in_navmesh)
     }
 
     /// Check if a point is in a navigationable part of the mesh
@@ -261,18 +297,18 @@ impl NavMesh {
     /// This mesh doesn't have normals.
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
-        let inverse_transform = self.inverse_transform();
+        let mesh_to_world = self.transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            self.mesh
+            self.mesh.layers[0]
                 .vertices
                 .iter()
-                .map(|v| [v.coords.x, v.coords.y, 0.0])
-                .map(|coords| inverse_transform.transform_point(coords.into()).into())
+                .map(|v| v.coords.extend(0.0))
+                .map(|coords| mesh_to_world.transform_point(coords).into())
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(
-            self.mesh
+            self.mesh.layers[0]
                 .polygons
                 .iter()
                 .flat_map(|p| {
@@ -287,18 +323,18 @@ impl NavMesh {
     /// Creates a [`Mesh`] from this [`NavMesh`], showing the wireframe of the polygons
     pub fn to_wireframe_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::all());
-        let inverse_transform = self.inverse_transform();
+        let mesh_to_world = self.transform();
         new_mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            self.mesh
+            self.mesh.layers[0]
                 .vertices
                 .iter()
                 .map(|v| [v.coords.x, v.coords.y, 0.0])
-                .map(|coords| inverse_transform.transform_point(coords.into()).into())
+                .map(|coords| mesh_to_world.transform_point(coords.into()).into())
                 .collect::<Vec<[f32; 3]>>(),
         );
         new_mesh.insert_indices(Indices::U32(
-            self.mesh
+            self.mesh.layers[0]
                 .polygons
                 .iter()
                 .flat_map(|p| {
@@ -312,38 +348,43 @@ impl NavMesh {
         new_mesh
     }
 
+    /// Return the transform that would convert world coordinates into mesh coordinates.
     #[inline]
-    pub(crate) fn inverse_transform(&self) -> Transform {
-        Transform {
-            translation: -self.transform.translation,
-            rotation: self.transform.rotation.inverse(),
-            scale: 1.0 / self.transform.scale,
-        }
+    pub fn world_to_mesh(&self) -> Affine3A {
+        world_to_mesh(&self.transform())
     }
+}
+
+pub(crate) fn world_to_mesh(navmesh_transform: &Transform) -> Affine3A {
+    navmesh_transform.compute_affine().inverse()
 }
 
 fn get_vectors(
     mesh: &Mesh,
     id: impl Into<MeshVertexAttributeId>,
-) -> impl Iterator<Item = Vec3> + '_ {
-    let vectors = match mesh.attribute(id).unwrap() {
-        VertexAttributeValues::Float32x3(values) => values,
-        // Guaranteed by Bevy
-        _ => unreachable!(),
+) -> Option<impl Iterator<Item = Vec3> + '_> {
+    let vectors = match mesh.attribute(id) {
+        Some(VertexAttributeValues::Float32x3(values)) => values,
+        // Guaranteed by Bevy for the attributes requested in this context
+        _ => return None,
     };
-    vectors.iter().cloned().map(Vec3::from)
+    Some(vectors.iter().cloned().map(Vec3::from))
 }
 
 #[cfg(feature = "debug-with-gizmos")]
 /// Use gizmos to display navmeshes
 pub fn display_navmesh(
-    live_navmeshes: Query<(&Handle<NavMesh>, Option<&NavMeshDebug>)>,
+    live_navmeshes: Query<(
+        &Handle<NavMesh>,
+        Option<&NavMeshDebug>,
+        &bevy::prelude::GlobalTransform,
+        &updater::NavMeshSettings,
+    )>,
     mut gizmos: Gizmos,
     navmeshes: Res<Assets<NavMesh>>,
     controls: Option<Res<NavMeshesDebug>>,
 ) {
-    use bevy::math::vec3;
-    for (mesh, debug) in &live_navmeshes {
+    for (mesh, debug, mesh_to_world, settings) in &live_navmeshes {
         let Some(color) = debug
             .map(|debug| debug.0)
             .or_else(|| controls.as_ref().map(|c| c.0))
@@ -351,29 +392,26 @@ pub fn display_navmesh(
             continue;
         };
         if let Some(navmesh) = navmeshes.get(mesh) {
-            let inverse_transform = navmesh.inverse_transform();
-            let transform = navmesh.transform();
             let navmesh = navmesh.get();
-            for polygon in &navmesh.polygons {
+            let Some(layer) = &navmesh.layers.get(settings.layer.unwrap_or(0) as usize) else {
+                continue;
+            };
+            #[cfg(feature = "detailed-layers")]
+            let scale = layer.scale;
+            #[cfg(not(feature = "detailed-layers"))]
+            let scale = Vec2::ONE;
+            for polygon in &layer.polygons {
                 let mut v = polygon
                     .vertices
                     .iter()
-                    .map(|i| &navmesh.vertices[*i as usize].coords)
-                    .map(|v| {
-                        inverse_transform.rotation.mul_vec3(vec3(v.x, v.y, 0.0))
-                            + transform.translation
-                    })
+                    .filter(|i| **i != u32::MAX)
+                    .map(|i| layer.vertices[*i as usize].coords * scale)
+                    .map(|v| mesh_to_world.transform_point(v.extend(0.0)))
                     .collect::<Vec<_>>();
                 if !v.is_empty() {
                     let first = polygon.vertices[0];
-                    let first = &navmesh.vertices[first as usize];
-                    v.push(
-                        inverse_transform.rotation.mul_vec3(vec3(
-                            first.coords.x,
-                            first.coords.y,
-                            0.0,
-                        )) + transform.translation,
-                    );
+                    let first = &layer.vertices[first as usize];
+                    v.push(mesh_to_world.transform_point((first.coords * scale).extend(0.0)));
                     gizmos.linestrip(v, color);
                 }
             }
@@ -389,7 +427,23 @@ mod tests {
 
     #[test]
     fn generating_from_existing_navmesh_results_in_same_navmesh() {
+        // TODO: try and find why this is in CW instead of CCW
         let expected_navmesh = NavMesh::from_polyanya_mesh(
+            Trimesh {
+                vertices: vec![
+                    Vec2::new(1., 1.),
+                    Vec2::new(5., 1.),
+                    Vec2::new(5., 4.),
+                    Vec2::new(1., 4.),
+                    Vec2::new(2., 2.),
+                    Vec2::new(4., 3.),
+                ],
+                triangles: vec![[4, 1, 0], [5, 2, 1], [3, 2, 5], [3, 5, 1], [3, 4, 0]],
+            }
+            .try_into()
+            .unwrap(),
+        );
+        let initial_navmesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
                     Vec2::new(1., 1.),
@@ -404,7 +458,7 @@ mod tests {
             .try_into()
             .unwrap(),
         );
-        let mut bevy_mesh = expected_navmesh.to_mesh();
+        let mut bevy_mesh = initial_navmesh.to_mesh();
         // Add back normals as they are used to determine where is up in the mesh
         bevy_mesh.insert_attribute(
             Mesh::ATTRIBUTE_NORMAL,
@@ -420,12 +474,12 @@ mod tests {
         let expected_navmesh = NavMesh::from_polyanya_mesh(
             Trimesh {
                 vertices: vec![
-                    Vec2::new(-1., -1.),
-                    Vec2::new(1., -1.),
                     Vec2::new(-1., 1.),
                     Vec2::new(1., 1.),
+                    Vec2::new(-1., -1.),
+                    Vec2::new(1., -1.),
                 ],
-                triangles: vec![[0, 1, 3], [0, 3, 2]],
+                triangles: vec![[3, 1, 0], [2, 3, 0]],
             }
             .try_into()
             .unwrap(),
@@ -460,41 +514,46 @@ mod tests {
         let expected_mesh = expected.mesh;
         let actual_mesh = actual.mesh;
 
-        assert_eq!(expected_mesh.polygons, actual_mesh.polygons);
-        for (index, (expected_vertex, actual_vertex)) in expected_mesh
-            .vertices
-            .iter()
-            .zip(actual_mesh.vertices.iter())
-            .enumerate()
-        {
-            let nearly_same_coords =
-                (expected_vertex.coords - actual_vertex.coords).length_squared() < 1e-8;
-            assert!(nearly_same_coords
+        for i in 0..expected_mesh.layers.len() {
+            assert_eq!(
+                expected_mesh.layers[i].polygons,
+                actual_mesh.layers[i].polygons
+            );
+            for (index, (expected_vertex, actual_vertex)) in expected_mesh.layers[i]
+                .vertices
+                .iter()
+                .zip(actual_mesh.layers[i].vertices.iter())
+                .enumerate()
+            {
+                let nearly_same_coords =
+                    (expected_vertex.coords - actual_vertex.coords).length_squared() < 1e-8;
+                assert!(nearly_same_coords
                ,
                 "\nvertex {index} does not have the expected coords.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                expected_mesh.vertices, actual_mesh.vertices
+                expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
             );
 
-            let adjusted_actual = wrap_to_first(&actual_vertex.polygons, |index| *index != -1).unwrap_or_else(||
+                let adjusted_actual = wrap_to_first(&actual_vertex.polygons, |index| *index != u32::MAX).unwrap_or_else(||
                 panic!("vertex {index}: Found only surrounded by obstacles.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                       expected_mesh.vertices, actual_mesh.vertices));
+                       expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices));
 
-            let adjusted_expectation= wrap_to_first(&expected_vertex.polygons, |polygon| {
+                let adjusted_expectation= wrap_to_first(&expected_vertex.polygons, |polygon| {
                 *polygon == adjusted_actual[0]
             })
                 .unwrap_or_else(||
                     panic!("vertex {index}: Failed to expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                           expected_mesh.vertices, actual_mesh.vertices));
+                           expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices));
 
-            assert_eq!(
+                assert_eq!(
                 adjusted_expectation, adjusted_actual,
                 "\nvertex {index} does not have the expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                expected_mesh.vertices, actual_mesh.vertices
+                expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
             );
+            }
         }
     }
 
-    fn wrap_to_first(polygons: &[isize], pred: impl Fn(&isize) -> bool) -> Option<Vec<isize>> {
+    fn wrap_to_first(polygons: &[u32], pred: impl Fn(&u32) -> bool) -> Option<Vec<u32>> {
         let offset = polygons.iter().position(pred)?;
         Some(
             polygons

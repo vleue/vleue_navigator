@@ -29,7 +29,7 @@ default-features = false
 optional = true
 
 [dependencies.polyanya]
-version = "0.7.1"
+version = "0.9.0"
 
 [dependencies.bevy]
 version = "0.14.0"
@@ -56,13 +56,15 @@ features = [
     "multi_threaded",
     "bevy_state",
     "default_font",
+    # to build on linux
+    "x11",
 ]
 default-features = false
 
 [features]
 default = ["debug-with-gizmos"]
-linuxci = ["bevy/x11"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
+detailed-layers = ["polyanya/detailed-layers"]
 
 [[example]]
 name = "auto_navmesh_avian2d"
@@ -71,3 +73,26 @@ required-features = ["avian2d"]
 [[example]]
 name = "auto_navmesh_avian3d"
 required-features = ["avian3d"]
+
+[[example]]
+name = "auto_navmesh_avian3d_inclined"
+required-features = ["avian3d"]
+
+[[example]]
+name = "gltf_avian3d"
+required-features = ["avian3d", "avian3d/collider-from-mesh"]
+
+[[example]]
+name = "layers"
+required-features = ["avian3d", "detailed-layers"]
+
+[[example]]
+name = "layers_basic"
+required-features = ["avian3d"]
+
+[[example]]
+name = "layers_inclined"
+required-features = ["avian3d", "detailed-layers"]
+
+[package.metadata.docs.rs]
+features = ["detailed-layers"]

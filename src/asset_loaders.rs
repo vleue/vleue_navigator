@@ -1,11 +1,8 @@
 //! Asset loaders that can load a [`NavMesh`] from a file
 
-use std::{error::Error, fmt::Display, sync::Arc};
+use std::{error::Error, fmt::Display};
 
-use bevy::{
-    asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
-    prelude::{Transform, Vec3},
-};
+use bevy::asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext};
 use polyanya::PolyanyaFile;
 
 use crate::NavMesh;
@@ -58,14 +55,11 @@ impl AssetLoader for NavMeshPolyanyaLoader {
             .read_to_end(&mut bytes)
             .await
             .map_err(NavMeshLoaderError::Io)?;
-        let navmesh = NavMesh {
-            mesh: Arc::new(
-                PolyanyaFile::from_bytes(bytes.as_slice())
-                    .try_into()
-                    .map_err(NavMeshLoaderError::MeshError)?,
-            ),
-            transform: Transform::from_scale(Vec3::splat(1.)),
-        };
+        let navmesh = NavMesh::from_polyanya_mesh(
+            PolyanyaFile::from_bytes(bytes.as_slice())
+                .try_into()
+                .map_err(NavMeshLoaderError::MeshError)?,
+        );
         Ok(navmesh)
     }
 

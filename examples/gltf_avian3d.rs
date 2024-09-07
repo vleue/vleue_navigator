@@ -1,3 +1,4 @@
+use avian3d::prelude::*;
 use bevy::{
     asset::LoadState,
     color::palettes,
@@ -5,17 +6,22 @@ use bevy::{
     math::Vec3Swizzles,
     pbr::NotShadowCaster,
     prelude::*,
-    window::PrimaryWindow,
+    time::common_conditions::on_timer,
 };
+use polyanya::Triangulation;
 use rand::Rng;
-use std::f32::consts::FRAC_PI_2;
-use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
+use std::{f32::consts::FRAC_PI_2, time::Duration};
+use vleue_navigator::{
+    prelude::{NavMeshBundle, NavMeshSettings, NavMeshUpdateMode, NavmeshUpdaterPlugin},
+    NavMesh, NavMeshDebug, VleueNavigatorPlugin,
+};
 
-const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> = Handle::weak_from_u128(0);
+#[derive(Component)]
+struct Obstacle(Timer);
 
 fn main() {
-    App::new()
-        .insert_resource(Msaa::default())
+    let mut app = App::new();
+    app.insert_resource(Msaa::default())
         .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
@@ -26,7 +32,9 @@ fn main() {
                 }),
                 ..default()
             }),
+            PhysicsPlugins::default().with_length_unit(20.0),
             VleueNavigatorPlugin,
+            NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
         ))
         .init_state::<AppState>()
         .add_systems(OnEnter(AppState::Setup), setup)
@@ -36,15 +44,31 @@ fn main() {
             Update,
             (
                 give_target_auto,
-                give_target_on_click,
                 move_object,
                 move_hover,
                 target_activity,
-                trigger_navmesh_visibility,
+                display_navigator_path,
+                despawn_obstacles,
             )
                 .run_if(in_state(AppState::Playing)),
         )
-        .run();
+        .add_systems(
+            Update,
+            spawn_obstacles.run_if(on_timer(Duration::from_secs_f32(0.5))),
+        )
+        .add_systems(
+            Update,
+            refresh_path.run_if(on_timer(Duration::from_secs_f32(0.1))),
+        );
+
+    let mut config_store = app
+        .world_mut()
+        .get_resource_mut::<GizmoConfigStore>()
+        .unwrap();
+    for (_, config, _) in config_store.iter_mut() {
+        config.depth_bias = -1.0;
+    }
+    app.run();
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, States, Default)]
@@ -57,15 +81,17 @@ enum AppState {
 #[derive(Resource, Default, Deref)]
 struct GltfHandle(Handle<Gltf>);
 
-#[derive(Resource)]
-struct CurrentMesh(Handle<NavMesh>);
-
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(GltfHandle(asset_server.load("meshes/navmesh.glb")));
 
-    commands.insert_resource(AmbientLight {
-        color: palettes::css::SEA_GREEN.into(),
-        brightness: 100.0,
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            illuminance: 3000.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
+        ..default()
     });
 
     commands.spawn(Camera3dBundle {
@@ -78,54 +104,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
         ..Default::default()
     });
-
-    commands.spawn(TextBundle {
-        style: Style {
-            align_self: AlignSelf::FlexStart,
-            margin: UiRect::all(Val::Px(15.0)),
-            ..Default::default()
-        },
-        text: Text {
-            sections: vec![
-                TextSection {
-                    value: "<space>".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::GOLD.into(),
-                        ..default()
-                    },
-                },
-                TextSection {
-                    value: " to display the navmesh, ".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::WHITE.into(),
-                        ..default()
-                    },
-                },
-                TextSection {
-                    value: "click".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::GOLD.into(),
-                        ..default()
-                    },
-                },
-                TextSection {
-                    value: " to set the destination".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::WHITE.into(),
-                        ..default()
-                    },
-                },
-            ],
-            ..Default::default()
-        },
-        ..Default::default()
-    });
-
-    commands.insert_resource(CurrentMesh(HANDLE_TRIMESH_OPTIMIZED));
 }
 
 fn check_textures(
@@ -153,9 +131,6 @@ struct Target;
 #[derive(Component)]
 struct Hover(Vec2);
 
-#[derive(Component, Clone)]
-struct NavMeshDisp(Handle<NavMesh>);
-
 fn setup_scene(
     mut commands: Commands,
     gltf: Res<GltfHandle>,
@@ -163,7 +138,6 @@ fn setup_scene(
     gltf_meshes: Res<Assets<GltfMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut navmeshes: ResMut<Assets<NavMesh>>,
 ) {
     let mut material: StandardMaterial = Color::Srgba(palettes::css::ALICE_BLUE).into();
     material.perceptual_roughness = 1.0;
@@ -172,53 +146,23 @@ fn setup_scene(
         let mesh = gltf_meshes.get(&gltf.named_meshes["obstacles"]).unwrap();
         let mut material: StandardMaterial = Color::Srgba(palettes::css::GRAY).into();
         material.perceptual_roughness = 1.0;
-        commands.spawn(PbrBundle {
-            mesh: mesh.primitives[0].mesh.clone(),
-            material: materials.add(material),
-            ..default()
-        });
+        commands.spawn((
+            PbrBundle {
+                mesh: mesh.primitives[0].mesh.clone(),
+                material: materials.add(material),
+                ..default()
+            },
+            RigidBody::Static,
+            ColliderConstructor::TrimeshFromMesh,
+        ));
 
         let mesh = gltf_meshes.get(&gltf.named_meshes["plane"]).unwrap();
         commands.spawn(PbrBundle {
             mesh: mesh.primitives[0].mesh.clone(),
-            transform: Transform::from_xyz(0.0, 0.1, 0.0),
+            transform: Transform::from_xyz(0.0, 0.01, 0.0),
             material: ground_material.clone(),
             ..default()
         });
-    }
-
-    {
-        #[cfg(target_arch = "wasm32")]
-        const NB_HOVER: usize = 5;
-        #[cfg(not(target_arch = "wasm32"))]
-        const NB_HOVER: usize = 10;
-
-        for _i in 0..NB_HOVER {
-            commands.spawn((
-                SpotLightBundle {
-                    spot_light: SpotLight {
-                        intensity: 1000000.0,
-                        color: palettes::css::SEA_GREEN.into(),
-                        shadows_enabled: true,
-                        inner_angle: 0.5,
-                        outer_angle: 0.8,
-                        range: 250.0,
-                        ..default()
-                    },
-                    transform: Transform::from_xyz(
-                        rand::thread_rng().gen_range(-50.0..50.0),
-                        20.0,
-                        rand::thread_rng().gen_range(-25.0..25.0),
-                    )
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                    ..default()
-                },
-                Hover(Vec2::new(
-                    rand::thread_rng().gen_range(-50.0..50.0),
-                    rand::thread_rng().gen_range(-25.0..25.0),
-                )),
-            ));
-        }
     }
 
     if let Some(gltf) = gltfs.get(gltf.id()) {
@@ -239,16 +183,19 @@ fn setup_scene(
             material.unlit = true;
 
             commands.spawn((
-                PbrBundle {
-                    mesh: meshes.add(navmesh.to_wireframe_mesh()),
-                    material: materials.add(material),
-                    transform: Transform::from_xyz(0.0, 0.2, 0.0),
-                    visibility: Visibility::Hidden,
-                    ..Default::default()
+                NavMeshBundle {
+                    settings: NavMeshSettings {
+                        fixed: Triangulation::from_mesh(navmesh.get().as_ref(), 0),
+                        build_timeout: Some(5.0),
+                        upward_shift: 0.5,
+                        ..default()
+                    },
+                    transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    update_mode: NavMeshUpdateMode::Direct,
+                    ..NavMeshBundle::with_default_id()
                 },
-                NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED),
+                NavMeshDebug(palettes::tailwind::RED_400.into()),
             ));
-            navmeshes.insert(&HANDLE_TRIMESH_OPTIMIZED, navmesh);
         }
 
         commands
@@ -260,7 +207,7 @@ fn setup_scene(
                         emissive: (palettes::css::BLUE * 5.0).into(),
                         ..default()
                     }),
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    transform: Transform::from_xyz(-1.0, 0.0, -2.0),
                     ..Default::default()
                 },
                 Object(None),
@@ -288,13 +235,14 @@ fn give_target_auto(
     navmeshes: Res<Assets<NavMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    current_mesh: Res<CurrentMesh>,
 ) {
     for (entity, transform, mut object) in object_query.iter_mut() {
-        let navmesh = navmeshes.get(&current_mesh.0).unwrap();
-        let mut x;
-        let mut z;
-        loop {
+        let Some(navmesh) = navmeshes.get(&Handle::default()) else {
+            continue;
+        };
+        let mut x = 0.0;
+        let mut z = 0.0;
+        for _ in 0..50 {
             x = rand::thread_rng().gen_range(-50.0..50.0);
             z = rand::thread_rng().gen_range(-25.0..25.0);
 
@@ -347,76 +295,25 @@ fn give_target_auto(
     }
 }
 
-fn give_target_on_click(
-    mut commands: Commands,
-    mut object_query: Query<(Entity, &Transform, &mut Object)>,
-    targets: Query<Entity, With<Target>>,
+fn refresh_path(
+    mut object_query: Query<(&Transform, &mut Path)>,
+    target: Query<&Transform, With<Target>>,
     navmeshes: Res<Assets<NavMesh>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    current_mesh: Res<CurrentMesh>,
-    mouse_buttons: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
-    camera: Query<(&Camera, &GlobalTransform)>,
 ) {
-    if mouse_buttons.just_pressed(MouseButton::Left) {
-        let navmesh = navmeshes.get(&current_mesh.0).unwrap();
-        let Some(target) = (|| {
-            let position = primary_window.single().cursor_position()?;
-            let (camera, transform) = camera.get_single().ok()?;
-            let ray = camera.viewport_to_world(transform, position)?;
-            let denom = Vec3::Y.dot(ray.direction.into());
-            let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;
-            let target = ray.origin + ray.direction * t;
-            navmesh.transformed_is_in_mesh(target).then_some(target)
-        })() else {
-            return;
+    for (transform, mut path) in &mut object_query {
+        let navmesh = navmeshes.get(&Handle::default()).unwrap();
+        let Some(new_path) =
+            navmesh.transformed_path(transform.translation, target.single().translation)
+        else {
+            break;
         };
-
-        for (entity, transform, mut object) in object_query.iter_mut() {
-            let Some(path) = navmesh.transformed_path(transform.translation, target) else {
-                break;
+        if let Some((first, remaining)) = new_path.path.split_first() {
+            let mut remaining = remaining.to_vec();
+            remaining.reverse();
+            *path = Path {
+                current: *first,
+                next: remaining,
             };
-            if let Some((first, remaining)) = path.path.split_first() {
-                let mut remaining = remaining.to_vec();
-                remaining.reverse();
-                let target_id = commands
-                    .spawn((
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(Sphere { radius: 0.5 })),
-                            material: materials.add(StandardMaterial {
-                                base_color: palettes::css::RED.into(),
-                                emissive: (palettes::css::RED * 5.0).into(),
-                                ..default()
-                            }),
-                            transform: Transform::from_translation(target),
-                            ..Default::default()
-                        },
-                        NotShadowCaster,
-                        Target,
-                    ))
-                    .with_children(|target| {
-                        target.spawn(PointLightBundle {
-                            point_light: PointLight {
-                                color: palettes::css::RED.into(),
-                                shadows_enabled: true,
-                                range: 10.0,
-                                ..default()
-                            },
-                            transform: Transform::from_xyz(0.0, 1.5, 0.0),
-                            ..default()
-                        });
-                    })
-                    .id();
-                commands.entity(entity).insert(Path {
-                    current: *first,
-                    next: remaining,
-                });
-                object.0 = Some(target_id);
-            }
-        }
-        for entity in &targets {
-            commands.entity(entity).despawn_recursive();
         }
     }
 }
@@ -428,7 +325,7 @@ fn move_object(
 ) {
     for (mut transform, mut target, entity, mut object) in object_query.iter_mut() {
         let move_direction = target.current - transform.translation;
-        transform.translation += move_direction.normalize() * time.delta_seconds() * 10.0;
+        transform.translation += move_direction.normalize() * time.delta_seconds() * 6.0;
         if transform.translation.distance(target.current) < 0.1 {
             if let Some(next) = target.next.pop() {
                 target.current = next;
@@ -436,24 +333,6 @@ fn move_object(
                 commands.entity(entity).remove::<Path>();
                 let target_entity = object.0.take().unwrap();
                 commands.entity(target_entity).despawn_recursive();
-            }
-        }
-    }
-}
-
-fn trigger_navmesh_visibility(
-    mut query: Query<(&mut Visibility, &NavMeshDisp)>,
-    keyboard_input: ResMut<ButtonInput<KeyCode>>,
-    current_mesh: Res<CurrentMesh>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Space) {
-        for (mut visible, nav) in query.iter_mut() {
-            if nav.0 == current_mesh.0 {
-                match *visible {
-                    Visibility::Visible => *visible = Visibility::Hidden,
-                    Visibility::Hidden => *visible = Visibility::Visible,
-                    Visibility::Inherited => *visible = Visibility::Inherited,
-                }
             }
         }
     }
@@ -482,5 +361,70 @@ fn move_hover(mut hovers: Query<(&mut Transform, &mut Hover)>, time: Res<Time>) 
         transform.translation += ((hover.0 - current).normalize() * time.delta_seconds() * 5.0)
             .extend(0.0)
             .xzy();
+    }
+}
+
+fn spawn_obstacles(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let size = rand::thread_rng().gen_range(1.5..2.0);
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Cuboid::new(size, size, size)),
+            material: materials.add(Color::srgb(0.2, 0.7, 0.9)),
+            transform: Transform::from_xyz(
+                rand::thread_rng().gen_range(-50.0..50.0),
+                10.0,
+                rand::thread_rng().gen_range(-25.0..25.0),
+            )
+            .looking_to(
+                Vec3::new(
+                    rand::thread_rng().gen_range(-1.0..1.0),
+                    rand::thread_rng().gen_range(-1.0..1.0),
+                    rand::thread_rng().gen_range(-1.0..1.0),
+                )
+                .normalize(),
+                Vec3::Y,
+            ),
+            ..default()
+        },
+        RigidBody::Dynamic,
+        Collider::cuboid(size, size, size),
+        Obstacle(Timer::from_seconds(30.0, TimerMode::Once)),
+    ));
+}
+
+fn display_navigator_path(navigator: Query<(&Transform, &Path)>, mut gizmos: Gizmos) {
+    for (transform, path) in &navigator {
+        let mut to_display = path.next.clone();
+        to_display.push(path.current);
+        to_display.push(transform.translation.xz().extend(0.2).xzy());
+        to_display.reverse();
+        if !to_display.is_empty() {
+            gizmos.linestrip(
+                to_display.iter().map(|xz| Vec3::new(xz.x, 0.2, xz.z)),
+                palettes::tailwind::TEAL_400,
+            );
+        }
+    }
+}
+
+fn despawn_obstacles(
+    mut commands: Commands,
+    mut obstacles: Query<(Entity, &mut Obstacle, &mut LinearVelocity, &mut Transform)>,
+    time: Res<Time>,
+) {
+    for (entity, mut timer, mut linvel, mut transform) in &mut obstacles {
+        if timer.0.tick(time.delta()).just_finished() {
+            linvel.0 = Vec3::new(0.0, 50.0, 0.0);
+        }
+        if timer.0.finished() {
+            transform.scale *= 0.98;
+            if transform.scale.x < 0.01 {
+                commands.entity(entity).despawn();
+            }
+        }
     }
 }

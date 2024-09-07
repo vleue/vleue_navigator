@@ -1,4 +1,4 @@
-use bevy::{color::palettes, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes, prelude::*};
 use rand::Rng;
 use vleue_navigator::prelude::*;
 
@@ -37,54 +37,46 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     navigator: Query<(Entity, &Transform), (With<Navigator>, Without<Path>)>,
     navmeshes: Res<Assets<NavMesh>>,
     navmesh: Query<&Handle<NavMesh>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
     for (entity, transform) in &navigator {
         let Some(navmesh) = navmeshes.get(navmesh.single()) else {
             continue;
         };
-        let mut x;
-        let mut y;
-        loop {
+        let mut x = 1.0;
+        let mut y = 1.0;
+        for _ in 0..10 {
             x = rand::thread_rng().gen_range(0.0..(X as f32));
             y = rand::thread_rng().gen_range(0.0..(Y as f32));
 
-            if navmesh.transformed_is_in_mesh(Vec3::new(x, y, 0.0)) {
+            if navmesh.is_in_mesh(Vec2::new(x, y)) {
                 break;
             }
         }
-        let window = primary_window.single();
-        let factor = (window.width() / X as f32).min(window.height() / Y as f32);
-
         let Some(path) = navmesh.transformed_path(
-            transform.translation / factor + Vec3::new(X as f32, Y as f32, 0.0) / 2.0,
-            Vec3::new(x, y, 0.0),
+            transform.translation.xyz(),
+            navmesh.transform().transform_point(Vec3::new(x, y, 0.0)),
         ) else {
             break;
         };
         if let Some((first, remaining)) = path.path.split_first() {
-            let mut remaining = remaining
-                .into_iter()
-                .map(|p| (p.xy() - Vec2::new(X as f32, Y as f32) / 2.0) * factor)
-                .collect::<Vec<_>>();
+            let mut remaining = remaining.iter().map(|p| p.xy()).collect::<Vec<_>>();
             remaining.reverse();
             let id = commands
-                .spawn((SpriteBundle {
+                .spawn(SpriteBundle {
                     sprite: Sprite {
                         color: palettes::tailwind::FUCHSIA_500.into(),
                         custom_size: Some(Vec2::ONE),
                         ..default()
                     },
                     transform: Transform::from_translation(
-                        ((Vec2::new(x, y) - Vec2::new(X as f32, Y as f32) / 2.0) * factor)
-                            .extend(0.5),
+                        remaining.first().unwrap_or(&first.xy()).extend(1.5),
                     )
                     .with_scale(Vec3::splat(SIZE as f32)),
                     ..default()
-                },))
+                })
                 .id();
             commands.entity(entity).insert(Path {
-                current: (first.xy() - Vec2::new(X as f32, Y as f32) / 2.0) * factor,
+                current: first.xy(),
                 next: remaining,
                 target: id,
             });
@@ -97,7 +89,6 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     mut navigator: Query<(Entity, &Transform, &mut Path), With<Navigator>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
     navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
     transforms: Query<&Transform>,
     mut delta: Local<f32>,
 ) {
@@ -108,37 +99,30 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     let Some(navmesh) = navmeshes.get_mut(navmesh_handle) else {
         return;
     };
-    let window = primary_window.single();
-    let factor = (window.width() / X as f32).min(window.height() / Y as f32);
 
     for (entity, transform, mut path) in &mut navigator {
         let target = transforms.get(path.target).unwrap().translation.xy();
-        let target = (target / factor + Vec2::new(X as f32, Y as f32) / 2.0).extend(0.0);
-        let current =
-            (transform.translation.xy() / factor + Vec2::new(X as f32, Y as f32) / 2.0).extend(0.0);
-        if !navmesh.transformed_is_in_mesh(current) {
+        if !navmesh.transformed_is_in_mesh(transform.translation) {
             *delta += 0.1;
             navmesh.set_delta(*delta);
             continue;
         }
-        if !navmesh.transformed_is_in_mesh(target) {
+        if !navmesh.transformed_is_in_mesh(target.extend(0.0)) {
             commands.entity(path.target).despawn();
             commands.entity(entity).remove::<Path>();
             continue;
         }
 
-        let Some(new_path) = navmesh.transformed_path(current, target) else {
+        let Some(new_path) = navmesh.transformed_path(transform.translation, target.extend(0.0))
+        else {
             commands.entity(path.target).despawn();
             commands.entity(entity).remove::<Path>();
             continue;
         };
         if let Some((first, remaining)) = new_path.path.split_first() {
-            let mut remaining = remaining
-                .into_iter()
-                .map(|p| (p.xy() - Vec2::new(X as f32, Y as f32) / 2.0) * factor)
-                .collect::<Vec<_>>();
+            let mut remaining = remaining.iter().map(|p| p.xy()).collect::<Vec<_>>();
             remaining.reverse();
-            path.current = (first.xy() - Vec2::new(X as f32, Y as f32) / 2.0) * factor;
+            path.current = first.xy();
             path.next = remaining;
             *delta = 0.0;
         }
@@ -171,10 +155,10 @@ pub fn display_navigator_path(navigator: Query<(&Transform, &Path)>, mut gizmos:
         return;
     };
     let mut to_display = path.next.clone();
-    to_display.push(path.current.clone());
+    to_display.push(path.current);
     to_display.push(transform.translation.xy());
     to_display.reverse();
-    if to_display.len() >= 1 {
+    if !to_display.is_empty() {
         gizmos.linestrip_2d(to_display, palettes::css::YELLOW);
     }
 }

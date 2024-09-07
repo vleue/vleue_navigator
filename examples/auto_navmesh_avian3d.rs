@@ -116,8 +116,8 @@ fn setup(
 
     let types = [
         (
-            meshes.add(Cuboid::from_length(2.0)),
-            Collider::cuboid(2.0, 2.0, 2.0),
+            meshes.add(Cuboid::from_length(obstacle_size)),
+            Collider::cuboid(obstacle_size, obstacle_size, obstacle_size),
         ),
         (
             meshes.add(Cone {
@@ -126,7 +126,10 @@ fn setup(
             }),
             Collider::cone(2.0, 2.0),
         ),
-        (meshes.add(Sphere::new(1.0)), Collider::sphere(1.0)),
+        (
+            meshes.add(Sphere::new(obstacle_size / 2.0)),
+            Collider::sphere(obstacle_size / 2.0),
+        ),
         (
             meshes.add(Capsule3d::new(1.0, 2.0)),
             Collider::capsule(1.0, 2.0),
@@ -172,12 +175,12 @@ fn setup(
     });
 
     let nb_navmeshes = 3;
-    let height_step = 2.0 / (nb_navmeshes as f32);
+    let height_step = obstacle_size / (nb_navmeshes as f32);
     for idx in 0..nb_navmeshes {
         commands.spawn((NavMeshBundle {
             settings: NavMeshSettings {
                 // Define the outer borders of the navmesh.
-                fixed: Triangulation::from_outer_edges(&vec![
+                fixed: Triangulation::from_outer_edges(&[
                     vec2(-25.0, -25.0),
                     vec2(25.0, -25.0),
                     vec2(25.0, 25.0),
@@ -189,11 +192,10 @@ fn setup(
                 ..default()
             },
             update_mode: NavMeshUpdateMode::Direct,
-            transform: Transform::from_xyz(0.0, 0.1 + idx as f32 * height_step, 0.0)
-                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+            transform: Transform::from_xyz(0.0, idx as f32 * height_step + 0.1, 0.0)
+                .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             handle: Handle::<NavMesh>::weak_from_u128(idx as u128),
-
-            ..default()
+            ..NavMeshBundle::with_default_id()
         },));
     }
 }

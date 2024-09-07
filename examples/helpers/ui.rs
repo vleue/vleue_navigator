@@ -228,7 +228,7 @@ pub fn update_settings<const STEP: u32>(
                         settings.simplify = (settings.simplify + STEP as f32 / 1000.0).min(10.0);
                     }
                     UiSettingsButtons::MergeStepsDec => {
-                        settings.merge_steps = settings.merge_steps.checked_sub(1).unwrap_or(0);
+                        settings.merge_steps = settings.merge_steps.saturating_sub(1);
                     }
                     UiSettingsButtons::MergeStepsInc => {
                         settings.merge_steps = (settings.merge_steps + 1).min(5);
@@ -336,13 +336,19 @@ pub fn update_stats<T: Component>(
         NavMeshStatus::Built => palettes::tailwind::GREEN_400.into(),
         NavMeshStatus::Failed => palettes::tailwind::RED_600.into(),
         NavMeshStatus::Cancelled => palettes::tailwind::AMBER_500.into(),
+        NavMeshStatus::Invalid => palettes::tailwind::RED_800.into(),
     };
     text.sections[3].value = format!("{}", obstacles.iter().len());
     text.sections[5].value = format!(
         "{}",
         navmeshes
             .get(handle)
-            .map(|nm| nm.get().polygons.len())
+            .map(|nm| nm
+                .get()
+                .layers
+                .iter()
+                .map(|l| l.polygons.len())
+                .sum::<usize>())
             .unwrap_or_default()
     );
     text.sections[7].value = format!(

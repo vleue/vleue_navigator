@@ -173,7 +173,7 @@ fn random_obstacle(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     ))
     .with_rotation(Quat::from_rotation_y(rng.gen_range(0.0..PI)))
     .with_scale(Vec3::splat(0.0));
-    new_obstacle(&mut commands, &mut rng, transform, &mut *meshes, &mat);
+    new_obstacle(&mut commands, &mut rng, transform, &mut meshes, &mat);
 }
 
 fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
@@ -201,7 +201,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
         commands.spawn(PointLightBundle {
             point_light: PointLight {
                 shadows_enabled: true,
-                intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 3_000_00.0,
+                intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 300_000.0,
                 range: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 10.0,
                 ..default()
             },
@@ -218,7 +218,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
     commands.spawn(NavMeshBundle {
         settings: NavMeshSettings {
             // Define the outer borders of the navmesh.
-            fixed: Triangulation::from_outer_edges(&vec![
+            fixed: Triangulation::from_outer_edges(&[
                 vec2(0.0, 0.0),
                 vec2(MESH_WIDTH as f32, 0.0),
                 vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
@@ -229,11 +229,11 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
             build_timeout: Some(0.5),
             ..default()
         },
-        transform: Transform::from_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
-        update_mode: NavMeshUpdateMode::Debounced(0.2),
-        ..default()
+        update_mode: NavMeshUpdateMode::Direct,
+        ..NavMeshBundle::with_default_id()
     });
 
     materials.insert(
@@ -444,12 +444,10 @@ fn display_mesh(
     *current_mesh_entity = Some(
         commands
             .spawn(PbrBundle {
-                mesh: meshes
-                    .add(Plane3d::new(
-                        Vec3::Y,
-                        Vec2::new(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
-                    ))
-                    .into(),
+                mesh: meshes.add(Plane3d::new(
+                    Vec3::Y,
+                    Vec2::new(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
+                )),
                 transform: Transform::from_translation(Vec3::new(
                     (MESH_WIDTH as f32) / 2.0,
                     0.0,

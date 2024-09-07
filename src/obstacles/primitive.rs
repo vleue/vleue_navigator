@@ -1,11 +1,13 @@
 use bevy::{
-    math::{vec2, Rot2, Vec2, Vec3, Vec3Swizzles},
+    math::{vec2, Dir3, Quat, Rot2, Vec2, Vec3, Vec3Swizzles},
     prelude::{
         Capsule2d, Circle, CircularSector, CircularSegment, Component, Ellipse, Rectangle,
         RegularPolygon, Rhombus,
     },
     transform::components::{GlobalTransform, Transform},
 };
+
+use crate::world_to_mesh;
 
 use super::{ObstacleSource, RESOLUTION};
 
@@ -74,43 +76,47 @@ impl ObstacleSource for PrimitiveObstacle {
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
+        (up, _shift): (Dir3, f32),
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
-        let to_vec2 = |v: Vec3| navmesh_transform.transform_point(v).xy();
-        let to_navmesh = |v: Vec2| {
-            navmesh_transform
-                .compute_affine()
-                .inverse()
-                .transform_point3(v.extend(0.0))
+        let world_to_mesh = world_to_mesh(navmesh_transform);
+
+        let to_world = |v: Vec2| {
+            let mut v = v.extend(0.0).xzy();
+            v = if up.is_negative_bitmask().count_ones() % 2 == 1 {
+                Quat::from_rotation_arc(Vec3::Y, up.into()).mul_vec3(v)
+            } else {
+                Quat::from_rotation_arc(-Vec3::Y, up.into()).mul_vec3(v)
+            };
+            transform.transform_point(v)
         };
+
+        let to_navmesh = |v: Vec3| world_to_mesh.transform_point3(v).xy();
 
         match self {
             PrimitiveObstacle::Rectangle(primitive) => vec![
-                to_vec2(transform.transform_point(to_navmesh(vec2(
+                to_navmesh(to_world(vec2(
                     -primitive.half_size.x,
                     -primitive.half_size.y,
-                )))),
-                to_vec2(transform.transform_point(to_navmesh(vec2(
+                ))),
+                to_navmesh(to_world(vec2(
                     -primitive.half_size.x,
                     primitive.half_size.y,
-                )))),
-                to_vec2(transform.transform_point(to_navmesh(vec2(
-                    primitive.half_size.x,
-                    primitive.half_size.y,
-                )))),
-                to_vec2(transform.transform_point(to_navmesh(vec2(
+                ))),
+                to_navmesh(to_world(vec2(primitive.half_size.x, primitive.half_size.y))),
+                to_navmesh(to_world(vec2(
                     primitive.half_size.x,
                     -primitive.half_size.y,
-                )))),
+                ))),
             ],
             PrimitiveObstacle::Circle(primitive) => {
                 copypasta::ellipse_inner(vec2(primitive.radius, primitive.radius), RESOLUTION)
-                    .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
+                    .map(|v| to_navmesh(to_world(v)))
                     .collect()
             }
             PrimitiveObstacle::Ellipse(primitive) => {
                 copypasta::ellipse_inner(primitive.half_size, RESOLUTION)
-                    .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
+                    .map(|v| to_navmesh(to_world(v)))
                     .collect()
             }
             PrimitiveObstacle::CircularSector(primitive) => {
@@ -120,9 +126,9 @@ impl ObstacleSource for PrimitiveObstacle {
                     primitive.arc.radius,
                     RESOLUTION,
                 )
-                .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
+                .map(|v| to_navmesh(to_world(v)))
                 .collect::<Vec<_>>();
-                arc.push(to_vec2(transform.translation));
+                arc.push(to_navmesh(transform.translation));
                 arc
             }
             PrimitiveObstacle::CircularSegment(primitive) => copypasta::arc_2d_inner(
@@ -131,7 +137,7 @@ impl ObstacleSource for PrimitiveObstacle {
                 primitive.arc.radius,
                 RESOLUTION,
             )
-            .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
+            .map(|v| to_navmesh(to_world(v)))
             .collect(),
             PrimitiveObstacle::Capsule(primitive) => {
                 let mut points = copypasta::arc_2d_inner(
@@ -140,11 +146,7 @@ impl ObstacleSource for PrimitiveObstacle {
                     primitive.radius,
                     RESOLUTION,
                 )
-                .map(|v| {
-                    to_vec2(
-                        transform.transform_point(to_navmesh(v + primitive.half_length * Vec2::Y)),
-                    )
-                })
+                .map(|v| to_navmesh(to_world(v + primitive.half_length * Vec2::Y)))
                 .collect::<Vec<_>>();
                 points.extend(
                     copypasta::arc_2d_inner(
@@ -154,10 +156,10 @@ impl ObstacleSource for PrimitiveObstacle {
                         RESOLUTION,
                     )
                     .map(|v| {
-                        to_vec2(transform.transform_point(to_navmesh(
+                        to_navmesh(to_world(
                             (Rot2::radians(std::f32::consts::PI) * v)
                                 - primitive.half_length * Vec2::Y,
-                        )))
+                        ))
                     }),
                 );
                 points
@@ -170,7 +172,7 @@ impl ObstacleSource for PrimitiveObstacle {
                         p,
                     )
                 })
-                .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
+                .map(|v| to_navmesh(to_world(v)))
                 .collect(),
             PrimitiveObstacle::Rhombus(primitive) => {
                 [(1.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (0.0, -1.0)]
@@ -181,7 +183,7 @@ impl ObstacleSource for PrimitiveObstacle {
                         )
                     })
                     .into_iter()
-                    .map(|v| to_vec2(transform.transform_point(to_navmesh(v))))
+                    .map(|v| to_navmesh(to_world(v)))
                     .collect()
             }
         }
