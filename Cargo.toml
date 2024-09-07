@@ -93,3 +93,6 @@ required-features = ["avian3d"]
 [[example]]
 name = "layers_inclined"
 required-features = ["avian3d", "detailed-layers"]
+
+[package.metadata.docs.rs]
+features = ["detailed-layers"]

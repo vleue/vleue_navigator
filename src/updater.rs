@@ -88,6 +88,10 @@ pub struct NavMeshSettings {
     /// If there are several layers, stitch them together with these segments.
     pub stitches: Vec<((u8, u8), [Vec2; 2])>,
     /// Scale of this navmesh. Defaults to `Vec2::ONE`.
+    ///
+    /// Used to scale the navmesh to the correct size when displaying it
+    ///
+    /// if feature `detailed-layers` is enabled, it's also used for path finding to change the traversal cost of this layer.
     pub scale: Vec2,
 }
 

@@ -10,6 +10,7 @@
     unused_qualifications,
     missing_docs
 )]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use std::sync::Arc;
 
@@ -94,6 +95,7 @@ pub struct TransformedPath {
     pub path: Vec<Vec3>,
     /// Coordinates for each step of the path. The destination is the last step.
     #[cfg(feature = "detailed-layers")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "detailed-layers")))]
     pub path_with_layers: Vec<(Vec3, u8)>,
 }
 
