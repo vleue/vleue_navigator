@@ -60,4 +60,18 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo test --features linuxci
+          cargo test
+
+  tests-with-layers:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tests
+        run: |
+          cargo test --features detailed-layers

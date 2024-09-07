@@ -56,12 +56,13 @@ features = [
     "multi_threaded",
     "bevy_state",
     "default_font",
+    # to build on linux
+    "x11",
 ]
 default-features = false
 
 [features]
 default = ["debug-with-gizmos"]
-linuxci = ["bevy/x11"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 
