@@ -130,11 +130,14 @@ impl NavMesh {
     ///
     /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
     pub fn from_bevy_mesh_and_then(mesh: &Mesh, callback: impl Fn(&mut polyanya::Mesh)) -> NavMesh {
-        let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL).next().unwrap();
+        let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL)
+            .and_then(|mut i| i.next())
+            .unwrap_or(Vec3::Z);
         let rotation = Quat::from_rotation_arc(normal, Vec3::Z);
         let rotation_reverse = rotation.inverse();
 
         let vertices = get_vectors(mesh, Mesh::ATTRIBUTE_POSITION)
+            .expect("can't extract a navmesh from a mesh without `Mesh::ATTRIBUTE_POSITION`")
             .map(|vertex| rotation_reverse.mul_vec3(vertex))
             .map(|coords| coords.xy())
             .collect();
@@ -357,13 +360,13 @@ pub(crate) fn world_to_mesh(navmesh_transform: &Transform) -> Affine3A {
 fn get_vectors(
     mesh: &Mesh,
     id: impl Into<MeshVertexAttributeId>,
-) -> impl Iterator<Item = Vec3> + '_ {
-    let vectors = match mesh.attribute(id).unwrap() {
-        VertexAttributeValues::Float32x3(values) => values,
+) -> Option<impl Iterator<Item = Vec3> + '_> {
+    let vectors = match mesh.attribute(id) {
+        Some(VertexAttributeValues::Float32x3(values)) => values,
         // Guaranteed by Bevy for the attributes requested in this context
-        _ => unreachable!(),
+        _ => return None,
     };
-    vectors.iter().cloned().map(Vec3::from)
+    Some(vectors.iter().cloned().map(Vec3::from))
 }
 
 #[cfg(feature = "debug-with-gizmos")]
@@ -459,6 +462,7 @@ mod tests {
                     Vec2::new(1., 1.),
                 ],
                 triangles: vec![[0, 1, 3], [0, 3, 2]],
+                triangles: vec![[3, 1, 0], [2, 3, 0]],
             }
             .try_into()
             .unwrap(),
