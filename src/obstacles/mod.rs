@@ -22,5 +22,6 @@ pub trait ObstacleSource: Component + Clone {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2>;
 }

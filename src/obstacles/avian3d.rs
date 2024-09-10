@@ -1,13 +1,18 @@
 use avian3d::{
     dynamics::rigid_body::Sleeping,
+    math::Vector,
     parry::{
         na::{Const, OPoint, Unit, Vector3},
         query::IntersectResult,
-        shape::{Polyline, TriMesh, TypedShape},
+        shape::{Cuboid, Polyline, TriMesh, TypedShape},
     },
     prelude::Collider,
 };
-use bevy::{math::vec3, prelude::*};
+use bevy::{
+    log::warn,
+    math::{vec3, Dir3, Vec2, Vec3, Vec3Swizzles},
+    prelude::{Commands, GlobalTransform, OnInsert, OnRemove, Transform, TransformPoint, Trigger},
+};
 
 use crate::{updater::CachableObstacle, world_to_mesh};
 
@@ -19,10 +24,14 @@ impl ObstacleSource for Collider {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2> {
-        self.shape_scaled()
-            .as_typed_shape()
-            .get_polygon(obstacle_transform, navmesh_transform, up)
+        self.shape_scaled().as_typed_shape().get_polygon(
+            obstacle_transform,
+            navmesh_transform,
+            up,
+            agent_radius,
+        )
     }
 }
 
@@ -32,6 +41,7 @@ trait InnerObstacleSource {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2>;
 }
 
@@ -41,6 +51,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, shift): (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2> {
         let mut transform = obstacle_transform.compute_transform();
         transform.scale = Vec3::ONE;
@@ -73,6 +84,14 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         };
         match self {
             TypedShape::Cuboid(collider) => {
+                let collider = Cuboid::new(
+                    Vector::new(
+                        collider.half_extents.x + agent_radius,
+                        collider.half_extents.y + agent_radius,
+                        collider.half_extents.z + agent_radius,
+                    )
+                    .into(),
+                );
                 let (vertices, indices) = collider.to_trimesh();
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
                 vec![intersection_to_navmesh(
@@ -115,6 +134,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                             obstacle_transform,
                             navmesh_transform,
                             (up, shift),
+                            agent_radius,
                         )
                     })
                     .collect()

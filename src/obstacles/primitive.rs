@@ -77,6 +77,7 @@ impl ObstacleSource for PrimitiveObstacle {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, _shift): (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);

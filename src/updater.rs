@@ -93,6 +93,7 @@ pub struct NavMeshSettings {
     ///
     /// if feature `detailed-layers` is enabled, it's also used for path finding to change the traversal cost of this layer.
     pub scale: Vec2,
+    pub agent_radius: f32,
 }
 
 impl Default for NavMeshSettings {
@@ -108,6 +109,7 @@ impl Default for NavMeshSettings {
             layer: None,
             stitches: vec![],
             scale: Vec2::ONE,
+            agent_radius: 0.0,
         }
     }
 }
@@ -157,9 +159,9 @@ fn build_navmesh<T: ObstacleSource>(
     let up = (mesh_transform.forward(), settings.upward_shift);
     let base = if settings.cached.is_none() {
         let mut base = settings.fixed;
-        let obstacle_polys = cached_obstacles
-            .iter()
-            .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform, up));
+        let obstacle_polys = cached_obstacles.iter().map(|(transform, obstacle)| {
+            obstacle.get_polygon(transform, &mesh_transform, up, settings.agent_radius)
+        });
         base.add_obstacles(obstacle_polys);
         if settings.simplify != 0.0 {
             base.simplify(settings.simplify);
@@ -175,7 +177,7 @@ fn build_navmesh<T: ObstacleSource>(
         .iter()
         .map(|(transform, obstacle)| {
             obstacle
-                .get_polygon(transform, &mesh_transform, up)
+                .get_polygon(transform, &mesh_transform, up, settings.agent_radius)
                 .into_iter()
                 .map(|v| v / scale)
                 .collect()
