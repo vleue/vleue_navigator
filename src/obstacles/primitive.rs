@@ -77,6 +77,7 @@ impl ObstacleSource for PrimitiveObstacle {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, _shift): (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);
@@ -94,28 +95,24 @@ impl ObstacleSource for PrimitiveObstacle {
         let to_navmesh = |v: Vec3| world_to_mesh.transform_point3(v).xy();
 
         match self {
-            PrimitiveObstacle::Rectangle(primitive) => vec![
-                to_navmesh(to_world(vec2(
-                    -primitive.half_size.x,
-                    -primitive.half_size.y,
-                ))),
-                to_navmesh(to_world(vec2(
-                    -primitive.half_size.x,
-                    primitive.half_size.y,
-                ))),
-                to_navmesh(to_world(vec2(primitive.half_size.x, primitive.half_size.y))),
-                to_navmesh(to_world(vec2(
-                    primitive.half_size.x,
-                    -primitive.half_size.y,
-                ))),
-            ],
+            PrimitiveObstacle::Rectangle(primitive) => {
+                let x = primitive.half_size.x + agent_radius;
+                let y = primitive.half_size.y + agent_radius;
+                vec![
+                    to_navmesh(to_world(vec2(-x, -y))),
+                    to_navmesh(to_world(vec2(-x, y))),
+                    to_navmesh(to_world(vec2(x, y))),
+                    to_navmesh(to_world(vec2(x, -y))),
+                ]
+            }
             PrimitiveObstacle::Circle(primitive) => {
-                copypasta::ellipse_inner(vec2(primitive.radius, primitive.radius), RESOLUTION)
+                let with_radius = primitive.radius + agent_radius;
+                copypasta::ellipse_inner(vec2(with_radius, with_radius), RESOLUTION)
                     .map(|v| to_navmesh(to_world(v)))
                     .collect()
             }
             PrimitiveObstacle::Ellipse(primitive) => {
-                copypasta::ellipse_inner(primitive.half_size, RESOLUTION)
+                copypasta::ellipse_inner(primitive.half_size + agent_radius, RESOLUTION)
                     .map(|v| to_navmesh(to_world(v)))
                     .collect()
             }
@@ -123,7 +120,7 @@ impl ObstacleSource for PrimitiveObstacle {
                 let mut arc = copypasta::arc_2d_inner(
                     0.0,
                     primitive.arc.angle() as f64,
-                    primitive.arc.radius,
+                    primitive.arc.radius + agent_radius,
                     RESOLUTION,
                 )
                 .map(|v| to_navmesh(to_world(v)))
@@ -134,7 +131,7 @@ impl ObstacleSource for PrimitiveObstacle {
             PrimitiveObstacle::CircularSegment(primitive) => copypasta::arc_2d_inner(
                 0.0,
                 primitive.arc.angle() as f64,
-                primitive.arc.radius,
+                primitive.arc.radius + agent_radius,
                 RESOLUTION,
             )
             .map(|v| to_navmesh(to_world(v)))
@@ -143,7 +140,7 @@ impl ObstacleSource for PrimitiveObstacle {
                 let mut points = copypasta::arc_2d_inner(
                     0.0,
                     std::f64::consts::PI,
-                    primitive.radius,
+                    primitive.radius + agent_radius,
                     RESOLUTION,
                 )
                 .map(|v| to_navmesh(to_world(v + primitive.half_length * Vec2::Y)))
@@ -152,7 +149,7 @@ impl ObstacleSource for PrimitiveObstacle {
                     copypasta::arc_2d_inner(
                         0.0,
                         std::f64::consts::PI,
-                        primitive.radius,
+                        primitive.radius + agent_radius,
                         RESOLUTION,
                     )
                     .map(|v| {
@@ -167,7 +164,7 @@ impl ObstacleSource for PrimitiveObstacle {
             PrimitiveObstacle::RegularPolygon(primitive) => (0..=primitive.sides)
                 .map(|p| {
                     copypasta::single_circle_coordinate(
-                        primitive.circumcircle.radius,
+                        primitive.circumcircle.radius + agent_radius,
                         primitive.sides as u32,
                         p,
                     )
@@ -175,13 +172,10 @@ impl ObstacleSource for PrimitiveObstacle {
                 .map(|v| to_navmesh(to_world(v)))
                 .collect(),
             PrimitiveObstacle::Rhombus(primitive) => {
+                let x = primitive.half_diagonals.x + agent_radius;
+                let y = primitive.half_diagonals.y + agent_radius;
                 [(1.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (0.0, -1.0)]
-                    .map(|(sign_x, sign_y)| {
-                        Vec2::new(
-                            primitive.half_diagonals.x * sign_x,
-                            primitive.half_diagonals.y * sign_y,
-                        )
-                    })
+                    .map(|(sign_x, sign_y)| Vec2::new(x * sign_x, y * sign_y))
                     .into_iter()
                     .map(|v| to_navmesh(to_world(v)))
                     .collect()

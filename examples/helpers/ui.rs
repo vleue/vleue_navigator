@@ -5,6 +5,7 @@ use vleue_navigator::prelude::*;
 pub enum UiSettings {
     Simplify,
     MergeSteps,
+    AgentRadius,
     Cache,
 }
 
@@ -14,6 +15,8 @@ pub enum UiSettingsButtons {
     SimplifyDec,
     MergeStepsInc,
     MergeStepsDec,
+    AgentRadiusInc,
+    AgentRadiusDec,
     ToggleCache,
 }
 
@@ -137,6 +140,36 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                     button(" - ", UiSettingsButtons::MergeStepsDec, parent);
                     button(" + ", UiSettingsButtons::MergeStepsInc, parent);
                 });
+            parent
+                .spawn(NodeBundle { ..default() })
+                .with_children(|parent| {
+                    parent.spawn((
+                        TextBundle {
+                            text: Text::from_sections(
+                                [("Agent Radius: ", 30.0), ("{}", 30.0)].into_iter().map(
+                                    |(text, font_size): (&str, f32)| {
+                                        TextSection::new(
+                                            text,
+                                            TextStyle {
+                                                font_size,
+                                                ..default()
+                                            },
+                                        )
+                                    },
+                                ),
+                            ),
+                            style: Style {
+                                margin: UiRect::all(Val::Px(12.0)),
+                                ..default()
+                            },
+                            ..default()
+                        }
+                        .with_text_justify(JustifyText::Right),
+                        UiSettings::AgentRadius,
+                    ));
+                    button(" - ", UiSettingsButtons::AgentRadiusDec, parent);
+                    button(" + ", UiSettingsButtons::AgentRadiusInc, parent);
+                });
             if WITH_CACHE {
                 parent
                     .spawn((
@@ -187,6 +220,9 @@ pub fn display_settings(
                 UiSettings::MergeSteps => {
                     text.sections[1].value = format!("{}", settings.merge_steps)
                 }
+                UiSettings::AgentRadius => {
+                    text.sections[1].value = format!("{}", settings.agent_radius)
+                }
                 UiSettings::Cache => (),
             }
         }
@@ -196,6 +232,7 @@ pub fn display_settings(
             match param {
                 UiSettings::Simplify => (),
                 UiSettings::MergeSteps => (),
+                UiSettings::AgentRadius => (),
                 UiSettings::Cache => {
                     *color = if example_settings.cache_enabled {
                         palettes::tailwind::GREEN_400.into()
@@ -232,6 +269,12 @@ pub fn update_settings<const STEP: u32>(
                     }
                     UiSettingsButtons::MergeStepsInc => {
                         settings.merge_steps = (settings.merge_steps + 1).min(5);
+                    }
+                    UiSettingsButtons::AgentRadiusDec => {
+                        settings.agent_radius = (settings.agent_radius - 0.5).max(0.0);
+                    }
+                    UiSettingsButtons::AgentRadiusInc => {
+                        settings.agent_radius = (settings.agent_radius + 0.5).min(10.0);
                     }
                     UiSettingsButtons::ToggleCache => {
                         example_settings.cache_enabled = !example_settings.cache_enabled;

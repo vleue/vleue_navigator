@@ -21,10 +21,14 @@ impl ObstacleSource for Collider {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2> {
-        self.shape_scaled()
-            .as_typed_shape()
-            .get_polygon(obstacle_transform, navmesh_transform, up)
+        self.shape_scaled().as_typed_shape().get_polygon(
+            obstacle_transform,
+            navmesh_transform,
+            up,
+            agent_radius,
+        )
     }
 }
 

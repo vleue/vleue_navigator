@@ -37,12 +37,19 @@ impl<T: ObstacleSource> ObstacleSource for CachedObstacle<T> {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2> {
         self.polygon
             .get_or_init(|| {
-                T::get_polygon(&self.source, obstacle_transform, navmesh_transform, up)
-                    .into_iter()
-                    .collect::<Vec<_>>()
+                T::get_polygon(
+                    &self.source,
+                    obstacle_transform,
+                    navmesh_transform,
+                    up,
+                    agent_radius,
+                )
+                .into_iter()
+                .collect::<Vec<_>>()
             })
             .clone()
     }
