@@ -1,7 +1,16 @@
 use std::time::Duration;
 
 use avian3d::{math::*, prelude::*};
-use bevy::{color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer};
+use bevy::{
+    color::palettes,
+    math::vec2,
+    prelude::*,
+    render::{
+        settings::{Backends, PowerPreference, RenderCreation, WgpuSettings},
+        RenderPlugin,
+    },
+    time::common_conditions::on_timer,
+};
 
 use vleue_navigator::prelude::*;
 
@@ -11,14 +20,23 @@ struct Obstacle;
 fn main() {
     let mut app = App::new();
     app.add_plugins((
-        DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Navmesh with Polyanya".to_string(),
-                fit_canvas_to_parent: true,
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Navmesh with Polyanya".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(RenderPlugin {
+                render_creation: RenderCreation::Automatic(WgpuSettings {
+                    backends: Some(Backends::DX12),
+                    power_preference: PowerPreference::HighPerformance,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }),
         PhysicsPlugins::default().with_length_unit(20.0),
         VleueNavigatorPlugin,
         NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
@@ -189,9 +207,10 @@ fn setup(
                 build_timeout: Some(1.0),
                 simplify: 0.005,
                 merge_steps: 0,
+                agent_radius: 2.0,
                 ..default()
             },
-            update_mode: NavMeshUpdateMode::Direct,
+            update_mode: NavMeshUpdateMode::Debounced(0.5),
             transform: Transform::from_xyz(0.0, idx as f32 * height_step + 0.1, 0.0)
                 .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             handle: Handle::<NavMesh>::weak_from_u128(idx as u128),

@@ -1,9 +1,12 @@
 use avian3d::{
     dynamics::rigid_body::Sleeping,
     parry::{
+        math::Vector,
         na::{Const, OPoint, Unit, Vector3},
         query::IntersectResult,
-        shape::{Polyline, TriMesh, TypedShape},
+        shape::{
+            Ball, Capsule, Cone, Cuboid, Cylinder, HeightField, Polyline, TriMesh, TypedShape,
+        },
     },
     prelude::Collider,
 };
@@ -40,12 +43,125 @@ trait InnerObstacleSource {
     ) -> Vec<Vec2>;
 }
 
+fn shape_to_trymesh(shape: &TypedShape, agent_radius: f32) -> Option<TriMesh> {
+    if let TypedShape::TriMesh(trimesh) = shape {
+        return (*trimesh).clone().into();
+    }
+
+    let verts_and_indices = match shape {
+        TypedShape::Cuboid(collider) => {
+            let expanded = Cuboid::new(Vector::new(
+                collider.half_extents.x + agent_radius,
+                collider.half_extents.y + agent_radius,
+                collider.half_extents.z + agent_radius,
+            ));
+            Some(expanded.to_trimesh())
+        }
+        TypedShape::Ball(collider) => {
+            let expanded = Ball::new(collider.radius + agent_radius);
+            Some(expanded.to_trimesh(RESOLUTION, RESOLUTION))
+        }
+        TypedShape::Capsule(collider) => {
+            let segment = collider.segment;
+            let expanded = Capsule::new(segment.a, segment.b, collider.radius + agent_radius);
+            Some(expanded.to_trimesh(RESOLUTION, RESOLUTION))
+        }
+        TypedShape::HeightField(collider) => {
+            let expanded = HeightField::new(
+                collider.heights().add_scalar(agent_radius),
+                *collider.scale(),
+            );
+            Some(expanded.to_trimesh())
+        }
+        TypedShape::ConvexPolyhedron(collider) => {
+            if agent_radius > 0.0 {
+                warn!("ConvexPolyhedron doesn't support agent radius");
+            }
+            Some(collider.to_trimesh())
+        }
+        TypedShape::Cylinder(collider) => {
+            let expanded = Cylinder::new(
+                collider.half_height + (agent_radius / 2.0),
+                collider.radius + agent_radius,
+            );
+            Some(expanded.to_trimesh(RESOLUTION))
+        }
+        TypedShape::Cone(collider) => {
+            let expanded = Cone::new(
+                collider.half_height + (agent_radius / 2.0),
+                collider.radius + agent_radius,
+            );
+            Some(expanded.to_trimesh(RESOLUTION))
+        }
+        TypedShape::Segment(_) => {
+            warn!("Segment collider not supported for NavMesh obstacle generation");
+            None
+        }
+        TypedShape::Triangle(_) => {
+            warn!("Triangle collider not supported for NavMesh obstacle generation");
+            None
+        }
+        TypedShape::Polyline(_) => {
+            warn!("Polyline collider not supported for NavMesh obstacle generation");
+            None
+        }
+        TypedShape::HalfSpace(_) => {
+            warn!("HalfSpace collider not supported for NavMesh obstacle generation");
+            None
+        }
+        TypedShape::RoundCuboid(collider) => {
+            if agent_radius > 0.0 {
+                // ConvexPolyhedron needs to be constructured
+                warn!("RoundCuboid doesn't support agent radius");
+                None
+            } else {
+                Some(collider.inner_shape.to_trimesh())
+            }
+        }
+        TypedShape::RoundCone(collider) => {
+            if agent_radius > 0.0 {
+                warn!("RoundTriangle doesn't support agent radius");
+            }
+            Some(collider.inner_shape.to_trimesh(RESOLUTION))
+        }
+        TypedShape::RoundCylinder(collider) => {
+            if agent_radius > 0.0 {
+                warn!("RoundCylinder doesn't support agent radius");
+            }
+            Some(collider.inner_shape.to_trimesh(RESOLUTION))
+        }
+        TypedShape::RoundTriangle(_) => {
+            warn!("Polyline collider not supported for NavMesh obstacle generation");
+            None
+        }
+        TypedShape::RoundConvexPolyhedron(collider) => {
+            if agent_radius > 0.0 {
+                warn!("RoundConvexPolyhedron doesn't support agent radius");
+            }
+            Some(collider.inner_shape.to_trimesh())
+        }
+        TypedShape::Custom(_) => {
+            warn!("Cusomt collider not supported for NavMesh obstacle generation");
+            None
+        }
+
+        TypedShape::Compound(_) => unreachable!(),
+        TypedShape::TriMesh(_) => unreachable!(),
+    };
+    if let Some((vertices, indices)) = verts_and_indices {
+        TriMesh::new(vertices, indices).into()
+    } else {
+        None
+    }
+}
+
 impl<'a> InnerObstacleSource for TypedShape<'a> {
     fn get_polygon(
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, shift): (Dir3, f32),
+        agent_radius: f32,
     ) -> Vec<Vec2> {
         let mut transform = obstacle_transform.compute_transform();
         transform.scale = Vec3::ONE;
@@ -76,131 +192,20 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                 .map(|v| v.into())
                 .collect::<Vec<OPoint<f32, Const<3>>>>()
         };
-        match self {
-            TypedShape::Cuboid(collider) => {
-                let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::Ball(collider) => {
-                let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::Capsule(collider) => {
-                let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::TriMesh(collider) => {
-                vec![intersection_to_navmesh(
-                    collider.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::HeightField(collider) => {
-                let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::Compound(collider) => {
-                collider
-                    .shapes()
-                    .iter()
-                    .map(|(_iso, shape)| {
-                        // TODO: handle the isometry of each shape
-                        shape.as_typed_shape().get_polygon(
-                            obstacle_transform,
-                            navmesh_transform,
-                            (up, shift),
-                        )
-                    })
-                    .collect()
-            }
-            TypedShape::ConvexPolyhedron(collider) => {
-                let (vertices, indices) = collider.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::Cylinder(collider) => {
-                let (vertices, indices) = collider.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::Cone(collider) => {
-                let (vertices, indices) = collider.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::RoundCuboid(collider) => {
-                let (vertices, indices) = collider.inner_shape.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::RoundCylinder(collider) => {
-                let (vertices, indices) = collider.inner_shape.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::RoundCone(collider) => {
-                let (vertices, indices) = collider.inner_shape.to_trimesh(RESOLUTION);
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::RoundConvexPolyhedron(collider) => {
-                let (vertices, indices) = collider.inner_shape.to_trimesh();
-                let trimesh = TriMesh::new(trimesh_to_world(vertices), indices);
-                vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
-                )]
-            }
-            TypedShape::Segment(_) => {
-                warn!("Segment collider not supported for NavMesh obstacle generation");
-                vec![]
-            }
-            TypedShape::Triangle(_) => {
-                warn!("Triangle collider not supported for NavMesh obstacle generation");
-                vec![]
-            }
-            TypedShape::Polyline(_) => {
-                warn!("Polyline collider not supported for NavMesh obstacle generation");
-                vec![]
-            }
-            TypedShape::HalfSpace(_) => {
-                warn!("HalfSpace collider not supported for NavMesh obstacle generation");
-                vec![]
-            }
-            TypedShape::RoundTriangle(_) => {
-                warn!("RoundTriangle collider not supported for NavMesh obstacle generation");
-                vec![]
-            }
-            TypedShape::Custom(_) => {
-                warn!("Custom collider not supported for NavMesh obstacle generation");
-                vec![]
-            }
+        if let Some(tri_mesh) = shape_to_trymesh(self, agent_radius) {
+            let trimesh = TriMesh::new(
+                trimesh_to_world(tri_mesh.vertices().to_vec()),
+                tri_mesh.indices().to_vec(),
+            );
+            vec![intersection_to_navmesh(
+                trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+            )]
+            .into_iter()
+            .flatten()
+            .collect()
+        } else {
+            vec![]
         }
-        .into_iter()
-        .flatten()
-        .collect()
     }
 }
 
