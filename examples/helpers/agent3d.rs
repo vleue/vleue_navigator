@@ -139,7 +139,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     mut deltas: Local<EntityHashMap<Entity, f32>>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
-    if !status.is_changed() && deltas.is_empty() {
+    if (!status.is_changed() || *status != NavMeshStatus::Built) && deltas.is_empty() {
         return;
     }
     let Some(navmesh) = navmeshes.get_mut(navmesh_handle) else {

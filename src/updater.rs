@@ -113,7 +113,7 @@ impl Default for NavMeshSettings {
 }
 
 /// Status of the navmesh generation
-#[derive(Component, Debug, Copy, Clone)]
+#[derive(Component, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum NavMeshStatus {
     /// Not yet built
     Building,
@@ -562,7 +562,7 @@ fn update_navmesh_asset(
                 }
                 mesh.restitch_layer_at_vertices(*layer_id, stitch_vertices, false);
 
-                if matches!(*status, NavMeshStatus::Built) && previously_failed.is_empty() {
+                if *status == NavMeshStatus::Built && previously_failed.is_empty() {
                     let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
                     if *layer_id == 0 {
                         navmesh.set_transform(global_transform.compute_transform());
