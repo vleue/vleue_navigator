@@ -13,7 +13,6 @@ use bevy::{
     prelude::*,
     tasks::AsyncComputeTaskPool,
     transform::systems::sync_simple_transforms,
-    utils::HashMap,
 };
 use polyanya::{Layer, Mesh, Triangulation};
 
@@ -258,17 +257,13 @@ type ObstacleQueries<'world, 'state, 'a, 'b, 'c, Obstacle, Marker> = (
     Query<
         'world,
         'state,
-        (Ref<'a, GlobalTransform>, &'b Obstacle),
+        (Ref<'a, GlobalTransform>, Ref<'b, Obstacle>),
         (With<Marker>, Without<CachableObstacle>),
     >,
     Query<
         'world,
         'state,
-        (
-            Ref<'a, GlobalTransform>,
-            &'b Obstacle,
-            Ref<'c, CachableObstacle>,
-        ),
+        (&'a GlobalTransform, &'b Obstacle, Ref<'c, CachableObstacle>),
         With<Marker>,
     >,
 );
@@ -280,7 +275,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     removed_cachable_obstacles: RemovedComponents<CachableObstacle>,
     mut navmeshes: NavMeshToUpdateQuery,
     time: Res<Time>,
-    mut ready_to_update: Local<HashMap<Entity, (f32, bool)>>,
+    mut ready_to_update: Local<EntityHashMap<(f32, bool)>>,
 ) {
     let keys = ready_to_update.keys().cloned().collect::<Vec<_>>();
     let mut retrigger = vec![];
@@ -316,7 +311,9 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             if settings.is_changed()
                 || has_removed_obstacles
                 || matches!(mode, NavMeshUpdateMode::OnDemand(true))
-                || dynamic_obstacles.iter().any(|(t, _)| t.is_changed())
+                || dynamic_obstacles
+                    .iter()
+                    .any(|(t, o)| t.is_changed() || o.is_changed())
             {
                 Some(entity)
             } else {
