@@ -430,7 +430,7 @@ fn display_mesh(
     navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
-    if !status.is_changed() {
+    if !status.is_changed() || *status != NavMeshStatus::Built {
         return;
     }
 
