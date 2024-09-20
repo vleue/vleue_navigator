@@ -80,7 +80,9 @@ pub struct NavMeshSettings {
     pub build_timeout: Option<f32>,
     /// Cache from the last build from obstacles that are [`CachableObstacle`]
     pub cached: Option<Triangulation>,
-    /// Upward shift to sample obstacle from the ground
+    /// Upward shift to sample obstacles from the ground
+    ///
+    /// It should be greater than `0.0` in 3d as colliders lying flat on a surface are not considered intersecting. Default value is `0.1`.
     pub upward_shift: f32,
     /// Specific layer to update. If none, the first layer will be updated.
     pub layer: Option<u8>,
