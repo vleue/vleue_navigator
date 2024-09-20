@@ -162,12 +162,11 @@ fn build_navmesh<T: ObstacleSource>(
         let mut base = settings.fixed;
         let obstacle_polys = cached_obstacles
             .iter()
-            .map(|(transform, obstacle)| {
+            .flat_map(|(transform, obstacle)| {
                 obstacle
                     .get_polygons(transform, &mesh_transform, up)
                     .into_iter()
             })
-            .flatten()
             .filter(|p: &Vec<Vec2>| !p.is_empty())
             .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
         base.add_obstacles(obstacle_polys);
@@ -182,12 +181,11 @@ fn build_navmesh<T: ObstacleSource>(
     let mut triangulation = base.clone();
     let obstacle_polys = obstacles
         .iter()
-        .map(|(transform, obstacle)| {
+        .flat_map(|(transform, obstacle)| {
             obstacle
                 .get_polygons(transform, &mesh_transform, up)
                 .into_iter()
         })
-        .flatten()
         .filter(|p: &Vec<Vec2>| !p.is_empty())
         .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
     triangulation.add_obstacles(obstacle_polys);
