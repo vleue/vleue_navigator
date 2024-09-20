@@ -100,7 +100,7 @@ impl Default for NavMeshSettings {
     fn default() -> Self {
         Self {
             simplify: 0.0,
-            merge_steps: 2,
+            merge_steps: 0,
             default_delta: 0.01,
             fixed: Triangulation::from_outer_edges(&[]),
             build_timeout: None,
