@@ -103,7 +103,8 @@ impl Default for NavMeshSettings {
             fixed: Triangulation::from_outer_edges(&[]),
             build_timeout: None,
             cached: None,
-            upward_shift: 0.0,
+            // Value is arbitrary, but shouldn't be 0.0. colliders lying flat on a surface are not considered as intersecting with 0.0
+            upward_shift: 0.1,
             layer: None,
             stitches: vec![],
             scale: Vec2::ONE,
