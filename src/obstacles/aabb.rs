@@ -9,12 +9,12 @@ use crate::world_to_mesh;
 use super::ObstacleSource;
 
 impl ObstacleSource for Aabb {
-    fn get_polygon(
+    fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, _shift): (Dir3, f32),
-    ) -> Vec<Vec2> {
+    ) -> Vec<Vec<Vec2>> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);
 
@@ -29,7 +29,7 @@ impl ObstacleSource for Aabb {
         };
         let to_navmesh = |v: Vec3| world_to_mesh.transform_point3(v).xy();
 
-        vec![
+        vec![vec![
             to_navmesh(to_world(vec3(
                 -self.half_extents.x,
                 self.half_extents.y,
@@ -50,6 +50,6 @@ impl ObstacleSource for Aabb {
                 self.half_extents.y,
                 self.half_extents.z,
             ))),
-        ]
+        ]]
     }
 }

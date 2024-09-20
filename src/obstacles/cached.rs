@@ -12,7 +12,7 @@ use super::ObstacleSource;
 /// be recomputed every time. To clear the cache, you can use [`clear`](CachedObstacle::clear).
 #[derive(Clone, Component, Debug)]
 pub struct CachedObstacle<T: ObstacleSource> {
-    polygon: Arc<OnceLock<Vec<Vec2>>>,
+    polygon: Arc<OnceLock<Vec<Vec<Vec2>>>>,
     source: T,
 }
 
@@ -32,15 +32,15 @@ impl<T: ObstacleSource> CachedObstacle<T> {
 }
 
 impl<T: ObstacleSource> ObstacleSource for CachedObstacle<T> {
-    fn get_polygon(
+    fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
-    ) -> Vec<Vec2> {
+    ) -> Vec<Vec<Vec2>> {
         self.polygon
             .get_or_init(|| {
-                T::get_polygon(&self.source, obstacle_transform, navmesh_transform, up)
+                T::get_polygons(&self.source, obstacle_transform, navmesh_transform, up)
                     .into_iter()
                     .collect::<Vec<_>>()
             })
