@@ -29,7 +29,8 @@ default-features = false
 optional = true
 
 [dependencies.polyanya]
-version = "0.9.3"
+git = "https://github.com/vleue/polyanya"
+branch = "radius-baking-v2"
 
 [dependencies.bevy]
 version = "0.14.0"

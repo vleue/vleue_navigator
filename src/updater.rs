@@ -94,6 +94,7 @@ pub struct NavMeshSettings {
     ///
     /// if feature `detailed-layers` is enabled, it's also used for path finding to change the traversal cost of this layer.
     pub scale: Vec2,
+    pub agent_radius: f32,
 }
 
 impl Default for NavMeshSettings {
@@ -110,6 +111,7 @@ impl Default for NavMeshSettings {
             layer: None,
             stitches: vec![],
             scale: Vec2::ONE,
+            agent_radius: 0.0,
         }
     }
 }
@@ -173,6 +175,7 @@ fn build_navmesh<T: ObstacleSource>(
         if settings.simplify != 0.0 {
             base.simplify(settings.simplify);
         }
+        base.set_agent_radius(settings.agent_radius);
         base.prebuild();
         base
     } else {
