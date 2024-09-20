@@ -157,11 +157,18 @@ fn build_navmesh<T: ObstacleSource>(
     mesh_transform: Transform,
 ) -> (Triangulation, Layer) {
     let up = (mesh_transform.forward(), settings.upward_shift);
+    let scale = settings.scale;
     let base = if settings.cached.is_none() {
         let mut base = settings.fixed;
         let obstacle_polys = cached_obstacles
             .iter()
-            .map(|(transform, obstacle)| obstacle.get_polygon(transform, &mesh_transform, up));
+            .flat_map(|(transform, obstacle)| {
+                obstacle
+                    .get_polygons(transform, &mesh_transform, up)
+                    .into_iter()
+            })
+            .filter(|p: &Vec<Vec2>| !p.is_empty())
+            .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
         base.add_obstacles(obstacle_polys);
         if settings.simplify != 0.0 {
             base.simplify(settings.simplify);
@@ -172,17 +179,15 @@ fn build_navmesh<T: ObstacleSource>(
         settings.cached.unwrap()
     };
     let mut triangulation = base.clone();
-    let scale = settings.scale;
     let obstacle_polys = obstacles
         .iter()
-        .map(|(transform, obstacle)| {
+        .flat_map(|(transform, obstacle)| {
             obstacle
-                .get_polygon(transform, &mesh_transform, up)
+                .get_polygons(transform, &mesh_transform, up)
                 .into_iter()
-                .map(|v| v / scale)
-                .collect()
         })
-        .filter(|p: &Vec<Vec2>| !p.is_empty());
+        .filter(|p: &Vec<Vec2>| !p.is_empty())
+        .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
     triangulation.add_obstacles(obstacle_polys);
 
     if settings.simplify != 0.0 {

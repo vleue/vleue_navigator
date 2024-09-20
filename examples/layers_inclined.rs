@@ -386,7 +386,7 @@ fn display_path(
 ) {
     if statuses
         .iter()
-        .any(|status| status == NavMeshStatus::Invalid)
+        .any(|status| *status == NavMeshStatus::Invalid)
     {
         return;
     }

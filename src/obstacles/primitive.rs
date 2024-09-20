@@ -72,12 +72,12 @@ mod copypasta {
 }
 
 impl ObstacleSource for PrimitiveObstacle {
-    fn get_polygon(
+    fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, _shift): (Dir3, f32),
-    ) -> Vec<Vec2> {
+    ) -> Vec<Vec<Vec2>> {
         let transform = obstacle_transform.compute_transform();
         let world_to_mesh = world_to_mesh(navmesh_transform);
 
@@ -93,7 +93,7 @@ impl ObstacleSource for PrimitiveObstacle {
 
         let to_navmesh = |v: Vec3| world_to_mesh.transform_point3(v).xy();
 
-        match self {
+        vec![match self {
             PrimitiveObstacle::Rectangle(primitive) => vec![
                 to_navmesh(to_world(vec2(
                     -primitive.half_size.x,
@@ -186,6 +186,6 @@ impl ObstacleSource for PrimitiveObstacle {
                     .map(|v| to_navmesh(to_world(v)))
                     .collect()
             }
-        }
+        }]
     }
 }

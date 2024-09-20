@@ -14,34 +14,34 @@ use crate::{updater::CachableObstacle, world_to_mesh};
 use super::{ObstacleSource, RESOLUTION};
 
 impl ObstacleSource for Collider {
-    fn get_polygon(
+    fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
-    ) -> Vec<Vec2> {
+    ) -> Vec<Vec<Vec2>> {
         self.shape_scaled()
             .as_typed_shape()
-            .get_polygon(obstacle_transform, navmesh_transform, up)
+            .get_polygons(obstacle_transform, navmesh_transform, up)
     }
 }
 
 trait InnerObstacleSource {
-    fn get_polygon(
+    fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
-    ) -> Vec<Vec2>;
+    ) -> Vec<Vec<Vec2>>;
 }
 
 impl<'a> InnerObstacleSource for TypedShape<'a> {
-    fn get_polygon(
+    fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, shift): (Dir3, f32),
-    ) -> Vec<Vec2> {
+    ) -> Vec<Vec<Vec2>> {
         let mut transform = obstacle_transform.compute_transform();
         transform.scale = Vec3::ONE;
         let world_to_mesh = world_to_mesh(navmesh_transform);
@@ -50,7 +50,11 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
             |p: OPoint<f32, Const<3>>| world_to_mesh.transform_point(vec3(p.x, p.y, p.z)).xy();
 
         let intersection_to_navmesh = |intersection: IntersectResult<Polyline>| match intersection {
-            IntersectResult::Intersect(i) => i.segments().map(|s| s.a).map(to_navmesh).collect(),
+            IntersectResult::Intersect(i) => i
+                .extract_connected_components()
+                .iter()
+                .map(|p| p.segments().map(|s| s.a).map(to_navmesh).collect())
+                .collect(),
             IntersectResult::Negative => vec![],
             IntersectResult::Positive => vec![],
         };
@@ -111,7 +115,7 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
                     .iter()
                     .map(|(_iso, shape)| {
                         // TODO: handle the isometry of each shape
-                        shape.as_typed_shape().get_polygon(
+                        shape.as_typed_shape().get_polygons(
                             obstacle_transform,
                             navmesh_transform,
                             (up, shift),
