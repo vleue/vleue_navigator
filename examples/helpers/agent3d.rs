@@ -64,7 +64,6 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     navigators: Query<(Entity, &Transform, &Navigator), Without<Path>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
     navmesh: Query<&Handle<NavMesh>>,
-    mut deltas: Local<EntityHashMap<Entity, f32>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -74,14 +73,6 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
         };
 
         let mut target;
-        let delta = if !navmesh.transformed_is_in_mesh(transform.translation) {
-            let delta = deltas.entry(entity).or_insert(0.0);
-            *delta += 0.1;
-            *delta
-        } else {
-            0.0
-        };
-        navmesh.set_delta(delta);
 
         let mut i = 50;
         loop {
@@ -125,7 +116,6 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
                 next: remaining,
                 target: id,
             });
-            deltas.remove(&entity);
         }
     }
 }
@@ -148,11 +138,11 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
 
     for (entity, transform, mut path) in &mut navigator {
         let target = transforms.get(path.target).unwrap().translation;
-        navmesh.set_delta(0.0);
+        navmesh.set_search_delta(0.0);
         if !navmesh.transformed_is_in_mesh(transform.translation) {
             let delta_for_entity = deltas.entry(entity).or_insert(0.0);
             *delta_for_entity += 0.1;
-            navmesh.set_delta(*delta_for_entity);
+            navmesh.set_search_delta(*delta_for_entity);
             continue;
         }
         if !navmesh.transformed_is_in_mesh(target) {

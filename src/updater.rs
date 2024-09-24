@@ -72,8 +72,10 @@ pub struct NavMeshSettings {
     pub simplify: f32,
     /// Number of times to merge polygons
     pub merge_steps: usize,
-    /// Default delta use for the navmesh during pathing
-    pub default_delta: f32,
+    /// Default search delta used for the navmesh
+    pub default_search_delta: f32,
+    /// Default search steps used for the navmesh
+    pub default_search_steps: u32,
     /// Fixed edges and obstacles of the mesh
     pub fixed: Triangulation,
     /// Duration in seconds after which to cancel a navmesh build
@@ -101,7 +103,8 @@ impl Default for NavMeshSettings {
         Self {
             simplify: 0.0,
             merge_steps: 0,
-            default_delta: 0.01,
+            default_search_delta: 0.01,
+            default_search_steps: 4,
             fixed: Triangulation::from_outer_edges(&[]),
             build_timeout: None,
             cached: None,
@@ -475,7 +478,8 @@ fn update_navmesh_asset(
                         Transform::IDENTITY,
                         Mesh {
                             layers: vec![],
-                            delta: settings.default_delta,
+                            search_delta: settings.default_search_delta,
+                            search_steps: settings.default_search_steps,
                         },
                         vec![],
                     )

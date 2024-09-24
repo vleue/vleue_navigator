@@ -104,7 +104,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
         let target = transforms.get(path.target).unwrap().translation.xy();
         if !navmesh.transformed_is_in_mesh(transform.translation) {
             *delta += 0.1;
-            navmesh.set_delta(*delta);
+            navmesh.set_search_delta(*delta);
             continue;
         }
         if !navmesh.transformed_is_in_mesh(target.extend(0.0)) {
