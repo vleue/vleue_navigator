@@ -179,7 +179,7 @@ impl NavMesh {
     ///
     /// If you want more controls over the simplification process, you can use the [`from_polyanya_mesh`] method.
     ///
-    /// Depending on the scale of your mesh, you should change the [`delta`](polyanya::Mesh::delta) value using [`set_delta`].
+    /// Depending on the scale of your mesh, you should change the [`delta`](polyanya::Mesh::delta) value using [`set_search_delta`].
     pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> NavMesh {
         let mut triangulation = Triangulation::from_outer_edges(&edges);
         triangulation.add_obstacles(obstacles);
@@ -191,7 +191,7 @@ impl NavMesh {
                 break;
             }
         }
-        mesh.set_delta(0.01);
+        mesh.set_search_delta(0.01);
 
         Self::from_polyanya_mesh(mesh)
     }
@@ -201,11 +201,11 @@ impl NavMesh {
         self.mesh.clone()
     }
 
-    /// Set the [`delta`](polyanya::Mesh::delta) value of the navmesh.
-    pub fn set_delta(&mut self, delta: f32) -> bool {
+    /// Set the [`search_delta`](polyanya::Mesh::search_delta) value of the navmesh.
+    pub fn set_search_delta(&mut self, delta: f32) -> bool {
         if let Some(mesh) = Arc::get_mut(&mut self.mesh) {
             debug!("setting mesh delta to {}", delta);
-            mesh.set_delta(delta);
+            mesh.set_search_delta(delta);
             true
         } else {
             warn!("failed setting mesh delta to {}", delta);
@@ -213,9 +213,26 @@ impl NavMesh {
         }
     }
 
-    /// Get the [`delta`](polyanya::Mesh::delta) value of the navmesh.
-    pub fn delta(&self) -> f32 {
-        self.mesh.delta()
+    /// Get the [`search_delta`](polyanya::Mesh::search_delta) value of the navmesh.
+    pub fn search_delta(&self) -> f32 {
+        self.mesh.search_delta()
+    }
+
+    /// Set the [`search_steps`](polyanya::Mesh::search_steps) value of the navmesh.
+    pub fn set_search_steps(&mut self, steps: u32) -> bool {
+        if let Some(mesh) = Arc::get_mut(&mut self.mesh) {
+            debug!("setting mesh steps to {}", steps);
+            mesh.set_search_steps(steps);
+            true
+        } else {
+            warn!("failed setting mesh steps to {}", steps);
+            false
+        }
+    }
+
+    /// Get the [`search_steps`](polyanya::Mesh::search_steps) value of the navmesh.
+    pub fn search_steps(&self) -> u32 {
+        self.mesh.search_steps()
     }
 
     /// Get a path between two points, in an async way

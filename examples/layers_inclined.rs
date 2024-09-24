@@ -429,7 +429,7 @@ fn display_path(
             0,
             vec3(
                 points.0.x,
-                point_to_height(points.0.xz(), start.layer.unwrap()),
+                point_to_height(points.0.xz(), start.layer().unwrap()),
                 points.0.z,
             ),
         );

@@ -494,7 +494,7 @@ fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos) {
             0,
             vec3(
                 points.0.x,
-                point_to_height(points.0, start.layer.unwrap()),
+                point_to_height(points.0, start.layer().unwrap()),
                 points.0.y,
             ),
         );
