@@ -1,6 +1,6 @@
 [package]
 name = "vleue_navigator"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["François Mockers <francois.mockers@vleue.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
