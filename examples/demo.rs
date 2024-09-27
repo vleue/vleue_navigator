@@ -46,7 +46,7 @@ fn main() {
             (
                 setup,
                 ui::setup_stats::<false>,
-                ui::setup_settings::<true>,
+                ui::setup_settings::<false>,
                 agent3d::setup_agent::<100>,
             ),
         )
@@ -59,9 +59,9 @@ fn main() {
                 ui::display_settings,
                 ui::update_settings::<10>,
                 agent3d::give_target_to_navigator::<10, MESH_WIDTH, MESH_HEIGHT>,
-                agent3d::move_navigator,
-                agent3d::display_navigator_path,
-                agent3d::refresh_path::<100, MESH_WIDTH, MESH_HEIGHT>,
+                agent3d::move_navigator::<100>,
+                agent3d::display_navigator_path.after(agent3d::move_navigator::<100>),
+                agent3d::refresh_path::<MESH_WIDTH, MESH_HEIGHT>,
                 life_of_obstacle,
                 ui::toggle_ui,
                 toggle_ui,
@@ -224,9 +224,10 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
                 vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
                 vec2(0.0, MESH_HEIGHT as f32),
             ]),
-            simplify: 0.101,
-            merge_steps: 3,
-            build_timeout: Some(0.5),
+            simplify: 0.1,
+            merge_steps: 1,
+            build_timeout: Some(1.0),
+            agent_radius: 1.0,
             ..default()
         },
         transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
@@ -273,19 +274,15 @@ fn new_obstacle(
     meshes: &mut Assets<Mesh>,
     mat: &Handle<StandardMaterial>,
 ) {
-    let radius = 1.0;
-    match rng.gen_range(0..6) {
+    match rng.gen_range(0..8) {
         0 => {
             let primitive = Rectangle {
                 half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
             };
-            let larger_primitive = Rectangle {
-                half_size: primitive.half_size + vec2(radius, radius),
-            };
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Rectangle(larger_primitive),
+                    PrimitiveObstacle::Rectangle(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -304,13 +301,10 @@ fn new_obstacle(
             let primitive = Circle {
                 radius: rng.gen_range(1.0..5.0),
             };
-            let larger_primitive = Circle {
-                radius: primitive.radius + radius,
-            };
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Circle(larger_primitive),
+                    PrimitiveObstacle::Circle(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -329,13 +323,10 @@ fn new_obstacle(
             let primitive = Ellipse {
                 half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
             };
-            let larger_primitive = Ellipse {
-                half_size: primitive.half_size + vec2(radius, radius),
-            };
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Ellipse(larger_primitive),
+                    PrimitiveObstacle::Ellipse(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -352,12 +343,10 @@ fn new_obstacle(
         }
         3 => {
             let primitive = Capsule2d::new(rng.gen_range(1.0..3.0), rng.gen_range(1.5..5.0));
-            let larger_primitive =
-                Capsule2d::new(primitive.radius + radius, primitive.half_length * 2.0);
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Capsule(larger_primitive),
+                    PrimitiveObstacle::Capsule(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -374,12 +363,10 @@ fn new_obstacle(
         }
         4 => {
             let primitive = RegularPolygon::new(rng.gen_range(1.0..5.0), rng.gen_range(3..11));
-            let larger_primitive =
-                RegularPolygon::new(primitive.circumradius() + radius, primitive.sides);
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::RegularPolygon(larger_primitive),
+                    PrimitiveObstacle::RegularPolygon(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,
@@ -396,14 +383,51 @@ fn new_obstacle(
         }
         5 => {
             let primitive = Rhombus::new(rng.gen_range(3.0..6.0), rng.gen_range(2.0..3.0));
-            let larger_primitive = Rhombus::new(
-                (primitive.half_diagonals.x + radius) * 2.0,
-                (primitive.half_diagonals.y + radius) * 2.0,
-            );
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Rhombus(larger_primitive),
+                    PrimitiveObstacle::Rhombus(primitive),
+                    Lifetime(Timer::from_seconds(
+                        rng.gen_range(20.0..40.0),
+                        TimerMode::Once,
+                    )),
+                ))
+                .with_children(|parent| {
+                    parent.spawn(PbrBundle {
+                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
+                        material: mat.clone(),
+                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                        ..default()
+                    });
+                });
+        }
+        6 => {
+            let primitive =
+                CircularSector::new(rng.gen_range(1.5..5.0), rng.gen_range(0.5..FRAC_PI_2));
+            commands
+                .spawn((
+                    SpatialBundle::from_transform(transform),
+                    PrimitiveObstacle::CircularSector(primitive),
+                    Lifetime(Timer::from_seconds(
+                        rng.gen_range(20.0..40.0),
+                        TimerMode::Once,
+                    )),
+                ))
+                .with_children(|parent| {
+                    parent.spawn(PbrBundle {
+                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
+                        material: mat.clone(),
+                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                        ..default()
+                    });
+                });
+        }
+        7 => {
+            let primitive = CircularSegment::new(rng.gen_range(1.5..5.0), rng.gen_range(1.0..PI));
+            commands
+                .spawn((
+                    SpatialBundle::from_transform(transform),
+                    PrimitiveObstacle::CircularSegment(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
                         TimerMode::Once,

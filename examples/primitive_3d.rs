@@ -49,10 +49,10 @@ fn main() {
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
-                agent2d::give_target_to_navigator::<10, MESH_WIDTH, MESH_HEIGHT>,
-                agent2d::move_navigator,
+                agent2d::give_target_to_navigator::<100, MESH_WIDTH, MESH_HEIGHT>,
+                agent2d::move_navigator::<10>,
                 agent2d::display_navigator_path,
-                agent2d::refresh_path::<100, MESH_WIDTH, MESH_HEIGHT>,
+                agent2d::refresh_path::<MESH_WIDTH, MESH_HEIGHT>,
             ),
         )
         .run();
@@ -110,7 +110,7 @@ fn setup(
                 ]),
                 simplify: 0.001,
                 merge_steps: 0,
-
+                agent_radius: 1.0,
                 ..default()
             },
             transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
@@ -167,19 +167,15 @@ fn new_obstacle(
     meshes: &mut Assets<Mesh>,
     mat: &Handle<StandardMaterial>,
 ) {
-    let radius = 1.0;
     match rng.gen_range(0..8) {
         0 => {
             let primitive = Rectangle {
                 half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
             };
-            let larger_primitive = Rectangle {
-                half_size: primitive.half_size + vec2(radius, radius),
-            };
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Rectangle(larger_primitive),
+                    PrimitiveObstacle::Rectangle(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {
@@ -194,13 +190,10 @@ fn new_obstacle(
             let primitive = Circle {
                 radius: rng.gen_range(1.0..5.0),
             };
-            let larger_primitive = Circle {
-                radius: primitive.radius + radius,
-            };
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Circle(larger_primitive),
+                    PrimitiveObstacle::Circle(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {
@@ -215,13 +208,10 @@ fn new_obstacle(
             let primitive = Ellipse {
                 half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
             };
-            let larger_primitive = Ellipse {
-                half_size: primitive.half_size + vec2(radius, radius),
-            };
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Ellipse(larger_primitive),
+                    PrimitiveObstacle::Ellipse(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {
@@ -235,14 +225,10 @@ fn new_obstacle(
         3 => {
             let primitive =
                 CircularSector::new(rng.gen_range(1.5..5.0), rng.gen_range(0.5..FRAC_PI_2));
-            let larger_primitive = CircularSector::from(Arc2d {
-                radius: primitive.radius() + radius,
-                half_angle: primitive.half_angle(),
-            });
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::CircularSector(larger_primitive),
+                    PrimitiveObstacle::CircularSector(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {
@@ -255,14 +241,10 @@ fn new_obstacle(
         }
         4 => {
             let primitive = CircularSegment::new(rng.gen_range(1.5..5.0), rng.gen_range(1.0..PI));
-            let larger_primitive = CircularSegment::from(Arc2d {
-                radius: primitive.radius() + radius,
-                half_angle: primitive.half_angle(),
-            });
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::CircularSegment(larger_primitive),
+                    PrimitiveObstacle::CircularSegment(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {
@@ -275,12 +257,10 @@ fn new_obstacle(
         }
         5 => {
             let primitive = Capsule2d::new(rng.gen_range(1.0..3.0), rng.gen_range(1.5..5.0));
-            let larger_primitive =
-                Capsule2d::new(primitive.radius + radius, primitive.half_length * 2.0);
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Capsule(larger_primitive),
+                    PrimitiveObstacle::Capsule(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {
@@ -293,12 +273,10 @@ fn new_obstacle(
         }
         6 => {
             let primitive = RegularPolygon::new(rng.gen_range(1.0..5.0), rng.gen_range(3..8));
-            let larger_primitive =
-                RegularPolygon::new(primitive.circumradius() + radius, primitive.sides);
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::RegularPolygon(larger_primitive),
+                    PrimitiveObstacle::RegularPolygon(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {
@@ -311,14 +289,10 @@ fn new_obstacle(
         }
         7 => {
             let primitive = Rhombus::new(rng.gen_range(3.0..6.0), rng.gen_range(2.0..3.0));
-            let larger_primitive = Rhombus::new(
-                (primitive.half_diagonals.x + radius) * 2.0,
-                (primitive.half_diagonals.y + radius) * 2.0,
-            );
             commands
                 .spawn((
                     SpatialBundle::from_transform(transform),
-                    PrimitiveObstacle::Rhombus(larger_primitive),
+                    PrimitiveObstacle::Rhombus(primitive),
                 ))
                 .with_children(|parent| {
                     parent.spawn(PbrBundle {

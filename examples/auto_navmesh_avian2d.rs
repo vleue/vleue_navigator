@@ -139,6 +139,9 @@ fn setup(
                 vec2(500.0, 500.0),
                 vec2(-500.0, 500.0),
             ]),
+            agent_radius: 5.0,
+            simplify: 4.0,
+            merge_steps: 1,
             ..default()
         },
         update_mode: NavMeshUpdateMode::Direct,
@@ -194,7 +197,7 @@ pub fn move_puck(
 ) {
     for (mut transform, mut path, entity, mut linvel) in navigator.iter_mut() {
         let move_direction = path.current - transform.translation;
-        transform.translation += move_direction.normalize() * time.delta_seconds() * 200.0;
+        transform.translation += move_direction.normalize() * time.delta_seconds() * 100.0;
 
         if transform.translation.distance(path.current) < 10.0 {
             if let Some(next) = path.next.pop() {
