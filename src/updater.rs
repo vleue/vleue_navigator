@@ -96,6 +96,8 @@ pub struct NavMeshSettings {
     ///
     /// if feature `detailed-layers` is enabled, it's also used for path finding to change the traversal cost of this layer.
     pub scale: Vec2,
+    /// Agent radius used to inflate the obstacles.
+    pub agent_radius: f32,
 }
 
 impl Default for NavMeshSettings {
@@ -113,6 +115,7 @@ impl Default for NavMeshSettings {
             layer: None,
             stitches: vec![],
             scale: Vec2::ONE,
+            agent_radius: 0.0,
         }
     }
 }
@@ -158,11 +161,13 @@ fn build_navmesh<T: ObstacleSource>(
     cached_obstacles: Vec<(GlobalTransform, T)>,
     settings: NavMeshSettings,
     mesh_transform: Transform,
-) -> (Triangulation, Layer) {
+) -> (Option<Triangulation>, Layer) {
     let up = (mesh_transform.forward(), settings.upward_shift);
     let scale = settings.scale;
     let base = if settings.cached.is_none() {
         let mut base = settings.fixed;
+        base.set_agent_radius(settings.agent_radius);
+        base.set_agent_radius_simplification(settings.simplify);
         let obstacle_polys = cached_obstacles
             .iter()
             .flat_map(|(transform, obstacle)| {
@@ -182,6 +187,7 @@ fn build_navmesh<T: ObstacleSource>(
         settings.cached.unwrap()
     };
     let mut triangulation = base.clone();
+
     let obstacle_polys = obstacles
         .iter()
         .flat_map(|(transform, obstacle)| {
@@ -206,7 +212,14 @@ fn build_navmesh<T: ObstacleSource>(
         layer.scale = scale;
     }
     layer.remove_useless_vertices();
-    (base, layer)
+    (
+        if cached_obstacles.is_empty() {
+            None
+        } else {
+            Some(base)
+        },
+        layer,
+    )
 }
 
 fn drop_dead_tasks(
@@ -247,7 +260,7 @@ pub struct NavmeshUpdateTask(Arc<RwLock<Option<TaskResult>>>);
 struct TaskResult {
     layer: Layer,
     duration: Duration,
-    to_cache: Triangulation,
+    to_cache: Option<Triangulation>,
 }
 
 type NavMeshToUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e, 'f> = Query<
@@ -305,13 +318,13 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     {
         for (_, mut settings, ..) in &mut navmeshes {
             debug!("cache cleared due to cachable obstacle change");
-            settings.cached = None;
+            settings.bypass_change_detection().cached = None;
         }
     }
     for (_, mut settings, ..) in &mut navmeshes {
         if settings.is_changed() {
             debug!("cache cleared due to settings change");
-            settings.cached = None;
+            settings.bypass_change_detection().cached = None;
         }
     }
 
@@ -450,8 +463,11 @@ fn update_navmesh_asset(
         {
             let mut failed_stitches = vec![];
             commands.entity(entity).remove::<NavmeshUpdateTask>();
-            // This is internal and shouldn't trigger change detection
-            settings.bypass_change_detection().cached = Some(to_cache);
+            if to_cache.is_some() {
+                debug!("cache updated");
+                // This is internal and shouldn't trigger change detection
+                settings.bypass_change_detection().cached = to_cache;
+            }
             debug!(
                 "navmesh {:?} ({:?}) built{}",
                 handle,

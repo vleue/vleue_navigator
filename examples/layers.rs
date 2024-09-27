@@ -17,9 +17,13 @@ enum Obstacle {
     Sliding(f32),
 }
 
+#[derive(Default, Reflect, GizmoConfigGroup)]
+struct PathGizmo {}
+
 fn main() {
-    App::new()
-        .insert_resource(ClearColor(palettes::css::BLACK.into()))
+    let mut app = App::new();
+    app.insert_resource(ClearColor(palettes::css::BLACK.into()))
+        .init_gizmo_group::<PathGizmo>()
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -36,8 +40,16 @@ fn main() {
         .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 10.0))
         .add_systems(Startup, setup)
         .add_systems(Update, (rotate_camera, display_path))
-        .add_systems(Update, move_obstacles)
-        .run();
+        .add_systems(Update, move_obstacles);
+
+    let mut config_store = app
+        .world_mut()
+        .get_resource_mut::<GizmoConfigStore>()
+        .unwrap();
+    let (config, _) = config_store.config_mut::<PathGizmo>();
+    config.line_width = 5.0;
+
+    app.run();
 }
 
 fn setup(
@@ -471,7 +483,7 @@ fn move_obstacles(mut query: Query<(&mut Transform, &Obstacle)>, time: Res<Time>
     }
 }
 
-fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos) {
+fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos<PathGizmo>) {
     let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
         return;
     };

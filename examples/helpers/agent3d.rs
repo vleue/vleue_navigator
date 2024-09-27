@@ -120,7 +120,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     }
 }
 
-pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
+pub fn refresh_path<const X: u32, const Y: u32>(
     mut commands: Commands,
     mut navigator: Query<(Entity, &Transform, &mut Path), With<Navigator>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
@@ -166,18 +166,24 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     }
 }
 
-pub fn move_navigator(
+pub fn move_navigator<const SIZE: u32>(
     mut commands: Commands,
-    mut navigator: Query<(&mut Transform, &mut Path, Entity, &Navigator)>,
-    time: Res<Time>,
+    mut navigator: Query<(&mut Transform, &mut Path, Entity, &mut Navigator)>,
+    time: Res<Time<Real>>,
 ) {
-    for (mut transform, mut path, entity, navigator) in navigator.iter_mut() {
+    for (mut transform, mut path, entity, mut navigator) in navigator.iter_mut() {
         let move_direction = path.current - transform.translation;
         transform.translation +=
             move_direction.normalize() * time.delta_seconds() * navigator.speed;
-        while transform.translation.distance(path.current) < navigator.speed / 50.0 {
+        let mut distance_to_next = transform.translation.distance(path.current);
+        if distance_to_next < navigator.speed * time.delta_seconds() * 2.0 {
+            navigator.speed = (navigator.speed * 0.9).max(SIZE as f32 * 0.01);
+        }
+        while distance_to_next < SIZE as f32 / 250.0 {
+            navigator.speed = SIZE as f32 * 0.2;
             if let Some(next) = path.next.pop() {
                 path.current = next;
+                distance_to_next = transform.translation.distance(path.current);
             } else {
                 commands.entity(entity).remove::<Path>();
                 commands.entity(path.target).despawn_recursive();
