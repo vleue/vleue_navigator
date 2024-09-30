@@ -2,91 +2,266 @@
 <html lang="en">
 
 <head>
+    <link rel="icon" href="/vleue_navigator.png" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-twilight.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
     <title>
-        Navmesh with Polyanya
+        Vleue Navigator
     </title>
+    <style>
+        .sticky-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(31, 41, 55, 0.9); /* bg-gray-800 with opacity */
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .sticky-menu img {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .sticky-menu h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+        }
+        .copy-button {
+            transition: background-color 0.3s ease;
+        }
+
+        .copy-button:active {
+            transform: scale(0.95);
+        }
+    </style>
 </head>
 
-<body style="margin: 0px; height: 100vh">
+<body class="m-0 h-screen bg-gray-900 text-white">
 
-    <h1>Links</h1>
-    <ul>
-        <li><a href="https://en.wikipedia.org/wiki/Any-angle_path_planning">Any-angle path planning</a></lu>
-        <li><a href="https://www.ijcai.org/proceedings/2017/0070.pdf">Polyanya - Compromise-free Pathfinding on a
-                Navigation Mesh</a></li>
-        <li><a href="https://github.com/vleue/polyanya">Rust implementation of Polyanya</a></li>
-        <li><a href="https://github.com/vleue/vleue_navigator/">Integration with Bevy</a></li>
-
-    </ul>
-
-    <h1>Examples</h1>
-    <div style="display: flex; flex-wrap: wrap;">
-        <a href="primitive_3d.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/primitive_3d.png" /></div>
-            <div>Auto updating a NavMesh from Bevy shapes</div>
-        </a>
-        <a href="auto_navmesh_aabb.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/auto_navmesh_aabb.png" /></div>
-            <div>Auto updating a NavMesh from Bevy `Aabb` component</div>
-        </a>
-        <a href="auto_navmesh_primitive.html"
-            style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/auto_navmesh_primitive.png" /></div>
-            <div>NavMesh updated using primitive shapes (rectangle, circle, ...)</div>
-        </a>
-        <a href="demo.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/demo.png" /></div>
-            <div>Demo to test NavMesh settings</div>
-        </a>
+    <div class="bg-gray-800 text-white py-20">
+        <div class="container mx-auto text-center flex items-center justify-center">
+            <img src="/vleue_navigator.png" alt="Vleue Navigator Logo" class="w-20 h-20 mr-4">
+            <div>
+                <h1 class="text-5xl font-bold mb-4">Vleue Navigator</h1>
+                <p class="text-xl">Efficient NavMesh and pathfinding solutions for your Bevy projects</p>
+            </div>
+        </div>
     </div>
 
-    <h2>Avian integration</h2>
-    <div style="display: flex; flex-wrap: wrap;">
-        <a href="auto_navmesh_avian2d.html"
-            style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/auto_navmesh_avian2d.png" /></div>
-            <div>Auto updating a NavMesh with colliders from Avian2d</div>
-        </a>
-        <a href="auto_navmesh_avian3d.html"
-            style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/auto_navmesh_avian3d.png" /></div>
-            <div>Auto updating a NavMesh with colliders from Avian3d</div>
-        </a>
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Features</h1>
+        <ul class="list-disc pl-5 mb-8 grid grid-cols-2 gap-4">
+            <li>Fast Pathfinding</li>
+            <li>Fast NavMesh updates</li>
+            <li>Integrated with Bevy's AABB or Primitive Shapes</li>
+            <li>Integrated with Avian2D or Avian3D</li>
+            <li>NavMesh generation settings to fasten updates and pathfinding</li>
+            <li>Agent radius</li>
+            <li>Easy to add your own obstacle source</li>
+            <li>Layers support for targeted updated</li>
+            <li>Layers can overlap</li>
+        </ul>
+
+
+        <h1 class="text-3xl font-bold mb-4">How to Use</h1>
+        
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-2">Installation</h2>
+            <div class="relative">
+                <pre class="p-4 rounded overflow-x-auto"><code class="language-shell">cargo add vleue_navigator</code></pre>
+                <button class="copy-button absolute top-0 right-0 mt-1 mr-1 bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600" onclick="copyToClipboard('cargo add vleue_navigator', this)">Copy</button>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-2">Usage</h2>
+            First add the plugins to your game:
+            <div class="relative">
+                <pre class="p-4 rounded overflow-x-auto"><code class="language-rust">use vleue_navigator::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            VleueNavigatorPlugin,
+            // Auto update navmesh using the `Aabb` component
+            NavmeshUpdaterPlugin::<Aabb>::default(),
+        ))
+        ...
+        .run();
+}</code></pre>
+You can then spawn a NavMesh entity:
+<div class="relative">
+    <pre class="p-4 rounded overflow-x-auto"><code class="language-rust">fn spawn_navmesh(mut commands: Commands) {
+    commands.spawn(NavMeshBundle {
+        settings: NavMeshSettings {
+            // Define the outer borders of the navmesh.
+            fixed: Triangulation::from_outer_edges(&[
+                vec2(0.0, 0.0), vec2(10.0, 0.0),
+                vec2(10.0, 10.0), vec2(0.0, 10.0),
+            ]),
+            ..default()
+        },
+        // Mark it for update as soon as obstacles are changed.
+        // Other modes available are debounced or manually triggered.
+        update_mode: NavMeshUpdateMode::Direct,
+        ..NavMeshBundle::with_default_id()
+    });
+}</code></pre>
+Using the NavMesh to find a path:
+
+<div class="relative">
+    <pre class="p-4 rounded overflow-x-auto"><code class="language-rust">pub fn find_path(navmeshes: Res<Assets<NavMesh>>, navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>) {
+    let (navmesh_handle, status) = navmesh.single();
+    if status != NavMeshStatus::Built {
+        // NavMesh is not ready yet.
+        return;
+    }
+    if let Some(navmesh) = navmeshes.get_mut(navmesh_handle) {
+        let mut rng = rand::thread_rng();
+        let from = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
+        let to = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
+
+        if let Some(path) = navmesh.path(from, to) {
+            info!("found path from {:?} to {:?}: {:?}", from, to, path);
+        } else {
+            info!("no path found from {:?} to {:?}", from, to);
+        }
+    }
+
+    let mut rng = rand::thread_rng();
+    let from = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
+    let to = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
+
+    if let Some(path) = navmesh.path(from, to) {
+        info!("found path from {:?} to {:?}: {:?}", from, to, path);
+    } else {
+        info!("no path found from {:?} to {:?}", from, to);
+    }
+}</code></pre>
+                <button class="copy-button absolute top-0 right-0 mt-1 mr-1 bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600" onclick="copyToClipboard(`// Example usage of Vleue Navigator\nuse vleue_navigator::NavMesh;\n\nfn main() {\n    let navmesh = NavMesh::new();\n    // Add your pathfinding logic here\n}`, this)">Copy</button>
+            </div>
+        </div>
+        
+        <h1 class="text-3xl font-bold mb-4">Examples</h1>
+        <div class="flex flex-col space-y-8">
+            <a href="primitive_3d.html" class="flex items-center">
+                <img src="screenshots/primitive_3d.png" class="object-cover w-1/2" alt="Auto updating a NavMesh from Bevy shapes" />
+                <div class="ml-8 text-xl">Auto updating a NavMesh from Bevy shapes</div>
+            </a>
+            <a href="auto_navmesh_aabb.html" class="flex items-center flex-row-reverse">
+                <img src="screenshots/auto_navmesh_aabb.png" class="object-cover w-1/2" alt="Auto updating a NavMesh from Bevy Aabb component" />
+                <div class="mr-8 text-xl">Auto updating a NavMesh from Bevy `Aabb` component</div>
+            </a>
+            <a href="auto_navmesh_primitive.html" class="flex items-center">
+                <img src="screenshots/auto_navmesh_primitive.png" class="object-cover w-1/2" alt="NavMesh updated using primitive shapes" />
+                <div class="ml-8 text-xl">NavMesh updated using primitive shapes (rectangle, circle, ...)</div>
+            </a>
+            <a href="demo.html" class="flex items-center flex-row-reverse">
+                <img src="screenshots/demo.png" class="object-cover w-1/2" alt="Demo to test NavMesh settings" />
+                <div class="mr-8 text-xl">Demo to test NavMesh settings</div>
+            </a>
+        </div>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">Avian integration</h2>
+        <div class="flex flex-wrap">
+            <a href="auto_navmesh_avian2d.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/auto_navmesh_avian2d.png" class="object-cover" alt="Auto updating a NavMesh with colliders from Avian2d" />
+                <div class="mt-2">Auto updating a NavMesh with colliders from Avian2d</div>
+            </a>
+            <a href="auto_navmesh_avian3d.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/auto_navmesh_avian3d.png" class="object-cover" alt="Auto updating a NavMesh with colliders from Avian3d" />
+                <div class="mt-2">Auto updating a NavMesh with colliders from Avian3d</div>
+            </a>
+        </div>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">Others</h2>
+        <div class="flex flex-wrap">
+            <a href="many.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/many.png" class="object-cover" alt="Spawn many agents and run a lot of concurrent pathfinding tasks" />
+                <div class="mt-2">Spawn many agents and run a lot of concurrent pathfinding tasks</div>
+            </a>
+            <a href="lines.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/lines.png" class="object-cover" alt="Showing path lines" />
+                <div class="mt-2">Showing path lines</div>
+            </a>
+            <a href="moving.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/moving.png" class="object-cover" alt="Moving a dot around the meshes" />
+                <div class="mt-2">Moving a dot around the meshes</div>
+            </a>
+            <a href="gltf.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/gltf.png" class="object-cover" alt="Loading a navmesh from a gLTF file" />
+                <div class="mt-2">Loading a navmesh from a gLTF file</div>
+            </a>
+            <a href="random_obstacles.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/random_obstacles.png" class="object-cover" alt="Navmesh from random obstacles" />
+                <div class="mt-2">Navmesh from random obstacles</div>
+            </a>
+            <a href="auto_navmesh_aabb.html" class="m-5 text-xl flex flex-col items-center">
+                <img src="screenshots/auto_navmesh_aabb.png" class="object-cover" alt="NavMesh automatically updated from obstacles using Aabb" />
+                <div class="mt-2">NavMesh automatically updated from obstacles using `Aabb`</div>
+            </a>
+        </div>
     </div>
 
-    <h2>Others</h2>
-    <div style="display: flex; flex-wrap: wrap;">
-        <a href="many.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/many.png" /></div>
-            <div>Spawn many agents
-                and run a lot of concurrent pathfinding tasks</div>
-        </a>
-        <a href="lines.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/lines.png" /></div>
-            <div>Showing path
-                lines</div>
-        </a>
-        <a href="moving.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/moving.png" /></div>
-            <div>Moving a dot
-                around the
-                meshes</div>
-        </a>
-        <a href="gltf.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/gltf.png" /></div>
-            <div>Loading a navmesh
-                from a gLTF
-                file</div>
-        </a>
-        <a href="random_obstacles.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/random_obstacles.png" /></div>
-            <div>Navmesh from random obstacles</div>
-        </a>
-        <a href="auto_navmesh_aabb.html" style="margin: 20px; font-size: 1.5rem; display: flex; flex-direction: column">
-            <div><img src="screenshots/auto_navmesh_aabb.png" /></div>
-            <div>NavMesh automatically updated from obstacles using `Aabb`</div>
-        </a>
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Reading List of implemented and used techniques</h1>
+        <ul class="list-disc pl-5 mb-8">
+            <li><a class="text-blue-500 hover:underline"
+                    href="https://www.ijcai.org/proceedings/2017/0070.pdf">Compromise-free Pathfinding on a Navigation
+                    Mesh</a></li>
+            <li><a class="text-blue-500 hover:underline"
+                    href="https://hull-repository.worktribe.com/preview/376364/000870493786962263.pdf">Line
+                    Generalisation by Repeated Elimination of Points</a></li>
+            <li><a class="text-blue-500 hover:underline"
+                    href="https://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation">Constrained Delaunay
+                    Triangulation</a></li>
+            <li><a class="text-blue-500 hover:underline"
+                    href="https://mcmains.me.berkeley.edu/pubs/DAC05OffsetPolygon.pdf">Polygon Offsetting by Computing
+                    Winding Numbers</a></li>
+        </ul>
     </div>
-</body>
+
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Example Videos</h1>
+        <ul class="list-disc pl-5 mb-8">
+            <li><a class="text-blue-500 hover:underline" href="https://www.youtube.com/watch?v=Zi9EMAdHp4M">Pathfinding
+                    many agents</a></li>
+            <li><a class="text-blue-500 hover:underline" href="https://www.youtube.com/watch?v=wYRrvWaLjJ8">Parameters
+                    for NavMesh generation</a></li>
+        </ul>
+    </div>
+    <div id="stickyMenu" class="sticky-menu">
+        <img src="/vleue_navigator.png" alt="Vleue Navigator Logo">
+        <h1>Vleue Navigator</h1>
+    </div>
+
+    <script>
+        window.addEventListener('scroll', function () {
+            const stickyMenu = document.getElementById('stickyMenu');
+            const heroBannerHeight = document.querySelector('.bg-gray-800').offsetHeight;
+            if (window.scrollY > heroBannerHeight) {
+                stickyMenu.style.display = 'flex';
+            } else {
+                stickyMenu.style.display = 'none';
+            }
+        });
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+
+            }, (err) => {
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
 
 </html>
