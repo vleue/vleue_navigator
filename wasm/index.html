@@ -57,6 +57,15 @@
         </div>
     </div>
 
+    <footer class="bg-gray-800 text-white py-4">
+        <div class="container mx-auto text-center">
+            <p>
+                <a href="https://github.com/vleue/vleue_navigator" class="text-blue-500 hover:underline">GitHub Repository</a> |
+                <a href="https://docs.rs/vleue_navigator/latest/vleue_navigator/" class="text-blue-500 hover:underline">Documentation</a>
+            </p>
+        </div>
+    </footer>
+
     <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4">Features</h1>
         <ul class="list-disc pl-5 mb-8 grid grid-cols-2 gap-4">
@@ -136,16 +145,6 @@ Using the NavMesh to find a path:
         } else {
             info!("no path found from {:?} to {:?}", from, to);
         }
-    }
-
-    let mut rng = rand::thread_rng();
-    let from = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
-    let to = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
-
-    if let Some(path) = navmesh.path(from, to) {
-        info!("found path from {:?} to {:?}: {:?}", from, to, path);
-    } else {
-        info!("no path found from {:?} to {:?}", from, to);
     }
 }</code></pre>
                 <button class="copy-button absolute top-0 right-0 mt-1 mr-1 bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600" onclick="copyToClipboard(`// Example usage of Vleue Navigator\nuse vleue_navigator::NavMesh;\n\nfn main() {\n    let navmesh = NavMesh::new();\n    // Add your pathfinding logic here\n}`, this)">Copy</button>
