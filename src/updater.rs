@@ -12,7 +12,7 @@ use bevy::{
     ecs::entity::EntityHashMap,
     prelude::*,
     tasks::AsyncComputeTaskPool,
-    transform::systems::sync_simple_transforms,
+    transform::TransformSystem,
 };
 use polyanya::{Layer, Mesh, Triangulation};
 
@@ -650,7 +650,7 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
     fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
-            trigger_navmesh_build::<Marker, Obstacle>.after(sync_simple_transforms),
+            trigger_navmesh_build::<Marker, Obstacle>.after(TransformSystem::TransformPropagate),
         )
         .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
         .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));
