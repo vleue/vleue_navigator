@@ -6,6 +6,7 @@ pub enum UiSettings {
     Simplify,
     MergeSteps,
     AgentRadius,
+    AgentRadiusOuter,
     Cache,
 }
 
@@ -17,6 +18,7 @@ pub enum UiSettingsButtons {
     MergeStepsDec,
     AgentRadiusInc,
     AgentRadiusDec,
+    AgentRadiusOuterToggle,
     ToggleCache,
 }
 
@@ -170,6 +172,34 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                     button(" - ", UiSettingsButtons::AgentRadiusDec, parent);
                     button(" + ", UiSettingsButtons::AgentRadiusInc, parent);
                 });
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
+                            border: UiRect::all(Val::Px(1.0)),
+                            justify_content: JustifyContent::Center,
+                            height: Val::Px(30.0),
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        border_color: BorderColor(palettes::tailwind::GRAY_500.into()),
+                        border_radius: BorderRadius::all(Val::Px(10.0)),
+                        image: UiImage::default().with_color(palettes::tailwind::GRAY_700.into()),
+                        ..default()
+                    },
+                    UiSettingsButtons::AgentRadiusOuterToggle,
+                    UiSettings::AgentRadiusOuter,
+                ))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Agent Radius on Outer Edges",
+                        TextStyle {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                    ));
+                });
             if WITH_CACHE {
                 parent
                     .spawn((
@@ -223,11 +253,12 @@ pub fn display_settings(
                 UiSettings::AgentRadius => {
                     text.sections[1].value = format!("{:.1}", settings.agent_radius)
                 }
+                UiSettings::AgentRadiusOuter => (),
                 UiSettings::Cache => (),
             }
         }
     }
-    if example_settings.is_changed() {
+    if example_settings.is_changed() || settings.is_changed() {
         for (mut color, param) in &mut buttons {
             match param {
                 UiSettings::Simplify => (),
@@ -235,6 +266,13 @@ pub fn display_settings(
                 UiSettings::AgentRadius => (),
                 UiSettings::Cache => {
                     *color = if example_settings.cache_enabled {
+                        palettes::tailwind::GREEN_400.into()
+                    } else {
+                        palettes::tailwind::RED_600.into()
+                    }
+                }
+                UiSettings::AgentRadiusOuter => {
+                    *color = if settings.agent_radius_on_outer_edge {
                         palettes::tailwind::GREEN_400.into()
                     } else {
                         palettes::tailwind::RED_600.into()
@@ -279,15 +317,22 @@ pub fn update_settings<const STEP: u32>(
                     UiSettingsButtons::ToggleCache => {
                         example_settings.cache_enabled = !example_settings.cache_enabled;
                     }
+                    UiSettingsButtons::AgentRadiusOuterToggle => {
+                        settings.agent_radius_on_outer_edge = !settings.agent_radius_on_outer_edge;
+                    }
                 }
             }
             Interaction::Hovered => {
-                if !matches!(button, UiSettingsButtons::ToggleCache) {
+                if !matches!(button, UiSettingsButtons::ToggleCache)
+                    && !matches!(button, UiSettingsButtons::AgentRadiusOuterToggle)
+                {
                     *color = palettes::tailwind::GRAY_600.into();
                 }
             }
             Interaction::None => {
-                if !matches!(button, UiSettingsButtons::ToggleCache) {
+                if !matches!(button, UiSettingsButtons::ToggleCache)
+                    && !matches!(button, UiSettingsButtons::AgentRadiusOuterToggle)
+                {
                     *color = palettes::tailwind::GRAY_700.into();
                 }
             }
