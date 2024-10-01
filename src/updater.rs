@@ -98,6 +98,10 @@ pub struct NavMeshSettings {
     pub scale: Vec2,
     /// Agent radius used to inflate the obstacles.
     pub agent_radius: f32,
+    /// If the agent radius should be applied to the outer edges of the navmesh.
+    ///
+    /// When using layers, this can block stitching them together.
+    pub agent_radius_on_outer_edge: bool,
 }
 
 impl Default for NavMeshSettings {
@@ -116,6 +120,7 @@ impl Default for NavMeshSettings {
             stitches: vec![],
             scale: Vec2::ONE,
             agent_radius: 0.0,
+            agent_radius_on_outer_edge: false,
         }
     }
 }
@@ -168,6 +173,7 @@ fn build_navmesh<T: ObstacleSource>(
         let mut base = settings.fixed;
         base.set_agent_radius(settings.agent_radius);
         base.set_agent_radius_simplification(settings.simplify);
+        base.agent_radius_on_outer_edge(settings.agent_radius_on_outer_edge);
         let obstacle_polys = cached_obstacles
             .iter()
             .flat_map(|(transform, obstacle)| {
