@@ -55,24 +55,28 @@ pub mod prelude {
 }
 
 /// Bevy plugin to add support for the [`NavMesh`] asset type.
+///
+/// This plugin doesn't add support for updating them. See [`NavmeshUpdaterPlugin`] for that.
 #[derive(Debug, Clone, Copy)]
 pub struct VleueNavigatorPlugin;
 
-/// Controls wether to display all NavMeshes with gizmos.
-/// When this resource is present, all NavMeshes will be visible.
+/// Controls wether to display all [`NavMesh`]es with gizmos, and the color used.
+///
+/// When this resource is present, all [`NavMesh`]es will be visible.
 #[cfg(feature = "debug-with-gizmos")]
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct NavMeshesDebug(
-    /// Color to display the NavMesh with
+    /// Color to display the [`NavMesh`] with
     pub Color,
 );
 
-/// Controls wether to display a NavMesh with gizmos.
-/// When this component is present, the NavMesh will be visible.
+/// Controls wether to display a specific [`NavMesh`] with gizmos, and the color used.
+///
+/// When this component is present on an entity, the [`NavMesh`] will be visible.
 #[cfg(feature = "debug-with-gizmos")]
 #[derive(Component, Clone, Copy, Debug)]
 pub struct NavMeshDebug(
-    /// Color to display the NavMesh with
+    /// Color to display the [`NavMesh`] with
     pub Color,
 );
 
@@ -86,7 +90,7 @@ impl Plugin for VleueNavigatorPlugin {
     }
 }
 
-/// A path between two points, in 3 dimensions using [`NavMesh::transform`].
+/// A path between two points, in 3D space, transformed using [`NavMesh::transform`].
 #[derive(Debug, PartialEq)]
 pub struct TransformedPath {
     /// Length of the path.
@@ -94,6 +98,7 @@ pub struct TransformedPath {
     /// Coordinates for each step of the path. The destination is the last step.
     pub path: Vec<Vec3>,
     /// Coordinates for each step of the path. The destination is the last step.
+    /// This path also contains the layer of each step, and steps when changing layers even on a straight line.
     #[cfg(feature = "detailed-layers")]
     #[cfg_attr(docsrs, doc(cfg(feature = "detailed-layers")))]
     pub path_with_layers: Vec<(Vec3, u8)>,
@@ -173,13 +178,13 @@ impl NavMesh {
         Self::from_bevy_mesh_and_then(mesh, |_| {})
     }
 
-    /// Build a navmesh from its edges and obstacles.
+    /// Builds a navmesh from its edges and obstacles.
     ///
     /// Obstacles will be merged in case some are overlapping, and mesh will be simplified to reduce the number of polygons.
     ///
-    /// If you want more controls over the simplification process, you can use the [`from_polyanya_mesh`] method.
+    /// If you want more controls over the simplification process, you can use the [`Self::from_polyanya_mesh`] method.
     ///
-    /// Depending on the scale of your mesh, you should change the [`delta`](polyanya::Mesh::delta) value using [`set_search_delta`].
+    /// Depending on the scale of your mesh, you should change the [`Self::search_delta`] value using [`Self::set_search_delta`].
     pub fn from_edge_and_obstacles(edges: Vec<Vec2>, obstacles: Vec<Vec<Vec2>>) -> NavMesh {
         let mut triangulation = Triangulation::from_outer_edges(&edges);
         triangulation.add_obstacles(obstacles);
@@ -196,12 +201,14 @@ impl NavMesh {
         Self::from_polyanya_mesh(mesh)
     }
 
-    /// Get the underlying Polyanya navigation mesh
+    /// Retrieves the underlying Polyanya navigation mesh.
     pub fn get(&self) -> Arc<polyanya::Mesh> {
         self.mesh.clone()
     }
 
-    /// Set the [`search_delta`](polyanya::Mesh::search_delta) value of the navmesh.
+    /// Sets the [`search_delta`](polyanya::Mesh::search_delta) value of the navmesh.
+    ///
+    /// Returns `true` if the delta was successfully set, `false` otherwise. This can happens if the mesh is shared and already being modified.
     pub fn set_search_delta(&mut self, delta: f32) -> bool {
         if let Some(mesh) = Arc::get_mut(&mut self.mesh) {
             debug!("setting mesh delta to {}", delta);
@@ -213,12 +220,14 @@ impl NavMesh {
         }
     }
 
-    /// Get the [`search_delta`](polyanya::Mesh::search_delta) value of the navmesh.
+    /// Retrieves the [`search_delta`](polyanya::Mesh::search_delta) value of the navmesh.
     pub fn search_delta(&self) -> f32 {
         self.mesh.search_delta()
     }
 
-    /// Set the [`search_steps`](polyanya::Mesh::search_steps) value of the navmesh.
+    /// Sets the [`search_steps`](polyanya::Mesh::search_steps) value of the navmesh.
+    ///
+    /// Returns `true` if the steps value was successfully set, `false` otherwise. This can happens if the mesh is shared and already being modified.
     pub fn set_search_steps(&mut self, steps: u32) -> bool {
         if let Some(mesh) = Arc::get_mut(&mut self.mesh) {
             debug!("setting mesh steps to {}", steps);
@@ -230,20 +239,20 @@ impl NavMesh {
         }
     }
 
-    /// Get the [`search_steps`](polyanya::Mesh::search_steps) value of the navmesh.
+    /// Retrieves the [`search_steps`](polyanya::Mesh::search_steps) value of the navmesh.
     pub fn search_steps(&self) -> u32 {
         self.mesh.search_steps()
     }
 
-    /// Get a path between two points, in an async way
+    /// Asynchronously finds the shortest path between two points.
     #[inline]
     pub async fn get_path(&self, from: Vec2, to: Vec2) -> Option<Path> {
         self.mesh.get_path(from, to).await
     }
 
-    /// Get a path between two points, in an async way.
+    /// Asynchronously finds the shortest path between two points.
     ///
-    /// Inputs and results are transformed using the [`NavMesh::transform`]
+    /// Inputs and results are transformed using the [`NavMesh::transform`].
     pub async fn get_transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
         let inner_from = self.world_to_mesh().transform_point(from).xy();
         let inner_to = self.world_to_mesh().transform_point(to).xy();
@@ -251,13 +260,13 @@ impl NavMesh {
         path.map(|path| self.transform_path(path))
     }
 
-    /// Get a path between two points
+    /// Finds the shortest path between two points.
     #[inline]
     pub fn path(&self, from: Vec2, to: Vec2) -> Option<Path> {
         self.mesh.path(from, to)
     }
 
-    /// Get a path between two points, in an async way.
+    /// Finds the shortest path between two points.
     ///
     /// Inputs and results are transformed using the [`NavMesh::transform`]
     pub fn transformed_path(&self, from: Vec3, to: Vec3) -> Option<TransformedPath> {
@@ -286,31 +295,33 @@ impl NavMesh {
         }
     }
 
-    /// Check if a 3d point is in a navigationable part of the mesh, using the [`Mesh::transform`]
+    /// Checks if a 3D point is within a navigable part of the mesh, using the [`NavMesh::transform`].
     pub fn transformed_is_in_mesh(&self, point: Vec3) -> bool {
         let point_in_navmesh = self.world_to_mesh().transform_point(point).xy();
         self.mesh.point_in_mesh(point_in_navmesh)
     }
 
-    /// Check if a point is in a navigationable part of the mesh
+    /// Checks if a point is within a navigable part of the mesh.
     pub fn is_in_mesh(&self, point: Vec2) -> bool {
         self.mesh.point_in_mesh(point)
     }
 
-    /// The transform used to convert world coordinates into mesh coordinates.
-    /// After applying this transform, the `z` coordinate is dropped because navmeshes are 2D.
+    /// Retrieves the transform used to convert world coordinates into mesh coordinates.
+    ///
+    /// After applying this transform, the `z` coordinate is dropped because navmeshes are in 2D space.
     pub fn transform(&self) -> Transform {
         self.transform
     }
 
-    /// Set the mesh transform
+    /// Sets the mesh transform.
     ///
-    /// It will be used to transform a 3d point to a 2d point where the `z` axis can be ignored
+    /// It will be used to transform a point in 3D space to a point in the NavMesh 2D space by rotating it and ignoring the `z` axis.
     pub fn set_transform(&mut self, transform: Transform) {
         self.transform = transform;
     }
 
     /// Creates a [`Mesh`] from this [`NavMesh`], suitable for debugging the surface.
+    ///
     /// This mesh doesn't have normals.
     pub fn to_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
@@ -337,7 +348,7 @@ impl NavMesh {
         new_mesh
     }
 
-    /// Creates a [`Mesh`] from this [`NavMesh`], showing the wireframe of the polygons
+    /// Creates a [`Mesh`] from this [`NavMesh`], showing the wireframe of the polygons.
     pub fn to_wireframe_mesh(&self) -> Mesh {
         let mut new_mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::all());
         let mesh_to_world = self.transform();
@@ -365,7 +376,7 @@ impl NavMesh {
         new_mesh
     }
 
-    /// Return the transform that would convert world coordinates into mesh coordinates.
+    /// Returns the transform that would convert world coordinates into mesh coordinates.
     #[inline]
     pub fn world_to_mesh(&self) -> Affine3A {
         world_to_mesh(&self.transform())
@@ -389,7 +400,7 @@ fn get_vectors(
 }
 
 #[cfg(feature = "debug-with-gizmos")]
-/// Use gizmos to display navmeshes
+/// System displaying navmeshes using gizmos for debug purposes.
 pub fn display_navmesh(
     live_navmeshes: Query<(
         &Handle<NavMesh>,

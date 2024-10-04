@@ -18,31 +18,36 @@ use polyanya::{Layer, Mesh, Triangulation};
 
 use crate::{obstacles::ObstacleSource, NavMesh};
 
-/// An obstacle that won't change and can be cached
+/// A Marker component for an obstacle that can be cached.
+///
+/// Caching obstacles can help to optimize the [`NavMesh`] generation process.
+/// A partial [`NavMesh`] will be built with them, then updated with the dynamic obstacles.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct CachableObstacle;
 
 /// Bundle for preparing an auto updated navmesh. To use with plugin [`NavmeshUpdaterPlugin`].
 #[derive(Bundle, Debug)]
 pub struct NavMeshBundle {
-    /// Settings for this navmesh updates.
+    /// Settings for this [`NavMesh`], used to control generation.
     pub settings: NavMeshSettings,
-    /// Status of the last navmesh update.
+    /// The current status of the last [`NavMesh`] update.
     pub status: NavMeshStatus,
-    /// Handle to the navmesh.
+    /// A handle to the [`NavMesh`] asset.
     pub handle: Handle<NavMesh>,
-    /// Transform of the navmesh. Used to transform point in 3d to 2d (by ignoring the `z` axis).
+    /// The local transform of the [`NavMesh`], used to convert points in 3D space to the [`NavMesh`] 2D space.
+    ///
+    /// When using methods like [`NavMesh::transformed_path`], this transform is used for conversion.
     pub transform: Transform,
-    /// Global Transform of the navmesh.
+    /// The global transform of the [`NavMesh`].
     pub global_transform: GlobalTransform,
-    /// How to trigger navmesh updates.
+    /// Specifies the mode for triggering [`NavMesh`] updates.
     pub update_mode: NavMeshUpdateMode,
 }
 
 impl NavMeshBundle {
-    /// Create a new `NavMeshBundle` with the provided id used for the handle of the `NavMesh`.
+    /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
     ///
-    /// In case there are several `NavMeshBundle`s with the same handle, they will overwrite each others unless they target different layers.
+    /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
     pub fn with_unique_id(id: u128) -> Self {
         Self {
             handle: Handle::<NavMesh>::weak_from_u128(id),
@@ -50,9 +55,9 @@ impl NavMeshBundle {
         }
     }
 
-    /// Create a new `NavMeshBundle` with the default handle for the `NavMesh`.
+    /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
     ///
-    /// In case there are several `NavMeshBundle`s with the same handle, they will overwrite each others unless they target different layers.
+    /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
     pub fn with_default_id() -> Self {
         Self {
             settings: NavMeshSettings::default(),
@@ -68,39 +73,56 @@ impl NavMeshBundle {
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
 pub struct NavMeshSettings {
-    /// Minimum area a point of an obstacle must impact
+    /// The minimum area that a point of an obstacle must impact. Otherwise, the obstacle will be simplified by removing this point.
+    ///
+    /// This value depends on the scale of your obstacles and agents. The default value is `0.0`.
+    /// Having a non-zero value can help to remove small artifacts from the generated [`NavMesh`], and speed up generation and pathfinding.
     pub simplify: f32,
-    /// Number of times to merge polygons
+    /// The number of iterations to merge polygons during the [`NavMesh`] generation.
+    ///
+    /// It's rarely useful to set this value to a number greater than `3`. The default value is `0`.
     pub merge_steps: usize,
-    /// Default search delta used for the navmesh
+    /// The default search delta used for pathfinding within the [`NavMesh`].
+    ///
+    /// This controls the radius of the circle used to search for a point in a [`NavMesh`].
+    /// This value depends on the scale of your obstacles and agents. The default value is `0.01`.
+    /// Increasing this value can help if you often get pathfinding errors when agents are too close to a border. Those errors happens because of rounding errors.
     pub default_search_delta: f32,
-    /// Default search steps used for the navmesh
+    /// The default number of search steps used for pathfinding within the [`NavMesh`].
+    ///
+    /// This controls the number of time of the circle used to search for a point in a [`NavMesh`] is expanded by the [`Self::default_search_delta`]. The default value is `4`.
+    /// Increasing this value can help if you often get pathfinding errors when agents are too close to a border. Those errors happens because of rounding errors.
     pub default_search_steps: u32,
-    /// Fixed edges and obstacles of the mesh
+    /// The fixed edges and obstacles that define the structure of the [`NavMesh`].
+    ///
+    /// Creating this [`Triangulation`] can be done with the [`Triangulation::from_outer_edges`] method, and static obstacles added with [`Triangulation::add_obstacles`].
     pub fixed: Triangulation,
-    /// Duration in seconds after which to cancel a navmesh build
+    /// The duration in seconds after which a [`NavMesh`] build is canceled if not completed.
     pub build_timeout: Option<f32>,
-    /// Cache from the last build from obstacles that are [`CachableObstacle`]
+    /// A cache of the last build from obstacles marked as [`CachableObstacle`].
     pub cached: Option<Triangulation>,
-    /// Upward shift to sample obstacles from the ground
+    /// The upward shift applied to sample obstacles from the ground.
     ///
-    /// It should be greater than `0.0` in 3d as colliders lying flat on a surface are not considered intersecting. Default value is `0.1`.
+    /// This value should be greater than `0.0` in 3D environments, as colliders lying flat on a surface are not considered intersecting.
+    /// The default value is `0.1`.
     pub upward_shift: f32,
-    /// Specific layer to update. If none, the first layer will be updated.
+    /// The specific layer to update in the [`NavMesh`]. If `None`, the first layer will be updated.
+    ///
+    /// Layers are used when the [`NavMesh`] has overlapping parts, or parts with different traversal costs.
     pub layer: Option<u8>,
-    /// If there are several layers, stitch them together with these segments.
+    /// Segments used to stitch together multiple layers in the [`NavMesh`].
     pub stitches: Vec<((u8, u8), [Vec2; 2])>,
-    /// Scale of this navmesh. Defaults to `Vec2::ONE`.
+    /// The scale of the [`NavMesh`], defaulting to `Vec2::ONE`.
     ///
-    /// Used to scale the navmesh to the correct size when displaying it
+    /// This scale is used to adjust the size of the [`NavMesh`] when displaying it.
     ///
-    /// if feature `detailed-layers` is enabled, it's also used for path finding to change the traversal cost of this layer.
+    /// If the `detailed-layers` feature is enabled, it is also used for pathfinding to modify the traversal cost of this layer.
     pub scale: Vec2,
-    /// Agent radius used to inflate the obstacles.
+    /// The radius of the agent used to inflate obstacles in the [`NavMesh`].
     pub agent_radius: f32,
-    /// If the agent radius should be applied to the outer edges of the navmesh.
+    /// Determines if the agent radius should be applied to the outer edges of the [`NavMesh`].
     ///
-    /// When using layers, this can block stitching them together.
+    /// When using layers, applying the agent radius to outer edges can block stitching them together.
     pub agent_radius_on_outer_edge: bool,
 }
 
@@ -128,35 +150,37 @@ impl Default for NavMeshSettings {
 /// Status of the navmesh generation
 #[derive(Component, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum NavMeshStatus {
-    /// Not yet built
+    /// The [`NavMesh`] has not yet been built.
     Building,
-    /// Built and ready to use
+    /// The [`NavMesh`] has been successfully built and is ready for use.
     Built,
-    /// Last build command failed. The mesh may still be available from a previous build, but it will be out of date.
+    /// The last build failed. The [`NavMesh`] may still be available from a previous build, but it will be out of date.
     ///
-    /// This can happen if the build takes longer than the `build_timeout` defined in the settings.
+    /// This can occur if the build takes longer than the [`NavMeshSettings::build_timeout`] defined in the settings.
     Failed,
-    /// Last build command failed, and the resulting mesh is invalid and can't be used for pathfinding.
+    /// The last build command failed, and the resulting [`NavMesh`] is invalid and cannot be used for pathfinding.
     ///
-    /// This can happen if the mesh has different layers that have not yet all been built.
+    /// This can occur if the [`NavMesh`] has different layers that have not yet all been built.
     Invalid,
-    /// Cancelled build task. This can happen if settings changed before the build was completed.
+    /// The build task was canceled. This can occur if [`NavMeshSettings`] associated changed before the last build was completed.
     Cancelled,
 }
 
 /// Control when to update the navmesh
 #[derive(Component, Debug, Copy, Clone)]
 pub enum NavMeshUpdateMode {
-    /// On every change
+    /// Update the [`NavMesh`] on every change.
     Direct,
-    /// On every debounced change, at maximum every `f32` seconds
+    /// Update the [`NavMesh`] on every debounced change, at most every `f32` seconds.
     Debounced(f32),
-    /// On demand, set it to `true` to trigger an update
+    /// Update the [`NavMesh`] on demand. Set to `true` to trigger an update.
     OnDemand(bool),
 }
 
-/// If this component is added to an entity with the `NavMeshBundle`, updating the navmesh will be blocking. Otherwise
-/// it will be async and happen on the [`AsyncComputeTaskPool`].
+/// If this component is added to an entity with the [`NavMeshBundle`], updating the [`NavMesh`] will be blocking.
+/// Otherwise, it will be done asynchronous and occur on the [`AsyncComputeTaskPool`].
+///
+/// This can cause the game to lag if updating the [`NavMesh`] takes longer than a frame. This is not recommended to use.
 #[derive(Component, Debug, Copy, Clone)]
 pub struct NavMeshUpdateModeBlocking;
 
@@ -626,9 +650,33 @@ fn update_navmesh_asset(
     }
 }
 
-/// Plugin to enable automatic navmesh updates.
-/// - `Marker` is the component type that marks an entity as an obstacle.
+/// Plugin to enable automatic [`NavMesh`] updates.
+///
 /// - `Obstacle` is the component type that provides the position and shape of an obstacle.
+/// - `Marker` is the component type that marks an entity as an obstacle. It defaults to `Obstacle`, so that it's not needed if all entities with `Obstacle` are obstacles.
+///
+/// # Example
+///
+/// When using [`Aabb`](bevy::render::primitives::Aabb) as the obstacle shape, the [`Obstacle`] component should be [`Aabb`](bevy::render::primitives::Aabb), and you should use a `Marker` component type of your own to differentiate between entities that are obstacles and those that aren't.
+///
+/// ```no_run
+/// use bevy::{
+///     prelude::*,
+///     render::primitives::Aabb,
+/// };
+/// use vleue_navigator::prelude::*;
+///
+/// #[derive(Component)]
+/// struct MyObstacle;
+///
+/// App::new().add_plugins((
+///     DefaultPlugins,
+///     VleueNavigatorPlugin,
+///     NavmeshUpdaterPlugin::<Aabb, MyObstacle>::default(),
+/// ))
+/// .run();
+/// ```
+
 #[derive(Debug)]
 pub struct NavmeshUpdaterPlugin<Obstacle: ObstacleSource, Marker: Component = Obstacle> {
     marker1: PhantomData<Marker>,
@@ -646,7 +694,7 @@ impl<Marker: Component, Obstacle: ObstacleSource> Default
     }
 }
 
-/// Diagnostic path for the duration of navmesh build.
+/// A diagnostic path for measuring the duration of the [`NavMesh`] build process.
 pub const NAVMESH_BUILD_DURATION: DiagnosticPath =
     DiagnosticPath::const_new("navmesh_build_duration");
 
