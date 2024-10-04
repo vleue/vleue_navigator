@@ -669,14 +669,12 @@ fn update_navmesh_asset(
 /// #[derive(Component)]
 /// struct MyObstacle;
 ///
-/// fn main() {
-///     App::new().add_plugins((
-///         DefaultPlugins,
-///         VleueNavigatorPlugin,
-///         NavmeshUpdaterPlugin::<Aabb, MyObstacle>::default(),
-///     ))
-///     .run();
-/// }
+/// App::new().add_plugins((
+///     DefaultPlugins,
+///     VleueNavigatorPlugin,
+///     NavmeshUpdaterPlugin::<Aabb, MyObstacle>::default(),
+/// ))
+/// .run();
 /// ```
 
 #[derive(Debug)]
