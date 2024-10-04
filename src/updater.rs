@@ -650,9 +650,35 @@ fn update_navmesh_asset(
     }
 }
 
-/// Plugin to enable automatic navmesh updates.
-/// - `Marker` is the component type that marks an entity as an obstacle.
+/// Plugin to enable automatic [`NavMesh`] updates.
+///
 /// - `Obstacle` is the component type that provides the position and shape of an obstacle.
+/// - `Marker` is the component type that marks an entity as an obstacle. It defaults to `Obstacle`, so that it's not needed if all entities with `Obstacle` are obstacles.
+///
+/// # Example
+///
+/// When using [`Aabb`](bevy::render::primitives::Aabb) as the obstacle shape, the [`Obstacle`] component should be [`Aabb`](bevy::render::primitives::Aabb), and you should use a `Marker` component type of your own to differentiate between entities that are obstacles and those that aren't.
+///
+/// ```no_run
+/// use bevy::{
+///     prelude::*,
+///     render::primitives::Aabb,
+/// };
+/// use vleue_navigator::prelude::*;
+///
+/// #[derive(Component)]
+/// struct MyObstacle;
+///
+/// fn main() {
+///     App::new().add_plugins((
+///         DefaultPlugins,
+///         VleueNavigatorPlugin,
+///         NavmeshUpdaterPlugin::<Aabb, MyObstacle>::default(),
+///     ))
+///     .run();
+/// }
+/// ```
+
 #[derive(Debug)]
 pub struct NavmeshUpdaterPlugin<Obstacle: ObstacleSource, Marker: Component = Obstacle> {
     marker1: PhantomData<Marker>,
