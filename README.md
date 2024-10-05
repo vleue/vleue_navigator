@@ -34,13 +34,12 @@ Pathfinding:
 NavMesh building:
 * [Line Generalisation by Repeated Elimination of Points](https://hull-repository.worktribe.com/preview/376364/000870493786962263.pdf): Geometry simplification while keeping the general shape
 * [Constrained Delaunay Triangulation](https://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation): Building a tri-mesh from edges
+* [Polygon Offsetting by Computing Winding Numbers](https://mcmains.me.berkeley.edu/pubs/DAC05OffsetPolygon.pdf): Agent radius
 
 
 ### To Implement
 
 * Steering Behaviors For Autonomous Characters https://www.red3d.com/cwr/steer/
-* A Generic Solution to Polygon Clipping https://dl.acm.org/doi/pdf/10.1145/129902.129906
-* Polygon Offsetting by Computing Winding Numbers https://mcmains.me.berkeley.edu/pubs/DAC05OffsetPolygon.pdf
 
 ## Bevy Supported Versions
 
