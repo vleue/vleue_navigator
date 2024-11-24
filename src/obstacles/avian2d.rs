@@ -53,9 +53,9 @@ impl<'a> InnerObstacleSource for TypedShape<'a> {
         let ref_to_world = |p: &OPoint<f32, Const<2>>| {
             let mut v = vec3(p.x, 0.0, p.y);
             v = if up.is_negative_bitmask().count_ones() % 2 == 1 {
-                Quat::from_rotation_arc(-Vec3::Y, up.into()).mul_vec3(v)
-            } else {
                 Quat::from_rotation_arc(Vec3::Y, up.into()).mul_vec3(v)
+            } else {
+                Quat::from_rotation_arc(-Vec3::Y, up.into()).mul_vec3(v)
             };
             transform.transform_point(v)
         };
