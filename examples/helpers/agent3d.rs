@@ -59,7 +59,7 @@ pub fn setup_agent<const SIZE: u32>(
     }
 }
 
-pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
+pub fn give_target_to_navigator<const X: u32, const Y: u32>(
     mut commands: Commands,
     navigators: Query<(Entity, &Transform, &Navigator), Without<Path>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
