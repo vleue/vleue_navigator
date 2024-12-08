@@ -92,7 +92,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             };
             p.spawn((
-                TextSpan::new("<span>".to_string()),
+                TextSpan::new("<space>".to_string()),
                 TextColor(palettes::css::GOLD.into()),
                 font_size.clone(),
             ));

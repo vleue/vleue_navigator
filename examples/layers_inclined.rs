@@ -82,7 +82,6 @@ fn setup(
         ))
         .with_children(|p| {
             p.spawn((
-                ManagedNavMesh::single(),
                 NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(0.0, 0.0),
@@ -141,7 +140,6 @@ fn setup(
         ))
         .with_children(|p| {
             p.spawn((
-                ManagedNavMesh::single(),
                 NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(0.0, 0.0),
@@ -203,7 +201,6 @@ fn setup(
         ))
         .with_children(|p| {
             p.spawn((
-                ManagedNavMesh::single(),
                 NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(0.0, 0.0),

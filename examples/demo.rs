@@ -213,7 +213,6 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
 
     // Spawn a new navmesh that will be automatically updated.
     commands.spawn((
-        ManagedNavMesh::single(),
         NavMeshSettings {
             // Define the outer borders of the navmesh.
             fixed: Triangulation::from_outer_edges(&[

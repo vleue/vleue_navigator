@@ -27,13 +27,7 @@ pub struct CachableObstacle;
 
 /// A NavMesh that will be updated automatically.
 #[derive(Component, Debug, Deref)]
-#[require(
-    NavMeshSettings,
-    NavMeshStatus,
-    NavMeshUpdateMode,
-    Transform,
-    GlobalTransform
-)]
+#[require(NavMeshStatus, NavMeshUpdateMode, Transform, GlobalTransform)]
 pub struct ManagedNavMesh(Handle<NavMesh>);
 
 impl ManagedNavMesh {
@@ -63,53 +57,9 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
     }
 }
 
-// /// Bundle for preparing an auto updated navmesh. To use with plugin [`NavmeshUpdaterPlugin`].
-// #[derive(Bundle, Debug)]
-// pub struct NavMeshBundle {
-//     /// Settings for this [`NavMesh`], used to control generation.
-//     pub settings: NavMeshSettings,
-//     /// The current status of the last [`NavMesh`] update.
-//     pub status: NavMeshStatus,
-//     /// A handle to the [`NavMesh`] asset.
-//     pub handle: ManagedNavMesh,
-//     /// The local transform of the [`NavMesh`], used to convert points in 3D space to the [`NavMesh`] 2D space.
-//     ///
-//     /// When using methods like [`NavMesh::transformed_path`], this transform is used for conversion.
-//     pub transform: Transform,
-//     /// The global transform of the [`NavMesh`].
-//     pub global_transform: GlobalTransform,
-//     /// Specifies the mode for triggering [`NavMesh`] updates.
-//     pub update_mode: NavMeshUpdateMode,
-// }
-
-// impl NavMeshBundle {
-//     /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
-//     ///
-//     /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
-//     pub fn with_unique_id(id: u128) -> Self {
-//         Self {
-//             handle: ManagedNavMesh(Handle::<NavMesh>::weak_from_u128(id)),
-//             ..Self::with_default_id()
-//         }
-//     }
-
-//     /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
-//     ///
-//     /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
-//     pub fn with_default_id() -> Self {
-//         Self {
-//             settings: NavMeshSettings::default(),
-//             status: NavMeshStatus::Invalid,
-//             handle: ManagedNavMesh::single(),
-//             transform: Default::default(),
-//             global_transform: Default::default(),
-//             update_mode: NavMeshUpdateMode::OnDemand(false),
-//         }
-//     }
-// }
-
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
+#[require(ManagedNavMesh(ManagedNavMesh::single))]
 pub struct NavMeshSettings {
     /// The minimum area that a point of an obstacle must impact. Otherwise, the obstacle will be simplified by removing this point.
     ///

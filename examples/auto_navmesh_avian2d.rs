@@ -117,7 +117,6 @@ fn setup(
     }
 
     commands.spawn((
-        ManagedNavMesh::single(),
         NavMeshSettings {
             // Define the outer borders of the navmesh.
             fixed: Triangulation::from_outer_edges(&[

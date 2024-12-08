@@ -129,7 +129,6 @@ fn setup(
         ))
         .with_children(|p| {
             p.spawn((
-                ManagedNavMesh::single(),
                 NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(-(MESH_UNIT as f32 / 2.0), MESH_UNIT as f32 * 2.0),
@@ -152,7 +151,6 @@ fn setup(
                     ..default()
                 },
                 NavMeshUpdateMode::Direct,
-                // NavMeshUpdateMode::Debounced(0.1),
                 NavMeshDebug(palettes::tailwind::FUCHSIA_600.into()),
             ));
             p.spawn((
@@ -214,7 +212,6 @@ fn setup(
         ))
         .with_children(|p| {
             p.spawn((
-                ManagedNavMesh::single(),
                 NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(-(MESH_UNIT as f32 / 2.0), -(MESH_UNIT as f32 * 1.0)),
@@ -262,7 +259,6 @@ fn setup(
         ))
         .with_children(|p| {
             p.spawn((
-                ManagedNavMesh::single(),
                 NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(-(MESH_UNIT as f32 / 4.0), -(MESH_UNIT as f32 / 2.0)),
@@ -315,7 +311,6 @@ fn setup(
         ))
         .with_children(|p| {
             p.spawn((
-                ManagedNavMesh::single(),
                 NavMeshSettings {
                     fixed: Triangulation::from_outer_edges(&[
                         vec2(-(MESH_UNIT as f32 / 4.0), -(MESH_UNIT as f32 / 2.0)),

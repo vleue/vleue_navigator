@@ -71,7 +71,6 @@ fn setup(mut commands: Commands) {
 
     // Spawn a new navmesh that will be automatically updated.
     commands.spawn((
-        ManagedNavMesh::single(),
         NavMeshSettings {
             // Define the outer borders of the navmesh.
             // This will be in navmesh coordinates
