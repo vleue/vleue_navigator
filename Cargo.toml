@@ -67,6 +67,8 @@ default-features = false
 default = ["debug-with-gizmos"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
+avian2d = ["dep:avian2d"]
+avian3d = ["dep:avian3d"]
 
 [[example]]
 name = "auto_navmesh_avian2d"
