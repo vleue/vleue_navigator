@@ -34,6 +34,7 @@ jobs:
   checks:
     name: Checks
     strategy:
+      fail-fast: false
       matrix:
         features: ["--no-default-features", "--features avian2d", "--features avian3d", "--features debug-with-gizmos", "--features detailed-layers"]
     runs-on: ubuntu-latest
