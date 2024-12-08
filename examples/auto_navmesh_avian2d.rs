@@ -1,5 +1,5 @@
 use avian2d::{math::*, prelude::*};
-use bevy::{color::palettes, math::vec2, prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{color::palettes, math::vec2, prelude::*};
 use rand::Rng;
 use vleue_navigator::prelude::*;
 
@@ -40,7 +40,7 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 
     let square_sprite = Sprite {
         color: Color::srgb(0.7, 0.7, 0.8),
@@ -50,24 +50,16 @@ fn setup(
 
     // Left wall
     commands.spawn((
-        SpriteBundle {
-            sprite: square_sprite.clone(),
-            transform: Transform::from_xyz(-50.0 * 9.5, 0.0, 0.0)
-                .with_scale(Vec3::new(1.0, 15.0, 1.0)),
-            ..default()
-        },
+        square_sprite.clone(),
+        Transform::from_xyz(-50.0 * 9.5, 0.0, 0.0).with_scale(Vec3::new(1.0, 15.0, 1.0)),
         RigidBody::Static,
         Collider::rectangle(50.0, 50.0),
         Obstacle::Wall,
     ));
     // Right wall
     commands.spawn((
-        SpriteBundle {
-            sprite: square_sprite,
-            transform: Transform::from_xyz(50.0 * 9.5, 0.0, 0.0)
-                .with_scale(Vec3::new(1.0, 15.0, 1.0)),
-            ..default()
-        },
+        square_sprite,
+        Transform::from_xyz(50.0 * 9.5, 0.0, 0.0).with_scale(Vec3::new(1.0, 15.0, 1.0)),
         RigidBody::Static,
         Collider::rectangle(50.0, 50.0),
         Obstacle::Wall,
@@ -81,23 +73,20 @@ fn setup(
     for x in (-50..50).step_by(step).skip(1) {
         for (yi, y) in (-50..50).step_by(step).skip(1).enumerate() {
             commands.spawn((
-                MaterialMesh2dBundle {
-                    mesh: peg_mesh.clone().into(),
-                    material: peg_material.clone(),
-                    transform: Transform::from_xyz(
-                        (x as f32
-                            + if yi % 2 == 0 {
-                                -(step as f32 / 4.0)
-                            } else {
-                                step as f32 / 4.0
-                            }
-                            + rand::thread_rng().gen_range(-1.0..1.0))
-                            * 9.5,
-                        (y as f32 + rand::thread_rng().gen_range(-1.0..1.0)) * 6.0,
-                        0.0,
-                    ),
-                    ..default()
-                },
+                Mesh2d(peg_mesh.clone().into()),
+                MeshMaterial2d(peg_material.clone()),
+                Transform::from_xyz(
+                    (x as f32
+                        + if yi % 2 == 0 {
+                            -(step as f32 / 4.0)
+                        } else {
+                            step as f32 / 4.0
+                        }
+                        + rand::thread_rng().gen_range(-1.0..1.0))
+                        * 9.5,
+                    (y as f32 + rand::thread_rng().gen_range(-1.0..1.0)) * 6.0,
+                    0.0,
+                ),
                 RigidBody::Static,
                 Collider::circle(peg_radius as Scalar),
                 Obstacle::Peg,
@@ -110,12 +99,9 @@ fn setup(
     for x in (-50..50).step_by(5).skip(1) {
         let start = Vec3::new(x as f32 * 9.5, 300.0, 0.0);
         commands.spawn((
-            MaterialMesh2dBundle {
-                mesh: marble_mesh.clone().into(),
-                material: marble_material.clone(),
-                transform: Transform::from_translation(start),
-                ..default()
-            },
+            Mesh2d(marble_mesh.clone().into()),
+            MeshMaterial2d(marble_material.clone()),
+            Transform::from_translation(start),
             RigidBody::Dynamic,
             LinearVelocity(
                 Vec2::new(
@@ -130,8 +116,8 @@ fn setup(
         ));
     }
 
-    commands.spawn(NavMeshBundle {
-        settings: NavMeshSettings {
+    commands.spawn((
+        NavMeshSettings {
             // Define the outer borders of the navmesh.
             fixed: Triangulation::from_outer_edges(&[
                 vec2(-500.0, -500.0),
@@ -144,9 +130,8 @@ fn setup(
             merge_steps: 1,
             ..default()
         },
-        update_mode: NavMeshUpdateMode::Direct,
-        ..NavMeshBundle::with_default_id()
-    });
+        NavMeshUpdateMode::Direct,
+    ));
 }
 
 #[derive(Component)]
@@ -156,7 +141,7 @@ fn puck_back_to_start(
     mut commands: Commands,
     query: Query<(Entity, Ref<Transform>, &Puck), Without<Path>>,
     navmeshes: Res<Assets<NavMesh>>,
-    navmesh: Query<&Handle<NavMesh>>,
+    navmesh: Query<&ManagedNavMesh>,
 ) {
     let Some(navmesh) = navmeshes.get(navmesh.single()) else {
         return;
@@ -197,7 +182,7 @@ pub fn move_puck(
 ) {
     for (mut transform, mut path, entity, mut linvel) in navigator.iter_mut() {
         let move_direction = path.current - transform.translation;
-        transform.translation += move_direction.normalize() * time.delta_seconds() * 100.0;
+        transform.translation += move_direction.normalize() * time.delta_secs() * 100.0;
 
         if transform.translation.distance(path.current) < 10.0 {
             if let Some(next) = path.next.pop() {

@@ -15,7 +15,6 @@ const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> = Handle::weak_from_u128(0);
 
 fn main() {
     App::new()
-        .insert_resource(Msaa::default())
         .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
@@ -68,62 +67,51 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         brightness: 100.0,
     });
 
-    commands.spawn(Camera3dBundle {
-        camera: Camera {
+    commands.spawn((
+        Camera3d::default(),
+        Camera {
             #[cfg(not(target_arch = "wasm32"))]
             hdr: true,
             ..default()
         },
-        transform: Transform::from_xyz(0.0, 70.0, 5.0)
-            .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
-        ..Default::default()
-    });
+        Transform::from_xyz(0.0, 70.0, 5.0).looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
+    ));
 
-    commands.spawn(TextBundle {
-        style: Style {
-            align_self: AlignSelf::FlexStart,
-            margin: UiRect::all(Val::Px(15.0)),
-            ..Default::default()
-        },
-        text: Text {
-            sections: vec![
-                TextSection {
-                    value: "<space>".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::GOLD.into(),
-                        ..default()
-                    },
-                },
-                TextSection {
-                    value: " to display the navmesh, ".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::WHITE.into(),
-                        ..default()
-                    },
-                },
-                TextSection {
-                    value: "click".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::GOLD.into(),
-                        ..default()
-                    },
-                },
-                TextSection {
-                    value: " to set the destination".to_string(),
-                    style: TextStyle {
-                        font_size: 30.0,
-                        color: palettes::css::WHITE.into(),
-                        ..default()
-                    },
-                },
-            ],
-            ..Default::default()
-        },
-        ..Default::default()
-    });
+    commands
+        .spawn((
+            Text::default(),
+            Node {
+                align_self: AlignSelf::FlexStart,
+                margin: UiRect::all(Val::Px(15.0)),
+                ..Default::default()
+            },
+        ))
+        .with_children(|p| {
+            let font_size = TextFont {
+                font_size: 20.0,
+                ..default()
+            };
+            p.spawn((
+                TextSpan::new("<space>".to_string()),
+                TextColor(palettes::css::GOLD.into()),
+                font_size.clone(),
+            ));
+            p.spawn((
+                TextSpan::new(" to display the navmesh, ".to_string()),
+                TextColor(palettes::css::WHITE.into()),
+                font_size.clone(),
+            ));
+            p.spawn((
+                TextSpan::new("click".to_string()),
+                TextColor(palettes::css::GOLD.into()),
+                font_size.clone(),
+            ));
+            p.spawn((
+                TextSpan::new(" to set the destination".to_string()),
+                TextColor(palettes::css::WHITE.into()),
+                font_size,
+            ));
+        });
 
     commands.insert_resource(CurrentMesh(HANDLE_TRIMESH_OPTIMIZED));
 }
@@ -172,19 +160,17 @@ fn setup_scene(
         let mesh = gltf_meshes.get(&gltf.named_meshes["obstacles"]).unwrap();
         let mut material: StandardMaterial = Color::Srgba(palettes::css::GRAY).into();
         material.perceptual_roughness = 1.0;
-        commands.spawn(PbrBundle {
-            mesh: mesh.primitives[0].mesh.clone(),
-            material: materials.add(material),
-            ..default()
-        });
+        commands.spawn((
+            Mesh3d(mesh.primitives[0].mesh.clone()),
+            MeshMaterial3d(materials.add(material)),
+        ));
 
         let mesh = gltf_meshes.get(&gltf.named_meshes["plane"]).unwrap();
-        commands.spawn(PbrBundle {
-            mesh: mesh.primitives[0].mesh.clone(),
-            transform: Transform::from_xyz(0.0, 0.1, 0.0),
-            material: ground_material.clone(),
-            ..default()
-        });
+        commands.spawn((
+            Mesh3d(mesh.primitives[0].mesh.clone()),
+            MeshMaterial3d(ground_material.clone()),
+            Transform::from_xyz(0.0, 0.1, 0.0),
+        ));
     }
 
     {
@@ -195,24 +181,21 @@ fn setup_scene(
 
         for _i in 0..NB_HOVER {
             commands.spawn((
-                SpotLightBundle {
-                    spot_light: SpotLight {
-                        intensity: 1000000.0,
-                        color: palettes::css::SEA_GREEN.into(),
-                        shadows_enabled: true,
-                        inner_angle: 0.5,
-                        outer_angle: 0.8,
-                        range: 250.0,
-                        ..default()
-                    },
-                    transform: Transform::from_xyz(
-                        rand::thread_rng().gen_range(-50.0..50.0),
-                        20.0,
-                        rand::thread_rng().gen_range(-25.0..25.0),
-                    )
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                SpotLight {
+                    intensity: 1000000.0,
+                    color: palettes::css::SEA_GREEN.into(),
+                    shadows_enabled: true,
+                    inner_angle: 0.5,
+                    outer_angle: 0.8,
+                    range: 250.0,
                     ..default()
                 },
+                Transform::from_xyz(
+                    rand::thread_rng().gen_range(-50.0..50.0),
+                    20.0,
+                    rand::thread_rng().gen_range(-25.0..25.0),
+                )
+                .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                 Hover(Vec2::new(
                     rand::thread_rng().gen_range(-50.0..50.0),
                     rand::thread_rng().gen_range(-25.0..25.0),
@@ -239,13 +222,10 @@ fn setup_scene(
             material.unlit = true;
 
             commands.spawn((
-                PbrBundle {
-                    mesh: meshes.add(navmesh.to_wireframe_mesh()),
-                    material: materials.add(material),
-                    transform: Transform::from_xyz(0.0, 0.2, 0.0),
-                    visibility: Visibility::Hidden,
-                    ..Default::default()
-                },
+                Mesh3d(meshes.add(navmesh.to_wireframe_mesh())),
+                MeshMaterial3d(materials.add(material)),
+                Transform::from_xyz(0.0, 0.2, 0.0),
+                Visibility::Hidden,
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED),
             ));
             navmeshes.insert(&HANDLE_TRIMESH_OPTIMIZED, navmesh);
@@ -253,31 +233,27 @@ fn setup_scene(
 
         commands
             .spawn((
-                PbrBundle {
-                    mesh: meshes.add(Mesh::from(Capsule3d { ..default() })),
-                    material: materials.add(StandardMaterial {
-                        base_color: palettes::css::BLUE.into(),
-                        emissive: (palettes::css::BLUE * 5.0).into(),
-                        ..default()
-                    }),
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                    ..Default::default()
-                },
+                Mesh3d(meshes.add(Mesh::from(Capsule3d { ..default() }))),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: palettes::css::BLUE.into(),
+                    emissive: (palettes::css::BLUE * 5.0).into(),
+                    ..default()
+                })),
+                Transform::from_xyz(0.0, 0.0, 0.0),
                 Object(None),
                 NotShadowCaster,
             ))
             .with_children(|object| {
-                object.spawn(PointLightBundle {
-                    point_light: PointLight {
+                object.spawn((
+                    PointLight {
                         color: palettes::css::BLUE.into(),
                         range: 500.0,
                         intensity: 100000.0,
                         shadows_enabled: true,
                         ..default()
                     },
-                    transform: Transform::from_xyz(0.0, 1.2, 0.0),
-                    ..default()
-                });
+                    Transform::from_xyz(0.0, 1.2, 0.0),
+                ));
             });
     }
 }
@@ -312,30 +288,26 @@ fn give_target_auto(
             remaining.reverse();
             let target_id = commands
                 .spawn((
-                    PbrBundle {
-                        mesh: meshes.add(Mesh::from(Sphere { radius: 0.5 })),
-                        material: materials.add(StandardMaterial {
-                            base_color: palettes::css::RED.into(),
-                            emissive: (palettes::css::RED * 5.0).into(),
-                            ..default()
-                        }),
-                        transform: Transform::from_xyz(x, 0.0, z),
-                        ..Default::default()
-                    },
+                    Mesh3d(meshes.add(Mesh::from(Sphere { radius: 0.5 }))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: palettes::css::RED.into(),
+                        emissive: (palettes::css::RED * 5.0).into(),
+                        ..default()
+                    })),
+                    Transform::from_xyz(x, 0.0, z),
                     NotShadowCaster,
                     Target,
                 ))
                 .with_children(|target| {
-                    target.spawn(PointLightBundle {
-                        point_light: PointLight {
+                    target.spawn((
+                        PointLight {
                             color: palettes::css::RED.into(),
                             shadows_enabled: true,
                             range: 10.0,
                             ..default()
                         },
-                        transform: Transform::from_xyz(0.0, 1.5, 0.0),
-                        ..default()
-                    });
+                        Transform::from_xyz(0.0, 1.5, 0.0),
+                    ));
                 })
                 .id();
             commands.entity(entity).insert(Path {
@@ -364,7 +336,7 @@ fn give_target_on_click(
         let Some(target) = (|| {
             let position = primary_window.single().cursor_position()?;
             let (camera, transform) = camera.get_single().ok()?;
-            let ray = camera.viewport_to_world(transform, position)?;
+            let ray = camera.viewport_to_world(transform, position).ok()?;
             let denom = Vec3::Y.dot(ray.direction.into());
             let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;
             let target = ray.origin + ray.direction * t;
@@ -382,30 +354,26 @@ fn give_target_on_click(
                 remaining.reverse();
                 let target_id = commands
                     .spawn((
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(Sphere { radius: 0.5 })),
-                            material: materials.add(StandardMaterial {
-                                base_color: palettes::css::RED.into(),
-                                emissive: (palettes::css::RED * 5.0).into(),
-                                ..default()
-                            }),
-                            transform: Transform::from_translation(target),
-                            ..Default::default()
-                        },
+                        Mesh3d(meshes.add(Mesh::from(Sphere { radius: 0.5 }))),
+                        MeshMaterial3d(materials.add(StandardMaterial {
+                            base_color: palettes::css::RED.into(),
+                            emissive: (palettes::css::RED * 5.0).into(),
+                            ..default()
+                        })),
+                        Transform::from_translation(target),
                         NotShadowCaster,
                         Target,
                     ))
                     .with_children(|target| {
-                        target.spawn(PointLightBundle {
-                            point_light: PointLight {
+                        target.spawn((
+                            PointLight {
                                 color: palettes::css::RED.into(),
                                 shadows_enabled: true,
                                 range: 10.0,
                                 ..default()
                             },
-                            transform: Transform::from_xyz(0.0, 1.5, 0.0),
-                            ..default()
-                        });
+                            Transform::from_xyz(0.0, 1.5, 0.0),
+                        ));
                     })
                     .id();
                 commands.entity(entity).insert(Path {
@@ -428,7 +396,7 @@ fn move_object(
 ) {
     for (mut transform, mut target, entity, mut object) in object_query.iter_mut() {
         let move_direction = target.current - transform.translation;
-        transform.translation += move_direction.normalize() * time.delta_seconds() * 10.0;
+        transform.translation += move_direction.normalize() * time.delta_secs() * 10.0;
         if transform.translation.distance(target.current) < 0.1 {
             if let Some(next) = target.next.pop() {
                 target.current = next;
@@ -466,7 +434,7 @@ fn target_activity(
 ) {
     for children in &target {
         point_light.get_mut(children[0]).unwrap().intensity =
-            (time.elapsed_seconds() * 10.0).sin().abs() * 100000.0;
+            (time.elapsed_secs() * 10.0).sin().abs() * 100000.0;
     }
 }
 
@@ -479,7 +447,7 @@ fn move_hover(mut hovers: Query<(&mut Transform, &mut Hover)>, time: Res<Time>) 
                 rand::thread_rng().gen_range(-25.0..25.0),
             );
         }
-        transform.translation += ((hover.0 - current).normalize() * time.delta_seconds() * 5.0)
+        transform.translation += ((hover.0 - current).normalize() * time.delta_secs() * 5.0)
             .extend(0.0)
             .xzy();
     }

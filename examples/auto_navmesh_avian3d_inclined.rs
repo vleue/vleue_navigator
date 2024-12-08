@@ -50,58 +50,49 @@ fn setup(
 
     // Ground
     commands.spawn((
-        PbrBundle {
-            mesh: arena_mesh.clone(),
-            material: arena_material.clone(),
-            transform: Transform::from_xyz(0.0, 0.0, 5.0)
-                .with_scale(Vec3::new(50.0, 0.1, 50.0))
-                .with_rotation(Quat::from_rotation_x(ANGLE)),
-            ..default()
-        },
+        Mesh3d(arena_mesh.clone()),
+        MeshMaterial3d(arena_material.clone()),
+        Transform::from_xyz(0.0, 0.0, 5.0)
+            .with_scale(Vec3::new(50.0, 0.1, 50.0))
+            .with_rotation(Quat::from_rotation_x(ANGLE)),
         RigidBody::Static,
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
 
     // Directional light
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
+    commands.spawn((
+        DirectionalLight {
             illuminance: 5000.0,
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
-        ..default()
-    });
+        Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
+    ));
 
     // Camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_translation(Vec3::new(0.0, 40.0, 30.0))
-            .looking_at(Vec3::Z * 5.0, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_translation(Vec3::new(0.0, 40.0, 30.0)).looking_at(Vec3::Z * 5.0, Vec3::Y),
+    ));
 
     commands.spawn((
-        NavMeshBundle {
-            settings: NavMeshSettings {
-                // Define the outer borders of the navmesh.
-                fixed: Triangulation::from_outer_edges(&[
-                    vec2(-25.0, -25.0),
-                    vec2(25.0, -25.0),
-                    vec2(25.0, 25.0),
-                    vec2(-25.0, 25.0),
-                ]),
-                build_timeout: Some(1.0),
-                simplify: 0.005,
-                merge_steps: 0,
-                upward_shift: 1.0,
-                ..default()
-            },
-            update_mode: NavMeshUpdateMode::Direct,
-            transform: Transform::from_xyz(0.0, 0.1, 5.0)
-                .with_rotation(Quat::from_rotation_x(ANGLE) * Quat::from_rotation_x(FRAC_PI_2)),
-            handle: Handle::<NavMesh>::weak_from_u128(0),
-            ..NavMeshBundle::with_default_id()
+        NavMeshSettings {
+            // Define the outer borders of the navmesh.
+            fixed: Triangulation::from_outer_edges(&[
+                vec2(-25.0, -25.0),
+                vec2(25.0, -25.0),
+                vec2(25.0, 25.0),
+                vec2(-25.0, 25.0),
+            ]),
+            build_timeout: Some(1.0),
+            simplify: 0.005,
+            merge_steps: 0,
+            upward_shift: 1.0,
+            ..default()
         },
+        NavMeshUpdateMode::Direct,
+        Transform::from_xyz(0.0, 0.1, 5.0)
+            .with_rotation(Quat::from_rotation_x(ANGLE) * Quat::from_rotation_x(FRAC_PI_2)),
         NavMeshDebug(palettes::tailwind::RED_600.into()),
     ));
 }
@@ -121,25 +112,22 @@ fn spawn_obstacles(
 ) {
     let cube_size = 2.0;
     commands.spawn((
-        PbrBundle {
-            mesh: meshes.add(Cuboid::new(cube_size, cube_size, cube_size)),
-            material: materials.add(Color::srgb(0.2, 0.7, 0.9)),
-            transform: Transform::from_xyz(
-                rand::thread_rng().gen_range(-25.0..25.0),
-                50.0,
-                rand::thread_rng().gen_range(-25.0..-10.0),
+        Mesh3d(meshes.add(Cuboid::new(cube_size, cube_size, cube_size))),
+        MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
+        Transform::from_xyz(
+            rand::thread_rng().gen_range(-25.0..25.0),
+            50.0,
+            rand::thread_rng().gen_range(-20.0..-10.0),
+        )
+        .looking_to(
+            Vec3::new(
+                rand::thread_rng().gen_range(-1.0..1.0),
+                rand::thread_rng().gen_range(-1.0..1.0),
+                rand::thread_rng().gen_range(-1.0..1.0),
             )
-            .looking_to(
-                Vec3::new(
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                )
-                .normalize(),
-                Vec3::Y,
-            ),
-            ..default()
-        },
+            .normalize(),
+            Vec3::Y,
+        ),
         RigidBody::Dynamic,
         Collider::cuboid(cube_size, cube_size, cube_size),
         Obstacle,
@@ -150,7 +138,7 @@ fn rotate_camera(time: Res<Time>, mut query: Query<&mut Transform, With<Camera3d
     for mut transform in query.iter_mut() {
         transform.rotate_around(
             Vec3::Z * 5.0,
-            Quat::from_rotation_y(time.delta_seconds() / 10.0),
+            Quat::from_rotation_y(time.delta_secs() / 10.0),
         )
     }
 }

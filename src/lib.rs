@@ -17,7 +17,7 @@ use std::sync::Arc;
 #[cfg(feature = "debug-with-gizmos")]
 use bevy::{
     app::Update,
-    asset::{Assets, Handle},
+    asset::Assets,
     color::Color,
     prelude::{Component, Gizmos, Query, Res, Resource},
 };
@@ -46,7 +46,7 @@ pub mod prelude {
         cached::CachedObstacle, primitive::PrimitiveObstacle, ObstacleSource,
     };
     pub use crate::updater::{
-        CachableObstacle, NavMeshBundle, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
+        CachableObstacle, ManagedNavMesh, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
         NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
     };
     pub use crate::{NavMesh, Triangulation, VleueNavigatorPlugin};
@@ -403,7 +403,7 @@ fn get_vectors(
 /// System displaying navmeshes using gizmos for debug purposes.
 pub fn display_navmesh(
     live_navmeshes: Query<(
-        &Handle<NavMesh>,
+        &updater::ManagedNavMesh,
         Option<&NavMeshDebug>,
         &bevy::prelude::GlobalTransform,
         &updater::NavMeshSettings,

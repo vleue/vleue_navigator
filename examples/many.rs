@@ -10,7 +10,6 @@ use bevy::{
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::Vec3Swizzles,
     prelude::*,
-    sprite::MaterialMesh2dBundle,
     tasks::AsyncComputeTaskPool,
     utils::Instant,
     window::{PrimaryWindow, WindowResized},
@@ -79,102 +78,47 @@ struct Meshes {
 const MESH_SIZE: Vec2 = Vec2::new(1024.0, 768.0);
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
     commands.insert_resource(Meshes {
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
-    let font = asset_server.load("FiraMono-Medium.ttf");
-    commands.spawn(TextBundle {
-        text: Text::from_sections([
-            TextSection::new(
-                "Agents: ",
-                TextStyle {
-                    font_size: 30.0,
+    commands
+        .spawn((
+            Text::default(),
+            Node {
+                position_type: PositionType::Absolute,
+                margin: UiRect {
+                    top: Val::Px(5.0),
+                    left: Val::Px(5.0),
                     ..default()
                 },
-            ),
-            TextSection::new(
-                "0\n",
-                TextStyle {
-                    font_size: 30.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "FPS: ",
-                TextStyle {
-                    font_size: 20.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "0.0\n",
-                TextStyle {
-                    font_size: 20.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "Task duration: ",
-                TextStyle {
-                    font_size: 20.0,
-                    font: font.clone(),
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "0.0\n",
-                TextStyle {
-                    font_size: 20.0,
-                    font: font.clone(),
-
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "Task overhead: ",
-                TextStyle {
-                    font_size: 20.0,
-                    font: font.clone(),
-
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "0.0\n",
-                TextStyle {
-                    font_size: 20.0,
-                    font: font.clone(),
-
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "space - ",
-                TextStyle {
-                    font_size: 15.0,
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "\n",
-                TextStyle {
-                    font_size: 15.0,
-                    ..default()
-                },
-            ),
-        ]),
-        style: Style {
-            position_type: PositionType::Absolute,
-            margin: UiRect {
-                top: Val::Px(5.0),
-                left: Val::Px(5.0),
                 ..default()
             },
-            ..default()
-        },
-        ..default()
-    });
+        ))
+        .with_children(|p| {
+            [
+                ("Agents: ", 30.0),
+                ("0\n", 30.0),
+                ("FPS: ", 20.0),
+                ("0.0\n", 20.0),
+                ("Task duration: ", 20.0),
+                ("0.0\n", 20.0),
+                ("Task overhead: ", 20.0),
+                ("0.0\n", 20.0),
+                ("space: ", 15.0),
+                ("\n", 15.0),
+            ]
+            .into_iter()
+            .for_each(|(text, font_size)| {
+                p.spawn((
+                    TextSpan::new(text.to_string()),
+                    TextFont {
+                        font_size,
+                        ..default()
+                    },
+                ));
+            });
+        });
 }
 
 fn on_mesh_change(
@@ -199,19 +143,18 @@ fn on_mesh_change(
             let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
             *current_mesh_entity = Some(
                 commands
-                    .spawn(MaterialMesh2dBundle {
-                        mesh: meshes.add(navmesh.to_mesh()).into(),
-                        transform: Transform::from_translation(Vec3::new(
+                    .spawn((
+                        Mesh2d(meshes.add(navmesh.to_mesh()).into()),
+                        Transform::from_translation(Vec3::new(
                             -MESH_SIZE.x / 2.0 * factor,
                             -MESH_SIZE.y / 2.0 * factor,
                             0.0,
                         ))
                         .with_scale(Vec3::splat(factor)),
-                        material: materials.add(ColorMaterial::from(Color::Srgba(
+                        MeshMaterial2d(materials.add(ColorMaterial::from(Color::Srgba(
                             palettes::tailwind::ZINC_700,
-                        ))),
-                        ..default()
-                    })
+                        )))),
+                    ))
                     .id(),
             );
         } else {
@@ -270,16 +213,12 @@ fn spawn(
             let color = Hsla::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5);
 
             to_spawn.push((
-                SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::Srgba(color.into()),
-                        custom_size: Some(Vec2::ONE),
-                        ..default()
-                    },
-                    transform: Transform::from_translation(position.extend(1.0))
-                        .with_scale(Vec3::splat(5.0)),
+                Sprite {
+                    color: Color::Srgba(color.into()),
+                    custom_size: Some(Vec2::ONE),
                     ..default()
                 },
+                Transform::from_translation(position.extend(1.0)).with_scale(Vec3::splat(5.0)),
                 Navigator {
                     speed: rng.gen_range(50.0..100.0),
                 },
@@ -407,7 +346,7 @@ fn move_navigator(
             let next = (path.path[0] - MESH_SIZE / 2.0) * factor;
             let toward = next - transform.translation.xy();
             // TODO: compare this in mesh dimensions, not in display dimensions
-            if toward.length() < time.delta_seconds() * navigator.speed * 2.0 {
+            if toward.length() < time.delta_secs() * navigator.speed * 2.0 {
                 path.path.remove(0);
                 if path.path.is_empty() {
                     par_commands.command_scope(|mut commands| {
@@ -416,7 +355,7 @@ fn move_navigator(
                 }
             }
             transform.translation +=
-                (toward.normalize() * time.delta_seconds() * navigator.speed).extend(0.0);
+                (toward.normalize() * time.delta_secs() * navigator.speed).extend(0.0);
         });
 }
 
@@ -443,7 +382,8 @@ fn go_somewhere(
 }
 
 fn update_ui(
-    mut ui_query: Query<&mut Text>,
+    ui_query: Query<Entity, With<Text>>,
+    mut text_writer: TextUiWriter,
     agents: Query<&Navigator>,
     mut count: Local<usize>,
     stats: Res<Stats>,
@@ -451,9 +391,9 @@ fn update_ui(
     task_mode: Res<TaskMode>,
 ) {
     let new_count = agents.iter().len();
-    let mut text = ui_query.single_mut();
-    text.sections[1].value = format!("{}\n", new_count);
-    text.sections[3].value = format!(
+    let text = ui_query.single();
+    *text_writer.text(text, 2) = format!("{}\n", new_count);
+    *text_writer.text(text, 4) = format!(
         "{:.2}\n",
         diagnostics
             .get(&FrameTimeDiagnosticsPlugin::FPS)
@@ -461,20 +401,20 @@ fn update_ui(
             .unwrap_or_default()
     );
 
-    text.sections[5].value = format!(
+    *text_writer.text(text, 6) = format!(
         "{:?}\n",
         Duration::from_secs_f32(
             stats.pathfinding_duration.iter().sum::<f32>()
                 / (stats.pathfinding_duration.len().max(1) as f32)
         ),
     );
-    text.sections[7].value = format!(
+    *text_writer.text(text, 8) = format!(
         "{:?}\n",
         Duration::from_secs_f32(
             stats.task_delay.iter().sum::<f32>() / (stats.task_delay.len().max(1) as f32)
         )
     );
-    text.sections[9].value = format!("{:?}\n", *task_mode);
+    *text_writer.text(text, 10) = format!("{:?}\n", *task_mode);
     *count = new_count;
 }
 

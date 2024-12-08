@@ -35,7 +35,7 @@ trait InnerObstacleSource {
     ) -> Vec<Vec<Vec2>>;
 }
 
-impl<'a> InnerObstacleSource for TypedShape<'a> {
+impl InnerObstacleSource for TypedShape<'_> {
     fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
