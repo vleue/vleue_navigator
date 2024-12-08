@@ -87,13 +87,13 @@ fn pause(keyboard_input: Res<ButtonInput<KeyCode>>, mut virtual_time: ResMut<Tim
 
 fn cached_material(
     obstacles: Query<(&Children, Option<Ref<CachableObstacle>>)>,
-    mut materials: Query<&mut Handle<StandardMaterial>>,
+    mut materials: Query<&mut MeshMaterial3d<StandardMaterial>>,
     mut removed: RemovedComponents<CachableObstacle>,
 ) {
     for (children, cachable) in &obstacles {
         if cachable.is_some() && cachable.unwrap().is_added() {
             let mut material = materials.get_mut(children[0]).unwrap();
-            *material = match rand::thread_rng().gen_range(0..3) {
+            material.0 = match rand::thread_rng().gen_range(0..3) {
                 0 => MATERIAL_OBSTACLE_CACHED_1,
                 1 => MATERIAL_OBSTACLE_CACHED_2,
                 2 => MATERIAL_OBSTACLE_CACHED_3,
@@ -104,7 +104,7 @@ fn cached_material(
     for removed in removed.read() {
         let (children, _) = obstacles.get(removed).unwrap();
         let mut material = materials.get_mut(children[0]).unwrap();
-        *material = match rand::thread_rng().gen_range(0..3) {
+        material.0 = match rand::thread_rng().gen_range(0..3) {
             0 => MATERIAL_OBSTACLE_1,
             1 => MATERIAL_OBSTACLE_2,
             2 => MATERIAL_OBSTACLE_3,
@@ -178,40 +178,37 @@ fn random_obstacle(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
 fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
     commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(
+        Camera3d::default(),
+        Transform::from_xyz(
+            MESH_WIDTH as f32 / 2.0,
+            MESH_WIDTH.min(MESH_HEIGHT) as f32,
+            -1.0,
+        )
+        .looking_at(
+            Vec3::new(
                 MESH_WIDTH as f32 / 2.0,
-                MESH_WIDTH.min(MESH_HEIGHT) as f32,
-                -1.0,
-            )
-            .looking_at(
-                Vec3::new(
-                    MESH_WIDTH as f32 / 2.0,
-                    0.0,
-                    MESH_HEIGHT as f32 / 2.0 - MESH_HEIGHT as f32 / 12.0,
-                ),
-                Vec3::Y,
+                0.0,
+                MESH_HEIGHT as f32 / 2.0 - MESH_HEIGHT as f32 / 12.0,
             ),
-            ..Default::default()
-        },
+            Vec3::Y,
+        ),
         RenderLayers::default().with(1),
     ));
     // light
     for (x, y) in [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)] {
-        commands.spawn(PointLightBundle {
-            point_light: PointLight {
+        commands.spawn((
+            PointLight {
                 shadows_enabled: true,
                 intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 300_000.0,
                 range: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 10.0,
                 ..default()
             },
-            transform: Transform::from_xyz(
+            Transform::from_xyz(
                 MESH_WIDTH as f32 * x,
                 MESH_WIDTH.min(MESH_HEIGHT) as f32 / 3.0,
                 MESH_HEIGHT as f32 * y,
             ),
-            ..default()
-        });
+        ));
     }
 
     // Spawn a new navmesh that will be automatically updated.
@@ -281,7 +278,7 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::Rectangle(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -289,12 +286,11 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         1 => {
@@ -303,7 +299,7 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::Circle(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -311,12 +307,11 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         2 => {
@@ -325,7 +320,7 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::Ellipse(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -333,19 +328,18 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         3 => {
             let primitive = Capsule2d::new(rng.gen_range(1.0..3.0), rng.gen_range(1.5..5.0));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::Capsule(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -353,19 +347,18 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         4 => {
             let primitive = RegularPolygon::new(rng.gen_range(1.0..5.0), rng.gen_range(3..11));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::RegularPolygon(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -373,19 +366,18 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         5 => {
             let primitive = Rhombus::new(rng.gen_range(3.0..6.0), rng.gen_range(2.0..3.0));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::Rhombus(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -393,12 +385,11 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         6 => {
@@ -406,7 +397,7 @@ fn new_obstacle(
                 CircularSector::new(rng.gen_range(1.5..5.0), rng.gen_range(0.5..FRAC_PI_2));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::CircularSector(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -414,19 +405,18 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         7 => {
             let primitive = CircularSegment::new(rng.gen_range(1.5..5.0), rng.gen_range(1.0..PI));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
                     PrimitiveObstacle::CircularSegment(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -434,12 +424,11 @@ fn new_obstacle(
                     )),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         _ => unreachable!(),
@@ -451,14 +440,14 @@ fn display_mesh(
     mut meshes: ResMut<Assets<Mesh>>,
     navmeshes: Res<Assets<NavMesh>>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&NavMeshHandle, Ref<NavMeshStatus>)>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
     if !status.is_changed() || *status != NavMeshStatus::Built {
         return;
     }
 
-    if navmeshes.get(navmesh_handle).is_none() {
+    if navmeshes.get(navmesh_handle.handle()).is_none() {
         return;
     };
     if let Some(entity) = *current_mesh_entity {
@@ -467,19 +456,18 @@ fn display_mesh(
 
     *current_mesh_entity = Some(
         commands
-            .spawn(PbrBundle {
-                mesh: meshes.add(Plane3d::new(
+            .spawn((
+                Mesh3d(meshes.add(Plane3d::new(
                     Vec3::Y,
                     Vec2::new(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
-                )),
-                transform: Transform::from_translation(Vec3::new(
+                ))),
+                Transform::from_translation(Vec3::new(
                     (MESH_WIDTH as f32) / 2.0,
                     0.0,
                     MESH_HEIGHT as f32 / 2.0,
                 )),
-                material: MATERIAL_NAVMESH,
-                ..default()
-            })
+                MeshMaterial3d(MATERIAL_NAVMESH),
+            ))
             .id(),
     );
 }

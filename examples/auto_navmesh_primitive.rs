@@ -4,7 +4,6 @@ use bevy::{
     color::palettes,
     math::vec2,
     prelude::*,
-    sprite::MaterialMesh2dBundle,
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;
@@ -68,7 +67,7 @@ fn main() {
 const FACTOR: f32 = 7.0;
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 
     // Spawn a new navmesh that will be automatically updated.
     commands.spawn(NavMeshBundle {
@@ -121,64 +120,80 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&PrimitiveObstacle, &Trans
             PrimitiveObstacle::Rectangle(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
             PrimitiveObstacle::Circle(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
             PrimitiveObstacle::Ellipse(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
             PrimitiveObstacle::CircularSector(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
             PrimitiveObstacle::CircularSegment(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
             PrimitiveObstacle::Capsule(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
             PrimitiveObstacle::RegularPolygon(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
             PrimitiveObstacle::Rhombus(prim) => {
                 gizmos.primitive_2d(
                     prim,
-                    transform.translation.xy(),
-                    transform.rotation.to_axis_angle().1,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
                     palettes::tailwind::RED_600,
                 );
             }
@@ -220,7 +235,7 @@ fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transfo
             )),
             _ => unreachable!(),
         },
-        SpatialBundle::from_transform(transform),
+        transform,
     ));
 }
 
@@ -231,14 +246,14 @@ fn display_mesh(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
     window_resized: EventReader<WindowResized>,
-    navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&NavMeshHandle, Ref<NavMeshStatus>)>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
     if (!status.is_changed() || *status != NavMeshStatus::Built) && window_resized.is_empty() {
         return;
     }
 
-    let Some(navmesh) = navmeshes.get(navmesh_handle) else {
+    let Some(navmesh) = navmeshes.get(navmesh_handle.handle()) else {
         return;
     };
     if let Some(entity) = *current_mesh_entity {
@@ -247,22 +262,20 @@ fn display_mesh(
 
     *current_mesh_entity = Some(
         commands
-            .spawn(MaterialMesh2dBundle {
-                mesh: meshes.add(navmesh.to_mesh()).into(),
-                material: materials.add(ColorMaterial::from(Color::Srgba(
+            .spawn((
+                Mesh2d(meshes.add(navmesh.to_mesh())),
+                MeshMaterial2d(materials.add(ColorMaterial::from(Color::Srgba(
                     palettes::tailwind::BLUE_800,
-                ))),
-                ..default()
-            })
+                )))),
+            ))
             .with_children(|main_mesh| {
-                main_mesh.spawn(MaterialMesh2dBundle {
-                    mesh: meshes.add(navmesh.to_wireframe_mesh()).into(),
-                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
-                    material: materials.add(ColorMaterial::from(Color::Srgba(
+                main_mesh.spawn((
+                    Mesh2d(meshes.add(navmesh.to_wireframe_mesh())),
+                    MeshMaterial2d(materials.add(ColorMaterial::from(Color::Srgba(
                         palettes::tailwind::TEAL_300,
-                    ))),
-                    ..default()
-                });
+                    )))),
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
+                ));
             })
             .id(),
     );
@@ -284,7 +297,7 @@ fn spawn_obstacle_on_click(
         let window = primary_window.single();
         if let Some(position) = window
             .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .map(|ray| ray.origin.truncate())
         {
             let mut rng = rand::thread_rng();

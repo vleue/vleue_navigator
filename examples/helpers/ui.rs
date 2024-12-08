@@ -30,26 +30,24 @@ pub struct ExampleSettings {
 fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildBuilder) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
-                    margin: UiRect::all(Val::Px(5.0)),
-                    border: UiRect::all(Val::Px(1.0)),
-                    justify_content: JustifyContent::Center,
-                    height: Val::Px(30.0),
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                border_color: BorderColor(palettes::tailwind::GRAY_500.into()),
-                border_radius: BorderRadius::MAX,
-                background_color: palettes::tailwind::GRAY_700.into(),
+            Node {
+                margin: UiRect::all(Val::Px(5.0)),
+                border: UiRect::all(Val::Px(1.0)),
+                justify_content: JustifyContent::Center,
+                height: Val::Px(30.0),
+                align_items: AlignItems::Center,
                 ..default()
             },
+            Button,
+            BorderColor(palettes::tailwind::GRAY_500.into()),
+            BorderRadius::MAX,
+            BackgroundColor(palettes::tailwind::GRAY_700.into()),
             action,
         ))
         .with_children(|parent| {
-            parent.spawn(TextBundle::from_section(
-                text,
-                TextStyle {
+            parent.spawn((
+                Text(text.to_string()),
+                TextFont {
                     font_size: 20.0,
                     ..default()
                 },
@@ -61,140 +59,115 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
     commands.init_resource::<ExampleSettings>();
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    right: Val::Px(0.0),
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
-                border_radius: BorderRadius {
-                    top_left: Val::Px(0.),
-                    top_right: Val::Px(0.),
-                    bottom_left: Val::Px(20.0),
-                    bottom_right: Val::Px(0.),
-                },
-                background_color: BackgroundColor(
-                    palettes::tailwind::GRAY_900.with_alpha(0.8).into(),
-                ),
+            Node {
+                position_type: PositionType::Absolute,
+                right: Val::Px(0.0),
+                flex_direction: FlexDirection::Column,
                 ..default()
             },
+            BorderRadius {
+                top_left: Val::Px(0.),
+                top_right: Val::Px(0.),
+                bottom_left: Val::Px(20.0),
+                bottom_right: Val::Px(0.),
+            },
+            BackgroundColor(palettes::tailwind::GRAY_900.with_alpha(0.8).into()),
             Ui,
         ))
         .with_children(|parent| {
-            parent
-                .spawn(NodeBundle { ..default() })
-                .with_children(|parent| {
-                    parent.spawn((
-                        TextBundle {
-                            text: Text::from_sections(
-                                [("Simplify: ", 30.0), ("{}", 30.0)].into_iter().map(
-                                    |(text, font_size): (&str, f32)| {
-                                        TextSection::new(
-                                            text,
-                                            TextStyle {
-                                                font_size,
-                                                ..default()
-                                            },
-                                        )
-                                    },
-                                ),
-                            ),
-                            style: Style {
-                                margin: UiRect::all(Val::Px(12.0)),
-                                ..default()
-                            },
-                            ..default()
-                        }
-                        .with_text_justify(JustifyText::Right),
-                        UiSettings::Simplify,
-                    ));
-                    button(" - ", UiSettingsButtons::SimplifyDec, parent);
-                    button(" + ", UiSettingsButtons::SimplifyInc, parent);
-                });
-            parent
-                .spawn(NodeBundle { ..default() })
-                .with_children(|parent| {
-                    parent.spawn((
-                        TextBundle {
-                            text: Text::from_sections(
-                                [("Merge Steps: ", 30.0), ("{}", 30.0)].into_iter().map(
-                                    |(text, font_size): (&str, f32)| {
-                                        TextSection::new(
-                                            text,
-                                            TextStyle {
-                                                font_size,
-                                                ..default()
-                                            },
-                                        )
-                                    },
-                                ),
-                            ),
-                            style: Style {
-                                margin: UiRect::all(Val::Px(12.0)),
-                                ..default()
-                            },
-                            ..default()
-                        }
-                        .with_text_justify(JustifyText::Right),
-                        UiSettings::MergeSteps,
-                    ));
-                    button(" - ", UiSettingsButtons::MergeStepsDec, parent);
-                    button(" + ", UiSettingsButtons::MergeStepsInc, parent);
-                });
-            parent
-                .spawn(NodeBundle { ..default() })
-                .with_children(|parent| {
-                    parent.spawn((
-                        TextBundle {
-                            text: Text::from_sections(
-                                [("Agent Radius: ", 30.0), ("{}", 30.0)].into_iter().map(
-                                    |(text, font_size): (&str, f32)| {
-                                        TextSection::new(
-                                            text,
-                                            TextStyle {
-                                                font_size,
-                                                ..default()
-                                            },
-                                        )
-                                    },
-                                ),
-                            ),
-                            style: Style {
-                                margin: UiRect::all(Val::Px(12.0)),
-                                ..default()
-                            },
-                            ..default()
-                        }
-                        .with_text_justify(JustifyText::Right),
-                        UiSettings::AgentRadius,
-                    ));
-                    button(" - ", UiSettingsButtons::AgentRadiusDec, parent);
-                    button(" + ", UiSettingsButtons::AgentRadiusInc, parent);
-                });
-            parent
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
-                            border: UiRect::all(Val::Px(1.0)),
-                            justify_content: JustifyContent::Center,
-                            height: Val::Px(30.0),
-                            align_items: AlignItems::Center,
+            parent.spawn(Node { ..default() }).with_children(|parent| {
+                parent
+                    .spawn((
+                        Text("Simplify: ".to_string()),
+                        TextFont {
+                            font_size: 20.0,
                             ..default()
                         },
-                        border_color: BorderColor(palettes::tailwind::GRAY_500.into()),
-                        border_radius: BorderRadius::all(Val::Px(10.0)),
-                        image: UiImage::default().with_color(palettes::tailwind::GRAY_700.into()),
+                        TextLayout {
+                            justify: JustifyText::Right,
+                            ..default()
+                        },
+                        UiSettings::Simplify,
+                    ))
+                    .with_child((
+                        TextSpan::default(),
+                        TextFont {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                    ));
+                button(" - ", UiSettingsButtons::SimplifyDec, parent);
+                button(" + ", UiSettingsButtons::SimplifyInc, parent);
+            });
+            parent.spawn(Node { ..default() }).with_children(|parent| {
+                parent
+                    .spawn((
+                        Text("Merge Steps: ".to_string()),
+                        TextFont {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                        TextLayout {
+                            justify: JustifyText::Right,
+                            ..default()
+                        },
+                        UiSettings::MergeSteps,
+                    ))
+                    .with_child((
+                        TextSpan::default(),
+                        TextFont {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                    ));
+                button(" - ", UiSettingsButtons::MergeStepsDec, parent);
+                button(" + ", UiSettingsButtons::MergeStepsInc, parent);
+            });
+            parent.spawn(Node { ..default() }).with_children(|parent| {
+                parent
+                    .spawn((
+                        Text("Agent Radius: ".to_string()),
+                        TextFont {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                        TextLayout {
+                            justify: JustifyText::Right,
+                            ..default()
+                        },
+                        UiSettings::AgentRadius,
+                    ))
+                    .with_child((
+                        TextSpan::default(),
+                        TextFont {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                    ));
+                button(" - ", UiSettingsButtons::AgentRadiusDec, parent);
+                button(" + ", UiSettingsButtons::AgentRadiusInc, parent);
+            });
+            parent
+                .spawn((
+                    Node {
+                        margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
+                        border: UiRect::all(Val::Px(1.0)),
+                        justify_content: JustifyContent::Center,
+                        height: Val::Px(30.0),
+                        align_items: AlignItems::Center,
                         ..default()
                     },
+                    Button,
+                    BorderColor(palettes::tailwind::GRAY_500.into()),
+                    BorderRadius::all(Val::Px(10.0)),
+                    BackgroundColor(palettes::tailwind::GRAY_700.into()),
                     UiSettingsButtons::AgentRadiusOuterToggle,
                     UiSettings::AgentRadiusOuter,
                 ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Agent Radius on Outer Edges",
-                        TextStyle {
+                    parent.spawn((
+                        Text("Agent Radius on Outer Edges".to_string()),
+                        TextFont {
                             font_size: 20.0,
                             ..default()
                         },
@@ -203,28 +176,24 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
             if WITH_CACHE {
                 parent
                     .spawn((
-                        ButtonBundle {
-                            style: Style {
-                                margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
-                                border: UiRect::all(Val::Px(1.0)),
-                                justify_content: JustifyContent::Center,
-                                height: Val::Px(30.0),
-                                align_items: AlignItems::Center,
-                                ..default()
-                            },
-                            border_color: BorderColor(palettes::tailwind::GRAY_500.into()),
-                            border_radius: BorderRadius::all(Val::Px(10.0)),
-                            image: UiImage::default()
-                                .with_color(palettes::tailwind::GRAY_700.into()),
+                        Node {
+                            margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
+                            border: UiRect::all(Val::Px(1.0)),
+                            justify_content: JustifyContent::Center,
+                            height: Val::Px(30.0),
+                            align_items: AlignItems::Center,
                             ..default()
                         },
+                        Button,
+                        BorderColor(palettes::tailwind::GRAY_500.into()),
+                        BorderRadius::all(Val::Px(10.0)),
                         UiSettingsButtons::ToggleCache,
                         UiSettings::Cache,
                     ))
                     .with_children(|parent| {
-                        parent.spawn(TextBundle::from_section(
-                            "Cache",
-                            TextStyle {
+                        parent.spawn((
+                            Text("Cache".to_string()),
+                            TextFont {
                                 font_size: 20.0,
                                 ..default()
                             },
@@ -237,21 +206,25 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
 pub fn display_settings(
     settings: Query<Ref<NavMeshSettings>>,
     example_settings: Res<ExampleSettings>,
-    mut texts: Query<(&mut Text, &UiSettings)>,
+    mut texts: Query<(Entity, &UiSettings)>,
     mut buttons: Query<(&mut BackgroundColor, &UiSettings), With<Button>>,
+    mut text_writer: TextUiWriter,
 ) {
     let settings = settings.single();
     if settings.is_changed() {
-        for (mut text, param) in &mut texts {
+        for (text, param) in &mut texts {
             match param {
                 UiSettings::Simplify => {
-                    text.sections[1].value = format!("{:.2}", settings.simplify)
+                    *text_writer.text(text, 1) = format!("{:.2}", settings.simplify);
+                    // text.sections[1].value = format!("{:.2}", settings.simplify)
                 }
                 UiSettings::MergeSteps => {
-                    text.sections[1].value = format!("{}", settings.merge_steps)
+                    *text_writer.text(text, 1) = format!("{}", settings.merge_steps);
+                    // text.sections[1].value = format!("{}", settings.merge_steps)
                 }
                 UiSettings::AgentRadius => {
-                    text.sections[1].value = format!("{:.1}", settings.agent_radius)
+                    *text_writer.text(text, 1) = format!("{:.1}", settings.agent_radius);
+                    // text.sections[1].value = format!("{:.1}", settings.agent_radius)
                 }
                 UiSettings::AgentRadiusOuter => (),
                 UiSettings::Cache => (),
@@ -285,7 +258,11 @@ pub fn display_settings(
 
 pub fn update_settings<const STEP: u32>(
     mut interaction_query: Query<
-        (&Interaction, &UiSettingsButtons, &mut BackgroundColor),
+        (
+            &Interaction,
+            &UiSettingsButtons,
+            Option<&mut BackgroundColor>,
+        ),
         (Changed<Interaction>, With<Button>),
     >,
     mut settings: Query<&mut NavMeshSettings>,
@@ -326,14 +303,14 @@ pub fn update_settings<const STEP: u32>(
                 if !matches!(button, UiSettingsButtons::ToggleCache)
                     && !matches!(button, UiSettingsButtons::AgentRadiusOuterToggle)
                 {
-                    *color = palettes::tailwind::GRAY_600.into();
+                    color.as_mut().unwrap().0 = palettes::tailwind::GRAY_600.into();
                 }
             }
             Interaction::None => {
                 if !matches!(button, UiSettingsButtons::ToggleCache)
                     && !matches!(button, UiSettingsButtons::AgentRadiusOuterToggle)
                 {
-                    *color = palettes::tailwind::GRAY_700.into();
+                    color.as_mut().unwrap().0 = palettes::tailwind::GRAY_700.into();
                 }
             }
         }
@@ -343,73 +320,59 @@ pub fn update_settings<const STEP: u32>(
 pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    flex_direction: FlexDirection::Column,
-                    min_width: Val::Px(300.0),
-                    ..default()
-                },
-                border_radius: BorderRadius {
-                    top_left: Val::Px(0.),
-                    top_right: Val::Px(0.),
-                    bottom_right: Val::Px(20.0),
-                    bottom_left: Val::Px(0.),
-                },
-                background_color: BackgroundColor(
-                    palettes::tailwind::GRAY_900.with_alpha(0.8).into(),
-                ),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                flex_direction: FlexDirection::Column,
+                min_width: Val::Px(300.0),
                 ..default()
             },
+            BorderRadius {
+                top_left: Val::Px(0.),
+                top_right: Val::Px(0.),
+                bottom_right: Val::Px(20.0),
+                bottom_left: Val::Px(0.),
+            },
+            BackgroundColor(palettes::tailwind::GRAY_900.with_alpha(0.8).into()),
             Ui,
         ))
         .with_children(|parent| {
             let mut text = vec![
-                ("Status: ", 30.0),
-                ("{}", 30.0),
-                ("\nObstacles: ", 30.0),
-                ("{}", 30.0),
-                ("\nPolygons: ", 30.0),
-                ("{}", 30.0),
-                ("\nBuild Duration: ", 30.0),
-                ("{}", 30.0),
-                ("ms", 30.0),
+                ("Status: ", 20.0),
+                ("{}", 20.0),
+                ("\nObstacles: ", 20.0),
+                ("{}", 20.0),
+                ("\nPolygons: ", 20.0),
+                ("{}", 20.0),
+                ("\nBuild Duration: ", 20.0),
+                ("{}", 20.0),
+                ("ms", 20.0),
             ];
             if INTERACTIVE {
-                text.push(("\n\nClick to add an obstacle", 25.0));
-                text.push(("\nPress spacebar to reset", 25.0));
+                text.push(("\n\nClick to add an obstacle", 15.0));
+                text.push(("\nPress spacebar to reset", 15.0));
             }
-            parent.spawn((
-                TextBundle {
-                    text: Text::from_sections(text.into_iter().map(
-                        |(text, font_size): (&str, f32)| {
-                            TextSection::new(
-                                text,
-                                TextStyle {
-                                    font_size,
-                                    ..default()
-                                },
-                            )
+            parent.spawn((Text::default(), UiStats)).with_children(|p| {
+                for (text, font_size) in text.into_iter() {
+                    p.spawn((
+                        TextSpan::new(text),
+                        TextFont {
+                            font_size,
+                            ..default()
                         },
-                    )),
-                    style: Style {
-                        margin: UiRect::all(Val::Px(12.0)),
-                        ..default()
-                    },
-                    ..default()
-                },
-                UiStats,
-            ));
+                    ));
+                }
+            });
         });
 }
 
 pub fn update_stats<T: Component>(
-    mut text: Query<&mut Text, With<UiStats>>,
+    mut text: Query<Entity, With<UiStats>>,
     obstacles: Query<&T>,
-    navmesh: Query<(Ref<NavMeshStatus>, &Handle<NavMesh>)>,
+    navmesh: Query<(Ref<NavMeshStatus>, &NavMeshHandle)>,
     navmeshes: Res<Assets<NavMesh>>,
     diagnostics: Res<DiagnosticsStore>,
+    mut text_writer: TextUiWriter,
 ) {
     let (status, handle) = navmesh.single();
 
@@ -417,20 +380,20 @@ pub fn update_stats<T: Component>(
         return;
     }
 
-    let mut text = text.single_mut();
-    text.sections[1].value = format!("{:?}", *status);
-    text.sections[1].style.color = match *status {
+    let text = text.single_mut();
+    *text_writer.text(text, 2) = format!("{:?}", *status);
+    *text_writer.color(text, 2) = match *status {
         NavMeshStatus::Building => palettes::tailwind::AMBER_500.into(),
         NavMeshStatus::Built => palettes::tailwind::GREEN_400.into(),
         NavMeshStatus::Failed => palettes::tailwind::RED_600.into(),
         NavMeshStatus::Cancelled => palettes::tailwind::AMBER_500.into(),
         NavMeshStatus::Invalid => palettes::tailwind::RED_800.into(),
     };
-    text.sections[3].value = format!("{}", obstacles.iter().len());
-    text.sections[5].value = format!(
+    *text_writer.text(text, 4) = format!("{}", obstacles.iter().len());
+    *text_writer.text(text, 6) = format!(
         "{}",
         navmeshes
-            .get(handle)
+            .get(handle.handle())
             .map(|nm| nm
                 .get()
                 .layers
@@ -439,7 +402,7 @@ pub fn update_stats<T: Component>(
                 .sum::<usize>())
             .unwrap_or_default()
     );
-    text.sections[7].value = format!(
+    *text_writer.text(text, 8) = format!(
         "{:.3}",
         diagnostics
             .get(&NAVMESH_BUILD_DURATION)

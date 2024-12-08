@@ -32,16 +32,17 @@ optional = true
 version = "0.11.1"
 
 [dependencies.bevy]
-version = "0.14.0"
+version = "0.15.0"
 features = ["bevy_render", "bevy_asset"]
-default-features = false
+# default-features = false
 
 [dev-dependencies]
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.14.0"
+version = "0.15.0"
 features = [
+    "bevy_window",
     "bevy_ui",
     "bevy_text",
     "bevy_winit",

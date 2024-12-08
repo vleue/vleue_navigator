@@ -1,4 +1,4 @@
-use bevy::{color::palettes, prelude::*, utils::EntityHashMap};
+use bevy::{color::palettes, ecs::entity::EntityHashMap, prelude::*};
 use rand::Rng;
 use vleue_navigator::prelude::*;
 
@@ -42,15 +42,12 @@ pub fn setup_agent<const SIZE: u32>(
         palettes::tailwind::YELLOW_400,
     ] {
         commands.spawn((
-            PbrBundle {
-                mesh: sphere.clone(),
-                material: materials.add(StandardMaterial {
-                    base_color: color.into(),
-                    emissive_exposure_weight: 0.0,
-                    ..default()
-                }),
+            Mesh3d(sphere.clone()),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: color.into(),
+                emissive_exposure_weight: 0.0,
                 ..default()
-            },
+            })),
             Navigator {
                 speed: SIZE as f32 * 0.2,
                 color: color.into(),
@@ -63,12 +60,12 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
     navigators: Query<(Entity, &Transform, &Navigator), Without<Path>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
-    navmesh: Query<&Handle<NavMesh>>,
+    navmesh: Query<&NavMeshHandle>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (entity, transform, navigator) in &navigators {
-        let Some(navmesh) = navmeshes.get_mut(navmesh.single()) else {
+        let Some(navmesh) = navmeshes.get_mut(navmesh.single().handle()) else {
             continue;
         };
 
@@ -99,17 +96,16 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
             let mut remaining = remaining.to_vec();
             remaining.reverse();
             let id = commands
-                .spawn(PbrBundle {
-                    mesh: meshes.add(Capsule3d::new(0.5, 2.0).mesh()),
-                    material: materials.add(StandardMaterial {
+                .spawn((
+                    Mesh3d(meshes.add(Capsule3d::new(0.5, 2.0).mesh())),
+                    MeshMaterial3d(materials.add(StandardMaterial {
                         base_color: navigator.color,
                         emissive: navigator.color.to_linear(),
                         emissive_exposure_weight: 0.0,
                         ..default()
-                    }),
-                    transform: Transform::from_translation(target),
-                    ..default()
-                })
+                    })),
+                    Transform::from_translation(target),
+                ))
                 .id();
             commands.entity(entity).insert(Path {
                 current: *first,
@@ -124,15 +120,15 @@ pub fn refresh_path<const X: u32, const Y: u32>(
     mut commands: Commands,
     mut navigator: Query<(Entity, &Transform, &mut Path), With<Navigator>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
-    navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&NavMeshHandle, Ref<NavMeshStatus>)>,
     transforms: Query<&Transform>,
-    mut deltas: Local<EntityHashMap<Entity, f32>>,
+    mut deltas: Local<EntityHashMap<f32>>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
     if (!status.is_changed() || *status != NavMeshStatus::Built) && deltas.is_empty() {
         return;
     }
-    let Some(navmesh) = navmeshes.get_mut(navmesh_handle) else {
+    let Some(navmesh) = navmeshes.get_mut(navmesh_handle.handle()) else {
         return;
     };
 
@@ -173,10 +169,9 @@ pub fn move_navigator<const SIZE: u32>(
 ) {
     for (mut transform, mut path, entity, mut navigator) in navigator.iter_mut() {
         let move_direction = path.current - transform.translation;
-        transform.translation +=
-            move_direction.normalize() * time.delta_seconds() * navigator.speed;
+        transform.translation += move_direction.normalize() * time.delta_secs() * navigator.speed;
         let mut distance_to_next = transform.translation.distance(path.current);
-        if distance_to_next < navigator.speed * time.delta_seconds() * 2.0 {
+        if distance_to_next < navigator.speed * time.delta_secs() * 2.0 {
             navigator.speed = (navigator.speed * 0.9).max(SIZE as f32 * 0.01);
         }
         while distance_to_next < SIZE as f32 / 250.0 {

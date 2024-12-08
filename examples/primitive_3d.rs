@@ -6,7 +6,7 @@ use rand::Rng;
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
-mod agent2d;
+mod agent3d;
 #[path = "helpers/ui.rs"]
 mod ui;
 
@@ -38,7 +38,7 @@ fn main() {
                 setup,
                 ui::setup_stats::<true>,
                 ui::setup_settings::<false>,
-                agent2d::setup_agent::<100>,
+                agent3d::setup_agent::<100>,
             ),
         )
         .add_systems(
@@ -49,10 +49,10 @@ fn main() {
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
-                agent2d::give_target_to_navigator::<100, MESH_WIDTH, MESH_HEIGHT>,
-                agent2d::move_navigator::<10>,
-                agent2d::display_navigator_path,
-                agent2d::refresh_path::<MESH_WIDTH, MESH_HEIGHT>,
+                agent3d::give_target_to_navigator::<100, MESH_WIDTH, MESH_HEIGHT>,
+                agent3d::move_navigator::<100>,
+                agent3d::display_navigator_path,
+                agent3d::refresh_path::<MESH_WIDTH, MESH_HEIGHT>,
             ),
         )
         .run();
@@ -63,8 +63,9 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(
             MESH_WIDTH as f32 / 2.0,
             MESH_WIDTH.min(MESH_HEIGHT) as f32,
             -1.0,
@@ -77,24 +78,22 @@ fn setup(
             ),
             Vec3::Y,
         ),
-        ..Default::default()
-    });
+    ));
     // light
     for (x, y) in [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)] {
-        commands.spawn(PointLightBundle {
-            point_light: PointLight {
+        commands.spawn((
+            PointLight {
                 shadows_enabled: true,
                 intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 300_000.0,
                 range: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 10.0,
                 ..default()
             },
-            transform: Transform::from_xyz(
+            Transform::from_xyz(
                 MESH_WIDTH as f32 * x,
                 MESH_WIDTH.min(MESH_HEIGHT) as f32 / 3.0,
                 MESH_HEIGHT as f32 * y,
             ),
-            ..default()
-        });
+        ));
     }
 
     // Spawn a new navmesh that will be automatically updated.
@@ -108,7 +107,7 @@ fn setup(
                     vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
                     vec2(0.0, MESH_HEIGHT as f32),
                 ]),
-                simplify: 0.001,
+                simplify: 0.05,
                 merge_steps: 0,
                 agent_radius: 1.0,
                 ..default()
@@ -122,22 +121,21 @@ fn setup(
         NavMeshDebug(palettes::tailwind::SLATE_800.into()),
     ));
 
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Plane3d::new(
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::new(
             Vec3::Z,
             Vec2::new(MESH_WIDTH as f32 / 2.0, MESH_HEIGHT as f32 / 2.0),
-        )),
-        transform: Transform::from_translation(Vec3::new(
+        ))),
+        Transform::from_translation(Vec3::new(
             MESH_WIDTH as f32 / 2.0,
             0.0,
             MESH_HEIGHT as f32 / 2.0,
         ))
         .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-        material: materials.add(StandardMaterial::from(Color::Srgba(
+        MeshMaterial3d(materials.add(StandardMaterial::from(Color::Srgba(
             palettes::tailwind::BLUE_800,
-        ))),
-        ..default()
-    });
+        )))),
+    ));
 
     // Spawn a few obstacles to start with.
     // They need
@@ -174,16 +172,16 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Rectangle(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         1 => {
@@ -192,16 +190,16 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Circle(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         2 => {
@@ -210,16 +208,16 @@ fn new_obstacle(
             };
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Ellipse(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         3 => {
@@ -227,80 +225,80 @@ fn new_obstacle(
                 CircularSector::new(rng.gen_range(1.5..5.0), rng.gen_range(0.5..FRAC_PI_2));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::CircularSector(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         4 => {
             let primitive = CircularSegment::new(rng.gen_range(1.5..5.0), rng.gen_range(1.0..PI));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::CircularSegment(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         5 => {
             let primitive = Capsule2d::new(rng.gen_range(1.0..3.0), rng.gen_range(1.5..5.0));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Capsule(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         6 => {
             let primitive = RegularPolygon::new(rng.gen_range(1.0..5.0), rng.gen_range(3..8));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::RegularPolygon(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         7 => {
             let primitive = Rhombus::new(rng.gen_range(3.0..6.0), rng.gen_range(2.0..3.0));
             commands
                 .spawn((
-                    SpatialBundle::from_transform(transform),
+                    transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Rhombus(primitive),
                 ))
                 .with_children(|parent| {
-                    parent.spawn(PbrBundle {
-                        mesh: meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0))),
-                        material: mat.clone(),
-                        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-                        ..default()
-                    });
+                    parent.spawn((
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        MeshMaterial3d(mat.clone()),
+                        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    ));
                 });
         }
         _ => unreachable!(),
@@ -325,7 +323,7 @@ fn spawn_obstacle_on_click(
         let window = primary_window.single();
         if let Some(position) = window
             .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .and_then(|ray| {
                 ray.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))
                     .map(|d| (ray, d))
