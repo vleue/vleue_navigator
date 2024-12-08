@@ -325,7 +325,7 @@ fn move_object(
 ) {
     for (mut transform, mut target, entity, mut object) in object_query.iter_mut() {
         let move_direction = target.current - transform.translation;
-        transform.translation += move_direction.normalize() * time.delta_seconds() * 6.0;
+        transform.translation += move_direction.normalize() * time.delta_secs() * 6.0;
         if transform.translation.distance(target.current) < 0.1 {
             if let Some(next) = target.next.pop() {
                 target.current = next;
@@ -358,7 +358,7 @@ fn move_hover(mut hovers: Query<(&mut Transform, &mut Hover)>, time: Res<Time>) 
                 rand::thread_rng().gen_range(-25.0..25.0),
             );
         }
-        transform.translation += ((hover.0 - current).normalize() * time.delta_seconds() * 5.0)
+        transform.translation += ((hover.0 - current).normalize() * time.delta_secs() * 5.0)
             .extend(0.0)
             .xzy();
     }

@@ -32,10 +32,10 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
     navigator: Query<(Entity, &Transform), (With<Navigator>, Without<Path>)>,
     navmeshes: Res<Assets<NavMesh>>,
-    navmesh: Query<&NavMeshHandle>,
+    navmesh: Query<&ManagedNavMesh>,
 ) {
     for (entity, transform) in &navigator {
-        let Some(navmesh) = navmeshes.get(navmesh.single().handle()) else {
+        let Some(navmesh) = navmeshes.get(navmesh.single()) else {
             continue;
         };
         let mut x = 1.0;
@@ -83,7 +83,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
     mut navigator: Query<(Entity, &Transform, &mut Path), With<Navigator>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
-    navmesh: Query<(&NavMeshHandle, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
     transforms: Query<&Transform>,
     mut delta: Local<f32>,
 ) {
@@ -91,7 +91,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     if (!status.is_changed() || *status != NavMeshStatus::Built) && *delta == 0.0 {
         return;
     }
-    let Some(navmesh) = navmeshes.get_mut(navmesh_handle.handle()) else {
+    let Some(navmesh) = navmeshes.get_mut(navmesh_handle) else {
         return;
     };
 

@@ -46,8 +46,8 @@ pub mod prelude {
         cached::CachedObstacle, primitive::PrimitiveObstacle, ObstacleSource,
     };
     pub use crate::updater::{
-        CachableObstacle, NavMeshBundle, NavMeshHandle, NavMeshSettings, NavMeshStatus,
-        NavMeshUpdateMode, NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
+        CachableObstacle, ManagedNavMesh, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
+        NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
     };
     pub use crate::{NavMesh, Triangulation, VleueNavigatorPlugin};
     #[cfg(feature = "debug-with-gizmos")]
@@ -403,7 +403,7 @@ fn get_vectors(
 /// System displaying navmeshes using gizmos for debug purposes.
 pub fn display_navmesh(
     live_navmeshes: Query<(
-        &updater::NavMeshHandle,
+        &updater::ManagedNavMesh,
         Option<&NavMeshDebug>,
         &bevy::prelude::GlobalTransform,
         &updater::NavMeshSettings,
@@ -419,7 +419,7 @@ pub fn display_navmesh(
         else {
             continue;
         };
-        if let Some(navmesh) = navmeshes.get(mesh.handle()) {
+        if let Some(navmesh) = navmeshes.get(mesh) {
             let navmesh = navmesh.get();
             let Some(layer) = &navmesh.layers.get(settings.layer.unwrap_or(0) as usize) else {
                 continue;

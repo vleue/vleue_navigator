@@ -98,27 +98,25 @@ fn setup(
 
     // Spawn a new navmesh that will be automatically updated.
     commands.spawn((
-        NavMeshBundle {
-            settings: NavMeshSettings {
-                // Define the outer borders of the navmesh.
-                fixed: Triangulation::from_outer_edges(&[
-                    vec2(0.0, 0.0),
-                    vec2(MESH_WIDTH as f32, 0.0),
-                    vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
-                    vec2(0.0, MESH_HEIGHT as f32),
-                ]),
-                simplify: 0.05,
-                merge_steps: 0,
-                agent_radius: 1.0,
-                ..default()
-            },
-            transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            // Mark it for update as soon as obstacles are changed.
-            // Other modes available are debounced or manual trigger.
-            update_mode: NavMeshUpdateMode::Direct,
-            ..NavMeshBundle::with_default_id()
+        ManagedNavMesh::single(),
+        NavMeshSettings {
+            // Define the outer borders of the navmesh.
+            fixed: Triangulation::from_outer_edges(&[
+                vec2(0.0, 0.0),
+                vec2(MESH_WIDTH as f32, 0.0),
+                vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
+                vec2(0.0, MESH_HEIGHT as f32),
+            ]),
+            simplify: 0.05,
+            merge_steps: 0,
+            agent_radius: 1.0,
+            ..default()
         },
+        // Mark it for update as soon as obstacles are changed.
+        // Other modes available are debounced or manual trigger.
+        NavMeshUpdateMode::Direct,
         NavMeshDebug(palettes::tailwind::SLATE_800.into()),
+        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
     ));
 
     commands.spawn((

@@ -212,8 +212,9 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
     }
 
     // Spawn a new navmesh that will be automatically updated.
-    commands.spawn(NavMeshBundle {
-        settings: NavMeshSettings {
+    commands.spawn((
+        ManagedNavMesh::single(),
+        NavMeshSettings {
             // Define the outer borders of the navmesh.
             fixed: Triangulation::from_outer_edges(&[
                 vec2(0.0, 0.0),
@@ -227,12 +228,11 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
             agent_radius: 1.0,
             ..default()
         },
-        transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+        Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
-        update_mode: NavMeshUpdateMode::Direct,
-        ..NavMeshBundle::with_default_id()
-    });
+        NavMeshUpdateMode::Direct,
+    ));
 
     materials.insert(
         &MATERIAL_OBSTACLE_1,
@@ -440,14 +440,14 @@ fn display_mesh(
     mut meshes: ResMut<Assets<Mesh>>,
     navmeshes: Res<Assets<NavMesh>>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    navmesh: Query<(&NavMeshHandle, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
     if !status.is_changed() || *status != NavMeshStatus::Built {
         return;
     }
 
-    if navmeshes.get(navmesh_handle.handle()).is_none() {
+    if navmeshes.get(navmesh_handle).is_none() {
         return;
     };
     if let Some(entity) = *current_mesh_entity {

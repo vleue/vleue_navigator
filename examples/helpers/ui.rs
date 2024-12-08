@@ -369,7 +369,7 @@ pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
 pub fn update_stats<T: Component>(
     mut text: Query<Entity, With<UiStats>>,
     obstacles: Query<&T>,
-    navmesh: Query<(Ref<NavMeshStatus>, &NavMeshHandle)>,
+    navmesh: Query<(Ref<NavMeshStatus>, &ManagedNavMesh)>,
     navmeshes: Res<Assets<NavMesh>>,
     diagnostics: Res<DiagnosticsStore>,
     mut text_writer: TextUiWriter,
@@ -393,7 +393,7 @@ pub fn update_stats<T: Component>(
     *text_writer.text(text, 6) = format!(
         "{}",
         navmeshes
-            .get(handle.handle())
+            .get(handle)
             .map(|nm| nm
                 .get()
                 .layers

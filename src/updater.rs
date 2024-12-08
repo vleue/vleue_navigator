@@ -25,59 +25,88 @@ use crate::{obstacles::ObstacleSource, NavMesh};
 #[derive(Component, Clone, Copy, Debug)]
 pub struct CachableObstacle;
 
-#[derive(Component, Debug, Default)]
-pub struct NavMeshHandle(Handle<NavMesh>);
+/// A NavMesh that will be updated automatically.
+#[derive(Component, Debug, Deref)]
+#[require(
+    NavMeshSettings,
+    NavMeshStatus,
+    NavMeshUpdateMode,
+    Transform,
+    GlobalTransform
+)]
+pub struct ManagedNavMesh(Handle<NavMesh>);
 
-impl NavMeshHandle {
-    pub fn handle(&self) -> &Handle<NavMesh> {
-        &self.0
+impl ManagedNavMesh {
+    /// Create a new [`ManagedNavMesh`] with the provided id.
+    pub fn from_id(id: u128) -> Self {
+        Self(Handle::<NavMesh>::weak_from_u128(id))
+    }
+
+    /// Create a new [`ManagedNavMesh`].
+    ///
+    /// This can be used when there is a single NavMesh in the scene.
+    /// Otherwise use [`Self::from_id`] with unique IDs for each NavMesh.
+    pub fn single() -> Self {
+        Self(Handle::<NavMesh>::weak_from_u128(0))
     }
 }
 
-/// Bundle for preparing an auto updated navmesh. To use with plugin [`NavmeshUpdaterPlugin`].
-#[derive(Bundle, Debug)]
-pub struct NavMeshBundle {
-    /// Settings for this [`NavMesh`], used to control generation.
-    pub settings: NavMeshSettings,
-    /// The current status of the last [`NavMesh`] update.
-    pub status: NavMeshStatus,
-    /// A handle to the [`NavMesh`] asset.
-    pub handle: NavMeshHandle,
-    /// The local transform of the [`NavMesh`], used to convert points in 3D space to the [`NavMesh`] 2D space.
-    ///
-    /// When using methods like [`NavMesh::transformed_path`], this transform is used for conversion.
-    pub transform: Transform,
-    /// The global transform of the [`NavMesh`].
-    pub global_transform: GlobalTransform,
-    /// Specifies the mode for triggering [`NavMesh`] updates.
-    pub update_mode: NavMeshUpdateMode,
-}
-
-impl NavMeshBundle {
-    /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
-    ///
-    /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
-    pub fn with_unique_id(id: u128) -> Self {
-        Self {
-            handle: NavMeshHandle(Handle::<NavMesh>::weak_from_u128(id)),
-            ..Self::with_default_id()
-        }
-    }
-
-    /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
-    ///
-    /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
-    pub fn with_default_id() -> Self {
-        Self {
-            settings: NavMeshSettings::default(),
-            status: NavMeshStatus::Invalid,
-            handle: Default::default(),
-            transform: Default::default(),
-            global_transform: Default::default(),
-            update_mode: NavMeshUpdateMode::OnDemand(false),
-        }
+impl From<ManagedNavMesh> for AssetId<NavMesh> {
+    fn from(navmesh: ManagedNavMesh) -> Self {
+        navmesh.id()
     }
 }
+
+impl From<&ManagedNavMesh> for AssetId<NavMesh> {
+    fn from(navmesh: &ManagedNavMesh) -> Self {
+        navmesh.id()
+    }
+}
+
+// /// Bundle for preparing an auto updated navmesh. To use with plugin [`NavmeshUpdaterPlugin`].
+// #[derive(Bundle, Debug)]
+// pub struct NavMeshBundle {
+//     /// Settings for this [`NavMesh`], used to control generation.
+//     pub settings: NavMeshSettings,
+//     /// The current status of the last [`NavMesh`] update.
+//     pub status: NavMeshStatus,
+//     /// A handle to the [`NavMesh`] asset.
+//     pub handle: ManagedNavMesh,
+//     /// The local transform of the [`NavMesh`], used to convert points in 3D space to the [`NavMesh`] 2D space.
+//     ///
+//     /// When using methods like [`NavMesh::transformed_path`], this transform is used for conversion.
+//     pub transform: Transform,
+//     /// The global transform of the [`NavMesh`].
+//     pub global_transform: GlobalTransform,
+//     /// Specifies the mode for triggering [`NavMesh`] updates.
+//     pub update_mode: NavMeshUpdateMode,
+// }
+
+// impl NavMeshBundle {
+//     /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
+//     ///
+//     /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
+//     pub fn with_unique_id(id: u128) -> Self {
+//         Self {
+//             handle: ManagedNavMesh(Handle::<NavMesh>::weak_from_u128(id)),
+//             ..Self::with_default_id()
+//         }
+//     }
+
+//     /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
+//     ///
+//     /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
+//     pub fn with_default_id() -> Self {
+//         Self {
+//             settings: NavMeshSettings::default(),
+//             status: NavMeshStatus::Invalid,
+//             handle: ManagedNavMesh::single(),
+//             transform: Default::default(),
+//             global_transform: Default::default(),
+//             update_mode: NavMeshUpdateMode::OnDemand(false),
+//         }
+//     }
+// }
 
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
@@ -157,7 +186,7 @@ impl Default for NavMeshSettings {
 }
 
 /// Status of the navmesh generation
-#[derive(Component, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Component, Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub enum NavMeshStatus {
     /// The [`NavMesh`] has not yet been built.
     Building,
@@ -170,6 +199,7 @@ pub enum NavMeshStatus {
     /// The last build command failed, and the resulting [`NavMesh`] is invalid and cannot be used for pathfinding.
     ///
     /// This can occur if the [`NavMesh`] has different layers that have not yet all been built.
+    #[default]
     Invalid,
     /// The build task was canceled. This can occur if [`NavMeshSettings`] associated changed before the last build was completed.
     Cancelled,
@@ -184,6 +214,12 @@ pub enum NavMeshUpdateMode {
     Debounced(f32),
     /// Update the [`NavMesh`] on demand. Set to `true` to trigger an update.
     OnDemand(bool),
+}
+
+impl Default for NavMeshUpdateMode {
+    fn default() -> Self {
+        Self::OnDemand(false)
+    }
 }
 
 /// If this component is added to an entity with the [`NavMeshBundle`], updating the [`NavMesh`] will be blocking.
@@ -478,7 +514,7 @@ type NavMeshWaitingUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
     'state,
     (
         Entity,
-        &'a NavMeshHandle,
+        &'a ManagedNavMesh,
         &'b NavmeshUpdateTask,
         &'c GlobalTransform,
         &'d mut NavMeshStatus,
@@ -720,13 +756,13 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
 
         #[cfg(feature = "avian2d")]
         {
-            app.observe(crate::obstacles::avian2d::on_sleeping_inserted)
-                .observe(crate::obstacles::avian2d::on_sleeping_removed);
+            app.add_observer(crate::obstacles::avian2d::on_sleeping_inserted)
+                .add_observer(crate::obstacles::avian2d::on_sleeping_removed);
         }
         #[cfg(feature = "avian3d")]
         {
-            app.observe(crate::obstacles::avian3d::on_sleeping_inserted)
-                .observe(crate::obstacles::avian3d::on_sleeping_removed);
+            app.add_observer(crate::obstacles::avian3d::on_sleeping_inserted)
+                .add_observer(crate::obstacles::avian3d::on_sleeping_removed);
         }
     }
 }

@@ -70,8 +70,9 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 
     // Spawn a new navmesh that will be automatically updated.
-    commands.spawn(NavMeshBundle {
-        settings: NavMeshSettings {
+    commands.spawn((
+        ManagedNavMesh::single(),
+        NavMeshSettings {
             // Define the outer borders of the navmesh.
             // This will be in navmesh coordinates
             fixed: Triangulation::from_outer_edges(&[
@@ -88,16 +89,15 @@ fn setup(mut commands: Commands) {
         },
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
-        update_mode: NavMeshUpdateMode::Direct,
+        NavMeshUpdateMode::Direct,
         // This transform places the (0, 0) point of the navmesh, and is used to transform coordinates from the world to the navmesh.
-        transform: Transform::from_translation(Vec3::new(
+        Transform::from_translation(Vec3::new(
             -(MESH_WIDTH as f32) / 2.0 * FACTOR,
             -(MESH_HEIGHT as f32) / 2.0 * FACTOR,
             0.0,
         ))
         .with_scale(Vec3::splat(FACTOR)),
-        ..NavMeshBundle::with_default_id()
-    });
+    ));
 
     let mut rng = rand::thread_rng();
     for _ in 0..50 {
@@ -246,14 +246,14 @@ fn display_mesh(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
     window_resized: EventReader<WindowResized>,
-    navmesh: Query<(&NavMeshHandle, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
     if (!status.is_changed() || *status != NavMeshStatus::Built) && window_resized.is_empty() {
         return;
     }
 
-    let Some(navmesh) = navmeshes.get(navmesh_handle.handle()) else {
+    let Some(navmesh) = navmeshes.get(navmesh_handle) else {
         return;
     };
     if let Some(entity) = *current_mesh_entity {
