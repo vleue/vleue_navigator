@@ -63,7 +63,7 @@ jobs:
           cargo test
 
   tests-with-layers:
-    name: Tests
+    name: Tests (layers)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
