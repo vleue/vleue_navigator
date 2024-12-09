@@ -5,7 +5,6 @@ use bevy::{
     math::vec2,
     prelude::*,
     render::primitives::Aabb,
-    sprite::MaterialMesh2dBundle,
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;
@@ -71,11 +70,11 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 
     // Spawn a new navmesh that will be automatically updated.
-    commands.spawn(NavMeshBundle {
-        settings: NavMeshSettings {
+    commands.spawn((
+        NavMeshSettings {
             // Define the outer borders of the navmesh.
             fixed: Triangulation::from_outer_edges(&[
                 vec2(0.0, 0.0),
@@ -87,15 +86,14 @@ fn setup(mut commands: Commands) {
         },
         // Mark it for update as soon as obstacles are changed.
         // Other modes can be debounced or manually triggered.
-        update_mode: NavMeshUpdateMode::Direct,
-        transform: Transform::from_translation(Vec3::new(
+        NavMeshUpdateMode::Direct,
+        Transform::from_translation(Vec3::new(
             -(MESH_WIDTH as f32) / 2.0 * FACTOR,
             -(MESH_HEIGHT as f32) / 2.0 * FACTOR,
             0.0,
         ))
         .with_scale(Vec3::splat(FACTOR)),
-        ..NavMeshBundle::with_default_id()
-    });
+    ));
 
     // Spawn a few obstacles to start with.
     // They need
@@ -111,16 +109,14 @@ fn setup(mut commands: Commands) {
                 Vec3::ZERO,
                 Vec3::new(rng.gen_range(10.0..50.0), rng.gen_range(10.0..50.0), 0.0),
             ),
-            TransformBundle::from_transform(
-                Transform::from_translation(
-                    Vec3::new(
-                        rng.gen_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                        rng.gen_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
-                        0.0,
-                    ) * FACTOR,
-                )
-                .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
-            ),
+            Transform::from_translation(
+                Vec3::new(
+                    rng.gen_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
+                    rng.gen_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
+                    0.0,
+                ) * FACTOR,
+            )
+            .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
         ));
     }
 }
@@ -132,7 +128,7 @@ fn display_mesh(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
     window_resized: EventReader<WindowResized>,
-    navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
     let (navmesh_handle, status) = navmesh.single();
     if (!status.is_changed() || *status != NavMeshStatus::Built) && window_resized.is_empty() {
@@ -148,22 +144,20 @@ fn display_mesh(
 
     *current_mesh_entity = Some(
         commands
-            .spawn(MaterialMesh2dBundle {
-                mesh: meshes.add(navmesh.to_mesh()).into(),
-                material: materials.add(ColorMaterial::from(Color::Srgba(
+            .spawn((
+                Mesh2d(meshes.add(navmesh.to_mesh())),
+                MeshMaterial2d(materials.add(ColorMaterial::from(Color::Srgba(
                     palettes::tailwind::BLUE_800,
-                ))),
-                ..default()
-            })
+                )))),
+            ))
             .with_children(|main_mesh| {
-                main_mesh.spawn(MaterialMesh2dBundle {
-                    mesh: meshes.add(navmesh.to_wireframe_mesh()).into(),
-                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
-                    material: materials.add(ColorMaterial::from(Color::Srgba(
+                main_mesh.spawn((
+                    Mesh2d(meshes.add(navmesh.to_wireframe_mesh())),
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
+                    MeshMaterial2d(materials.add(ColorMaterial::from(Color::Srgba(
                         palettes::tailwind::TEAL_300,
-                    ))),
-                    ..default()
-                });
+                    )))),
+                ));
             })
             .id(),
     );
@@ -185,7 +179,7 @@ fn spawn_obstacle_on_click(
         let window = primary_window.single();
         if let Some(position) = window
             .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .map(|ray| ray.origin.truncate())
         {
             let mut rng = rand::thread_rng();

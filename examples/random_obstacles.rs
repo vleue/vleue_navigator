@@ -2,7 +2,6 @@ use bevy::{
     color::palettes,
     math::vec2,
     prelude::*,
-    sprite::MaterialMesh2dBundle,
     window::{PrimaryWindow, WindowResized},
 };
 use rand::Rng;
@@ -46,7 +45,7 @@ fn main() {
 struct MyNavMesh(Handle<NavMesh>);
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 }
 
 #[derive(Default, Resource)]
@@ -84,68 +83,66 @@ fn on_mesh_change(
 
     *current_mesh_entity = Some(
         commands
-            .spawn(MaterialMesh2dBundle {
-                mesh: meshes.add(navmesh.to_mesh()).into(),
-                transform: Transform::from_translation(Vec3::new(
+            .spawn((
+                Mesh2d(meshes.add(navmesh.to_mesh()).into()),
+                Transform::from_translation(Vec3::new(
                     -MESH_WIDTH / 2.0 * factor,
                     -MESH_HEIGHT / 2.0 * factor,
                     0.0,
                 ))
                 .with_scale(Vec3::splat(factor)),
-                material: materials.add(ColorMaterial::from(Color::Srgba(palettes::css::BLUE))),
-                ..default()
-            })
+                MeshMaterial2d(
+                    materials.add(ColorMaterial::from(Color::Srgba(palettes::css::BLUE))),
+                ),
+            ))
             .with_children(|main_mesh| {
-                main_mesh.spawn(MaterialMesh2dBundle {
-                    mesh: meshes.add(navmesh.to_wireframe_mesh()).into(),
-                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
-                    material: materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 1.0))),
-                    ..default()
-                });
+                main_mesh.spawn((
+                    Mesh2d(meshes.add(navmesh.to_wireframe_mesh()).into()),
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
+                    MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 1.0)))),
+                ));
             })
             .id(),
     );
     if let Ok(entity) = text.get_single() {
         commands.entity(entity).despawn_recursive();
     }
-    commands.spawn(TextBundle {
-        text: Text::from_sections([
-            TextSection::new(
-                "Random Triangle Obstacles\n",
-                TextStyle {
-                    font_size: 30.0,
-                    color: palettes::css::WHITE.into(),
+    commands
+        .spawn((
+            Text::default(),
+            Node {
+                position_type: PositionType::Absolute,
+                margin: UiRect {
+                    top: Val::Px(5.0),
+                    left: Val::Px(5.0),
                     ..default()
                 },
-            ),
-            TextSection::new(
-                "Press spacebar to change obstacles\n",
-                TextStyle {
-                    font_size: 25.0,
-                    color: palettes::css::WHITE.into(),
-                    ..default()
-                },
-            ),
-            TextSection::new(
-                "Click to find a path",
-                TextStyle {
-                    font_size: 25.0,
-                    color: palettes::css::WHITE.into(),
-                    ..default()
-                },
-            ),
-        ]),
-        style: Style {
-            position_type: PositionType::Absolute,
-            margin: UiRect {
-                top: Val::Px(5.0),
-                left: Val::Px(5.0),
                 ..default()
             },
-            ..default()
-        },
-        ..default()
-    });
+        ))
+        .with_children(|p| {
+            p.spawn((
+                TextSpan::new("Random Triangle Obstacles\n".to_string()),
+                TextFont {
+                    font_size: 30.0,
+                    ..default()
+                },
+            ));
+            p.spawn((
+                TextSpan::new("Press spacebar to change obstacles\n".to_string()),
+                TextFont {
+                    font_size: 25.0,
+                    ..default()
+                },
+            ));
+            p.spawn((
+                TextSpan::new("Click to find a path".to_string()),
+                TextFont {
+                    font_size: 25.0,
+                    ..default()
+                },
+            ));
+        });
 }
 
 fn mesh_change(
@@ -192,7 +189,7 @@ fn on_click(
         let window = primary_window.single();
         if let Some(position) = window
             .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .map(|ray| ray.origin.truncate())
         {
             let screen = Vec2::new(window.width(), window.height());

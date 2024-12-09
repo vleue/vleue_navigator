@@ -16,16 +16,12 @@ pub struct Path {
 
 pub fn setup_agent<const SIZE: u32>(mut commands: Commands) {
     commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: palettes::css::RED.into(),
-                custom_size: Some(Vec2::ONE),
-                ..default()
-            },
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1.0))
-                .with_scale(Vec3::splat(SIZE as f32)),
+        Sprite {
+            color: palettes::css::RED.into(),
+            custom_size: Some(Vec2::ONE),
             ..default()
         },
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)).with_scale(Vec3::splat(SIZE as f32)),
         Navigator {
             speed: SIZE as f32 * 5.0,
         },
@@ -36,7 +32,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
     navigator: Query<(Entity, &Transform), (With<Navigator>, Without<Path>)>,
     navmeshes: Res<Assets<NavMesh>>,
-    navmesh: Query<&Handle<NavMesh>>,
+    navmesh: Query<&ManagedNavMesh>,
 ) {
     for (entity, transform) in &navigator {
         let Some(navmesh) = navmeshes.get(navmesh.single()) else {
@@ -62,18 +58,17 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
             let mut remaining = remaining.iter().map(|p| p.xy()).collect::<Vec<_>>();
             remaining.reverse();
             let id = commands
-                .spawn(SpriteBundle {
-                    sprite: Sprite {
+                .spawn((
+                    Sprite {
                         color: palettes::tailwind::FUCHSIA_500.into(),
                         custom_size: Some(Vec2::ONE),
                         ..default()
                     },
-                    transform: Transform::from_translation(
+                    Transform::from_translation(
                         remaining.first().unwrap_or(&first.xy()).extend(1.5),
                     )
                     .with_scale(Vec3::splat(SIZE as f32)),
-                    ..default()
-                })
+                ))
                 .id();
             commands.entity(entity).insert(Path {
                 current: first.xy(),
@@ -88,7 +83,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
     mut navigator: Query<(Entity, &Transform, &mut Path), With<Navigator>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
-    navmesh: Query<(&Handle<NavMesh>, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
     transforms: Query<&Transform>,
     mut delta: Local<f32>,
 ) {
@@ -137,7 +132,7 @@ pub fn move_navigator(
     for (mut transform, mut path, entity, navigator) in navigator.iter_mut() {
         let move_direction = path.current - transform.translation.xy();
         transform.translation +=
-            (move_direction.normalize() * time.delta_seconds() * navigator.speed).extend(0.0);
+            (move_direction.normalize() * time.delta_secs() * navigator.speed).extend(0.0);
         while transform.translation.xy().distance(path.current) < navigator.speed / 50.0 {
             if let Some(next) = path.next.pop() {
                 path.current = next;

@@ -25,53 +25,41 @@ use crate::{obstacles::ObstacleSource, NavMesh};
 #[derive(Component, Clone, Copy, Debug)]
 pub struct CachableObstacle;
 
-/// Bundle for preparing an auto updated navmesh. To use with plugin [`NavmeshUpdaterPlugin`].
-#[derive(Bundle, Debug)]
-pub struct NavMeshBundle {
-    /// Settings for this [`NavMesh`], used to control generation.
-    pub settings: NavMeshSettings,
-    /// The current status of the last [`NavMesh`] update.
-    pub status: NavMeshStatus,
-    /// A handle to the [`NavMesh`] asset.
-    pub handle: Handle<NavMesh>,
-    /// The local transform of the [`NavMesh`], used to convert points in 3D space to the [`NavMesh`] 2D space.
-    ///
-    /// When using methods like [`NavMesh::transformed_path`], this transform is used for conversion.
-    pub transform: Transform,
-    /// The global transform of the [`NavMesh`].
-    pub global_transform: GlobalTransform,
-    /// Specifies the mode for triggering [`NavMesh`] updates.
-    pub update_mode: NavMeshUpdateMode,
-}
+/// A NavMesh that will be updated automatically.
+#[derive(Component, Debug, Deref)]
+#[require(NavMeshStatus, NavMeshUpdateMode, Transform, GlobalTransform)]
+pub struct ManagedNavMesh(Handle<NavMesh>);
 
-impl NavMeshBundle {
-    /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
-    ///
-    /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
-    pub fn with_unique_id(id: u128) -> Self {
-        Self {
-            handle: Handle::<NavMesh>::weak_from_u128(id),
-            ..Self::with_default_id()
-        }
+impl ManagedNavMesh {
+    /// Create a new [`ManagedNavMesh`] with the provided id.
+    pub fn from_id(id: u128) -> Self {
+        Self(Handle::<NavMesh>::weak_from_u128(id))
     }
 
-    /// Creates a new [`NavMeshBundle`] with the provided id used for the [`NavMesh`] handle.
+    /// Create a new [`ManagedNavMesh`].
     ///
-    /// If multiple [`NavMeshBundle`]s share the same handle, they will overwrite each other unless they target different layers as specified in their [`NavMeshSettings`].
-    pub fn with_default_id() -> Self {
-        Self {
-            settings: NavMeshSettings::default(),
-            status: NavMeshStatus::Invalid,
-            handle: Default::default(),
-            transform: Default::default(),
-            global_transform: Default::default(),
-            update_mode: NavMeshUpdateMode::OnDemand(false),
-        }
+    /// This can be used when there is a single NavMesh in the scene.
+    /// Otherwise use [`Self::from_id`] with unique IDs for each NavMesh.
+    pub fn single() -> Self {
+        Self(Handle::<NavMesh>::weak_from_u128(0))
+    }
+}
+
+impl From<ManagedNavMesh> for AssetId<NavMesh> {
+    fn from(navmesh: ManagedNavMesh) -> Self {
+        navmesh.id()
+    }
+}
+
+impl From<&ManagedNavMesh> for AssetId<NavMesh> {
+    fn from(navmesh: &ManagedNavMesh) -> Self {
+        navmesh.id()
     }
 }
 
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
+#[require(ManagedNavMesh(ManagedNavMesh::single))]
 pub struct NavMeshSettings {
     /// The minimum area that a point of an obstacle must impact. Otherwise, the obstacle will be simplified by removing this point.
     ///
@@ -148,7 +136,7 @@ impl Default for NavMeshSettings {
 }
 
 /// Status of the navmesh generation
-#[derive(Component, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Component, Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub enum NavMeshStatus {
     /// The [`NavMesh`] has not yet been built.
     Building,
@@ -161,6 +149,7 @@ pub enum NavMeshStatus {
     /// The last build command failed, and the resulting [`NavMesh`] is invalid and cannot be used for pathfinding.
     ///
     /// This can occur if the [`NavMesh`] has different layers that have not yet all been built.
+    #[default]
     Invalid,
     /// The build task was canceled. This can occur if [`NavMeshSettings`] associated changed before the last build was completed.
     Cancelled,
@@ -175,6 +164,12 @@ pub enum NavMeshUpdateMode {
     Debounced(f32),
     /// Update the [`NavMesh`] on demand. Set to `true` to trigger an update.
     OnDemand(bool),
+}
+
+impl Default for NavMeshUpdateMode {
+    fn default() -> Self {
+        Self::OnDemand(false)
+    }
 }
 
 /// If this component is added to an entity with the [`NavMeshBundle`], updating the [`NavMesh`] will be blocking.
@@ -263,7 +258,7 @@ fn drop_dead_tasks(
 ) {
     for (entity, mut status, settings) in &mut navmeshes {
         if status.is_changed() {
-            task_ages.insert(entity, time.elapsed_seconds());
+            task_ages.insert(entity, time.elapsed_secs());
         } else if let Some(age) = task_ages.get(&entity).cloned() {
             if settings.is_changed() {
                 *status = NavMeshStatus::Cancelled;
@@ -273,7 +268,7 @@ fn drop_dead_tasks(
             let Some(timeout) = settings.build_timeout else {
                 continue;
             };
-            if time.elapsed_seconds() - age > timeout {
+            if time.elapsed_secs() - age > timeout {
                 *status = NavMeshStatus::Failed;
                 commands.entity(entity).remove::<NavmeshUpdateTask>();
                 task_ages.remove(&entity);
@@ -335,7 +330,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     let mut retrigger = vec![];
     for key in keys {
         let val = ready_to_update.get_mut(&key).unwrap();
-        val.0 -= time.delta_seconds();
+        val.0 -= time.delta_secs();
         if val.0 < 0.0 {
             if val.1 {
                 retrigger.push(key);
@@ -469,7 +464,7 @@ type NavMeshWaitingUpdateQuery<'world, 'state, 'a, 'b, 'c, 'd, 'e> = Query<
     'state,
     (
         Entity,
-        &'a Handle<NavMesh>,
+        &'a ManagedNavMesh,
         &'b NavmeshUpdateTask,
         &'c GlobalTransform,
         &'d mut NavMeshStatus,
@@ -509,7 +504,7 @@ fn update_navmesh_asset(
                 }
             );
             let (previous_navmesh_transform, mut mesh, mut previously_failed) =
-                if let Some(navmesh) = navmeshes.get(handle) {
+                if let Some(navmesh) = navmeshes.get(&handle.0) {
                     if let Some(mesh) = navmesh.building.as_ref() {
                         (
                             navmesh.transform(),
@@ -624,8 +619,8 @@ fn update_navmesh_asset(
                     } else {
                         navmesh.set_transform(previous_navmesh_transform);
                     }
-                    navmeshes.insert(handle, navmesh);
-                } else if let Some(navmesh) = navmeshes.get_mut(handle) {
+                    navmeshes.insert(&handle.0, navmesh);
+                } else if let Some(navmesh) = navmeshes.get_mut(&handle.0) {
                     failed_stitches.extend(previously_failed);
                     failed_stitches.sort_unstable();
                     failed_stitches.dedup();
@@ -635,14 +630,14 @@ fn update_navmesh_asset(
                     });
                 } else {
                     let navmesh = NavMesh::from_polyanya_mesh(mesh);
-                    navmeshes.insert(handle, navmesh);
+                    navmeshes.insert(&handle.0, navmesh);
                     *status = NavMeshStatus::Invalid;
                 }
             } else {
                 mesh.layers = vec![layer];
                 let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
                 navmesh.set_transform(global_transform.compute_transform());
-                navmeshes.insert(handle, navmesh);
+                navmeshes.insert(&handle.0, navmesh);
                 *status = NavMeshStatus::Built;
             }
             diagnostics.add_measurement(&NAVMESH_BUILD_DURATION, || duration.as_secs_f64());
@@ -711,13 +706,13 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
 
         #[cfg(feature = "avian2d")]
         {
-            app.observe(crate::obstacles::avian2d::on_sleeping_inserted)
-                .observe(crate::obstacles::avian2d::on_sleeping_removed);
+            app.add_observer(crate::obstacles::avian2d::on_sleeping_inserted)
+                .add_observer(crate::obstacles::avian2d::on_sleeping_removed);
         }
         #[cfg(feature = "avian3d")]
         {
-            app.observe(crate::obstacles::avian3d::on_sleeping_inserted)
-                .observe(crate::obstacles::avian3d::on_sleeping_removed);
+            app.add_observer(crate::obstacles::avian3d::on_sleeping_inserted)
+                .add_observer(crate::obstacles::avian3d::on_sleeping_removed);
         }
     }
 }

@@ -59,52 +59,37 @@ fn setup(
 
     // Ground
     commands.spawn((
-        PbrBundle {
-            mesh: arena_mesh.clone(),
-            material: arena_material.clone(),
-            transform: Transform::from_xyz(0.0, -5.0, 0.0).with_scale(Vec3::new(50.0, 10.0, 50.0)),
-            ..default()
-        },
+        Mesh3d(arena_mesh.clone()),
+        MeshMaterial3d(arena_material.clone()),
+        Transform::from_xyz(0.0, -5.0, 0.0).with_scale(Vec3::new(50.0, 10.0, 50.0)),
         RigidBody::Static,
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
     commands.spawn((
-        PbrBundle {
-            mesh: arena_mesh.clone(),
-            material: arena_material.clone(),
-            transform: Transform::from_xyz(25.5, 0.0, 0.0).with_scale(Vec3::new(1.0, 10.0, 50.0)),
-            ..default()
-        },
+        Mesh3d(arena_mesh.clone()),
+        MeshMaterial3d(arena_material.clone()),
+        Transform::from_xyz(25.5, 0.0, 0.0).with_scale(Vec3::new(1.0, 10.0, 50.0)),
         RigidBody::Static,
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
     commands.spawn((
-        PbrBundle {
-            mesh: arena_mesh.clone(),
-            material: arena_material.clone(),
-            transform: Transform::from_xyz(-25.5, 0.0, 0.0).with_scale(Vec3::new(1.0, 10.0, 50.0)),
-            ..default()
-        },
+        Mesh3d(arena_mesh.clone()),
+        MeshMaterial3d(arena_material.clone()),
+        Transform::from_xyz(-25.5, 0.0, 0.0).with_scale(Vec3::new(1.0, 10.0, 50.0)),
         RigidBody::Static,
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
     commands.spawn((
-        PbrBundle {
-            mesh: arena_mesh.clone(),
-            material: arena_material.clone(),
-            transform: Transform::from_xyz(0.0, 0.0, 25.5).with_scale(Vec3::new(50.0, 10.0, 1.0)),
-            ..default()
-        },
+        Mesh3d(arena_mesh.clone()),
+        MeshMaterial3d(arena_material.clone()),
+        Transform::from_xyz(0.0, 0.0, 25.5).with_scale(Vec3::new(50.0, 10.0, 1.0)),
         RigidBody::Static,
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
     commands.spawn((
-        PbrBundle {
-            mesh: arena_mesh.clone(),
-            material: arena_material.clone(),
-            transform: Transform::from_xyz(0.0, 0.0, -25.5).with_scale(Vec3::new(50.0, 10.0, 1.0)),
-            ..default()
-        },
+        Mesh3d(arena_mesh.clone()),
+        MeshMaterial3d(arena_material.clone()),
+        Transform::from_xyz(0.0, 0.0, -25.5).with_scale(Vec3::new(50.0, 10.0, 1.0)),
         RigidBody::Static,
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
@@ -142,12 +127,9 @@ fn setup(
             let position = Vec3::new((x as f32 - 0.5) * spacing, 25.0, (z as f32 - 0.5) * spacing)
                 * obstacle_size;
             commands.spawn((
-                PbrBundle {
-                    mesh: mesh.clone(),
-                    material: MATERIAL_OBSTACLE_LIVE.clone(),
-                    transform: Transform::from_translation(position),
-                    ..default()
-                },
+                Mesh3d(mesh.clone()),
+                MeshMaterial3d(MATERIAL_OBSTACLE_LIVE.clone()),
+                Transform::from_translation(position),
                 Friction::new(0.1),
                 RigidBody::Dynamic,
                 collider.clone(),
@@ -157,28 +139,27 @@ fn setup(
     }
 
     // Directional light
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
+    commands.spawn((
+        DirectionalLight {
             illuminance: 5000.0,
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
-        ..default()
-    });
+        Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
+    ));
 
     // Camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_translation(Vec3::new(0.0, 40.0, 30.0))
-            .looking_at(Vec3::Z * 5.0, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_translation(Vec3::new(0.0, 40.0, 30.0)).looking_at(Vec3::Z * 5.0, Vec3::Y),
+    ));
 
     let nb_navmeshes = 3;
     let height_step = obstacle_size / (nb_navmeshes as f32);
     for idx in 0..nb_navmeshes {
-        commands.spawn((NavMeshBundle {
-            settings: NavMeshSettings {
+        commands.spawn((
+            ManagedNavMesh::from_id(idx as u128),
+            NavMeshSettings {
                 // Define the outer borders of the navmesh.
                 fixed: Triangulation::from_outer_edges(&[
                     vec2(-25.0, -25.0),
@@ -191,18 +172,16 @@ fn setup(
                 merge_steps: 0,
                 ..default()
             },
-            update_mode: NavMeshUpdateMode::Direct,
-            transform: Transform::from_xyz(0.0, idx as f32 * height_step + 0.1, 0.0)
+            NavMeshUpdateMode::Direct,
+            Transform::from_xyz(0.0, idx as f32 * height_step + 0.1, 0.0)
                 .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            handle: Handle::<NavMesh>::weak_from_u128(idx as u128),
-            ..NavMeshBundle::with_default_id()
-        },));
+        ));
     }
 }
 
 fn view_navmesh(
     mut commands: Commands,
-    navmeshes: Query<Entity, With<Handle<NavMesh>>>,
+    navmeshes: Query<Entity, With<ManagedNavMesh>>,
     mut current: Local<usize>,
 ) {
     for (i, entity) in navmeshes.iter().sort::<Entity>().enumerate() {
@@ -217,16 +196,19 @@ fn view_navmesh(
 }
 
 fn cached_material(
-    mut obstacles: Query<(&mut Handle<StandardMaterial>, Option<Ref<CachableObstacle>>)>,
+    mut obstacles: Query<(
+        &mut MeshMaterial3d<StandardMaterial>,
+        Option<Ref<CachableObstacle>>,
+    )>,
     mut removed: RemovedComponents<CachableObstacle>,
 ) {
     for (mut material, cachable) in &mut obstacles {
         if cachable.is_some() {
-            *material = MATERIAL_OBSTACLE_CACHED.clone();
+            *material = MeshMaterial3d(MATERIAL_OBSTACLE_CACHED.clone());
         }
     }
     for removed in removed.read() {
         let (mut material, _) = obstacles.get_mut(removed).unwrap();
-        *material = MATERIAL_OBSTACLE_LIVE.clone();
+        *material = MeshMaterial3d(MATERIAL_OBSTACLE_LIVE.clone());
     }
 }
