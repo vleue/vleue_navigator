@@ -100,3 +100,7 @@ required-features = ["avian3d", "detailed-layers"]
 
 [package.metadata.docs.rs]
 features = ["detailed-layers"]
+
+[patch.crates-io]
+avian2d = { git = "https://github.com/Jondolf/avian", rev = "e23d070e" }
+avian3d = { git = "https://github.com/Jondolf/avian", rev = "e23d070e" }
