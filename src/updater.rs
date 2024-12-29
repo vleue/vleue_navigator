@@ -117,7 +117,7 @@ pub struct NavMeshSettings {
 impl Default for NavMeshSettings {
     fn default() -> Self {
         Self {
-            simplify: 0.0,
+            simplify: 0.001,
             merge_steps: 0,
             default_search_delta: 0.01,
             default_search_steps: 4,
