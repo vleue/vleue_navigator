@@ -81,10 +81,6 @@ pub struct NavMeshSettings {
     /// This controls the number of time of the circle used to search for a point in a [`NavMesh`] is expanded by the [`Self::default_search_delta`]. The default value is `4`.
     /// Increasing this value can help if you often get pathfinding errors when agents are too close to a border. Those errors happens because of rounding errors.
     pub default_search_steps: u32,
-    /// The fixed edges and obstacles that define the structure of the [`NavMesh`].
-    ///
-    /// Creating this [`Triangulation`] can be done with the [`Triangulation::from_outer_edges`] method, and static obstacles added with [`Triangulation::add_obstacles`].
-    pub fixed: Triangulation,
     /// The duration in seconds after which a [`NavMesh`] build is canceled if not completed.
     pub build_timeout: Option<f32>,
     /// A cache of the last build from obstacles marked as [`CachableObstacle`].
@@ -94,6 +90,10 @@ pub struct NavMeshSettings {
     /// This value should be greater than `0.0` in 3D environments, as colliders lying flat on a surface are not considered intersecting.
     /// The default value is `0.1`.
     pub upward_shift: f32,
+    /// The fixed edges and obstacles that define the structure of the [`NavMesh`].
+    ///
+    /// Creating this [`Triangulation`] can be done with the [`Triangulation::from_outer_edges`] method, and static obstacles added with [`Triangulation::add_obstacles`].
+    pub fixed: Triangulation,
     /// The specific layer to update in the [`NavMesh`]. If `None`, the first layer will be updated.
     ///
     /// Layers are used when the [`NavMesh`] has overlapping parts, or parts with different traversal costs.
@@ -121,11 +121,11 @@ impl Default for NavMeshSettings {
             merge_steps: 0,
             default_search_delta: 0.01,
             default_search_steps: 4,
-            fixed: Triangulation::from_outer_edges(&[]),
             build_timeout: None,
             cached: None,
             // Value is arbitrary, but shouldn't be 0.0. colliders lying flat on a surface are not considered as intersecting with 0.0
             upward_shift: 0.1,
+            fixed: Triangulation::from_outer_edges(&[]),
             layer: None,
             stitches: vec![],
             scale: Vec2::ONE,
