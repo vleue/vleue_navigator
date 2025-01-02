@@ -88,9 +88,6 @@ fn setup(
             p.spawn((
                 NavMeshSettings {
                     ground: Ground::Mesh(mesh.clone()),
-                    simplify: 0.001,
-                    merge_steps: 3,
-                    upward_shift: 1.0,
                     layer: LayerSettings::AutoLayer { id: 0 },
                     ..default()
                 },
@@ -121,9 +118,6 @@ fn setup(
             p.spawn((
                 NavMeshSettings {
                     ground: Ground::Mesh(mesh.clone()),
-                    simplify: 0.001,
-                    merge_steps: 3,
-                    upward_shift: 1.0,
                     layer: LayerSettings::AutoLayer { id: 1 },
                     ..default()
                 },
