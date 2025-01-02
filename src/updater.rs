@@ -441,6 +441,9 @@ fn compute_triangulation_from_meshes(
                             if ct.handle == new_ct.handle && ct.layer != new_ct.layer {
                                 let stitches =
                                     find_stitch_points_between_triangulations(&new_ct, ct);
+                                if stitches.is_empty() {
+                                    continue;
+                                }
                                 new_ct.stitches.insert(ct.layer, stitches.clone());
                                 ct.stitches.insert(new_ct.layer, stitches);
                             }
@@ -454,7 +457,7 @@ fn compute_triangulation_from_meshes(
     }
 }
 
-pub fn find_stitch_points_between_triangulations(
+fn find_stitch_points_between_triangulations(
     a: &ComputedTriangulation,
     b: &ComputedTriangulation,
 ) -> Vec<Vec2> {
@@ -466,6 +469,7 @@ pub fn find_stitch_points_between_triangulations(
     // - add the new points to the triangulations
     // - add the new points to the list of stitch points
 
+    // TODO: check per edge and not per point
     let mut points = vec![];
 
     for (ia, edge_a) in a.local_edges.iter().enumerate() {
@@ -725,6 +729,7 @@ fn update_navmesh_asset(
                         continue;
                     };
 
+                    // TODO: handle cases where more than two points are found
                     let stitch_segments = stitches
                         .iter()
                         .map(|(other, segment)| (other, [segment[0], segment[1]]));
