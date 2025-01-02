@@ -46,8 +46,8 @@ pub mod prelude {
         cached::CachedObstacle, primitive::PrimitiveObstacle, ObstacleSource,
     };
     pub use crate::updater::{
-        CachableObstacle, ManagedNavMesh, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
-        NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
+        CachableObstacle, Ground, LayerSettings, ManagedNavMesh, NavMeshSettings, NavMeshStatus,
+        NavMeshUpdateMode, NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
     };
     pub use crate::{NavMesh, Triangulation, VleueNavigatorPlugin};
     #[cfg(feature = "debug-with-gizmos")]
@@ -421,7 +421,11 @@ pub fn display_navmesh(
         };
         if let Some(navmesh) = navmeshes.get(mesh) {
             let navmesh = navmesh.get();
-            let Some(layer) = &navmesh.layers.get(settings.layer.unwrap_or(0) as usize) else {
+            let Some(layer) = &navmesh.layers.get(match settings.layer {
+                updater::LayerSettings::None => 0,
+                updater::LayerSettings::Layer { id, .. } => id as usize,
+                updater::LayerSettings::AutoLayer { id } => id as usize,
+            }) else {
                 continue;
             };
             #[cfg(feature = "detailed-layers")]
