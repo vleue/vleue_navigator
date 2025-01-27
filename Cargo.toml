@@ -37,7 +37,7 @@ features = ["bevy_render", "bevy_asset"]
 default-features = false
 
 [dev-dependencies]
-rand = "0.8"
+rand = "0.9"
 
 [dev-dependencies.bevy]
 version = "0.15.0"
