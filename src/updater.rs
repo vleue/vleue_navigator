@@ -466,8 +466,10 @@ fn find_stitch_points_between_triangulations(
     // - check if it's colinear to an edge in triangulation B
     // - check if their transformed height is the same
     // - if both are true, find the longest segment that is on both edges
-    // - add the new points to the triangulations
+    // - add the new points to both triangulations
     // - add the new points to the list of stitch points
+
+    // TODO: need to be able to modify both triangulations
 
     // TODO: check per edge and not per point
     let mut points = vec![];
@@ -478,6 +480,23 @@ fn find_stitch_points_between_triangulations(
                 if a.transformed_edges[ia].y == b.transformed_edges[ib].y {
                     points.push(edge_a.clone());
                 }
+            }
+        }
+    }
+
+    for edge_a in a.local_edges.as_slice().windows(2) {
+        let direction_a = (edge_a[1] - edge_a[0]).normalize();
+        for edge_b in b.local_edges.as_slice().windows(2) {
+            let direction_b = (edge_b[1] - edge_b[0]).normalize();
+            if (direction_a - direction_b).length_squared() < 0.01 {
+                // colinear
+                // TODO: need to check if they overlap, and if so their common segment
+                // as they're all on a single line, they can be expressed as a single scalar f(x) = a * x + b
+                // then we can compare the x of each point
+                // with xa0 < xa1 and xb0 < xb1:
+                // if (xa1 - xb0 >= 0 and xb1 - xa0 >=0 ) { // overlap
+                //   OverlapInterval = [ max(xa0, xb0), min(xa1, xb1) ]
+                // }
             }
         }
     }
