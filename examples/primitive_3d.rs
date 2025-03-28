@@ -49,7 +49,7 @@ fn main() {
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
-                agent3d::give_target_to_navigator::<100, MESH_WIDTH, MESH_HEIGHT>,
+                agent3d::give_target_to_navigator::<MESH_WIDTH, MESH_HEIGHT>,
                 agent3d::move_navigator::<100>,
                 agent3d::display_navigator_path,
                 agent3d::refresh_path::<MESH_WIDTH, MESH_HEIGHT>,
