@@ -136,7 +136,13 @@ impl NavMesh {
     /// The [`polyanya::Mesh`] generated in the process can be modified via `callback`.
     ///
     /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
-    pub fn from_bevy_mesh_and_then(mesh: &Mesh, callback: impl Fn(&mut polyanya::Mesh)) -> NavMesh {
+    pub fn from_bevy_mesh_and_then(
+        mesh: &Mesh,
+        callback: impl Fn(&mut polyanya::Mesh),
+    ) -> Option<NavMesh> {
+        if mesh.primitive_topology() != PrimitiveTopology::TriangleList {
+            return None;
+        }
         let normal = get_vectors(mesh, Mesh::ATTRIBUTE_NORMAL)
             .and_then(|mut i| i.next())
             .unwrap_or(Vec3::Z);
@@ -167,14 +173,14 @@ impl NavMesh {
 
         let mut navmesh = Self::from_polyanya_mesh(polyanya_mesh);
         navmesh.transform = Transform::from_rotation(rotation);
-        navmesh
+        Some(navmesh)
     }
 
     /// Creates a [`NavMesh`] from a Bevy [`Mesh`], assuming it constructs a 2D structure.
     /// All triangle normals are aligned during the conversion, so the orientation of the [`Mesh`] does not matter.
     ///
     /// Only supports meshes with the [`PrimitiveTopology::TriangleList`].
-    pub fn from_bevy_mesh(mesh: &Mesh) -> NavMesh {
+    pub fn from_bevy_mesh(mesh: &Mesh) -> Option<NavMesh> {
         Self::from_bevy_mesh_and_then(mesh, |_| {})
     }
 
@@ -492,7 +498,7 @@ mod tests {
             Mesh::ATTRIBUTE_NORMAL,
             (0..6).map(|_| [0.0, 0.0, 1.0]).collect::<Vec<_>>(),
         );
-        let actual_navmesh = NavMesh::from_bevy_mesh(&bevy_mesh);
+        let actual_navmesh = NavMesh::from_bevy_mesh(&bevy_mesh).unwrap();
 
         assert_same_navmesh(expected_navmesh, actual_navmesh);
     }
@@ -533,7 +539,7 @@ mod tests {
         );
         bevy_mesh.insert_indices(Indices::U32(vec![0, 1, 3, 0, 3, 2]));
 
-        let actual_navmesh = NavMesh::from_bevy_mesh(&bevy_mesh);
+        let actual_navmesh = NavMesh::from_bevy_mesh(&bevy_mesh).unwrap();
 
         assert_same_navmesh(expected_navmesh, actual_navmesh);
     }
