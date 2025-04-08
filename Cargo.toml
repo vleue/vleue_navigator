@@ -32,7 +32,7 @@ optional = true
 version = "0.12.0"
 
 [dependencies.bevy]
-version = "0.15.0"
+version = "0.16.0-rc.3"
 features = ["bevy_render", "bevy_asset"]
 default-features = false
 
@@ -40,7 +40,7 @@ default-features = false
 rand = "0.8"
 
 [dev-dependencies.bevy]
-version = "0.15.0"
+version = "0.16.0-rc.3"
 features = [
     "bevy_window",
     "bevy_ui",
@@ -52,6 +52,7 @@ features = [
     "bevy_pbr",
     "bevy_sprite",
     "bevy_gizmos",
+    "bevy_log",
     # Required for TonyMcMapface
     "tonemapping_luts",
     "multi_threaded",
@@ -62,6 +63,10 @@ features = [
     "animation", # TODO: remove
 ]
 default-features = false
+
+[patch.crates-io]
+avian2d = { git = "https://github.com/Jondolf/avian.git", rev = "86f3c48" }
+avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "86f3c48" }
 
 [features]
 default = ["debug-with-gizmos"]

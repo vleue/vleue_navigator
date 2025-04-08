@@ -72,8 +72,8 @@ fn main() {
         config.depth_bias = -1.0;
     }
     let (config, _) = config_store.config_mut::<PathGizmo>();
-    config.line_width = 10.0;
-    config.line_joints = GizmoLineJoint::Bevel;
+    config.line.width = 10.0;
+    config.line.joints = GizmoLineJoint::Bevel;
 
     app.run();
 }
@@ -233,7 +233,7 @@ fn give_target_auto(
     navmesh: Query<&ManagedNavMesh>,
 ) {
     for (entity, transform, mut object) in object_query.iter_mut() {
-        let Some(navmesh) = navmeshes.get(navmesh.single()) else {
+        let Some(navmesh) = navmeshes.get(navmesh.single().unwrap()) else {
             continue;
         };
         let mut x = 0.0;
@@ -294,9 +294,9 @@ fn refresh_path(
     navmesh: Query<&ManagedNavMesh>,
 ) {
     for (transform, mut path) in &mut object_query {
-        let navmesh = navmeshes.get(navmesh.single()).unwrap();
+        let navmesh = navmeshes.get(navmesh.single().unwrap()).unwrap();
         let Some(new_path) =
-            navmesh.transformed_path(transform.translation, target.single().translation)
+            navmesh.transformed_path(transform.translation, target.single().unwrap().translation)
         else {
             break;
         };
