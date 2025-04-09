@@ -13,7 +13,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
       - name: install tools
         run: |
           cargo install wasm-bindgen-cli
-          # sudo apt-get install -y binaryen
+          brew install binaryen
 
       - name: Build
         run: |
@@ -35,22 +35,22 @@ jobs:
             echo "Building $example"
             cargo build --target wasm32-unknown-unknown --release --example $example --features "bevy/webgl2,avian2d,avian3d"
             wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/$example.wasm
-            # wasm-opt -Oz wasm/${example}_bg.wasm --output wasm/${example}-opt.wasm
-            # rm wasm/${example}_bg.wasm
-            # mv wasm/${example}-opt.wasm wasm/${example}_bg.wasm
+            wasm-opt -Oz wasm/${example}_bg.wasm --output wasm/${example}-opt.wasm
+            rm wasm/${example}_bg.wasm
+            mv wasm/${example}-opt.wasm wasm/${example}_bg.wasm
             cp wasm/example.html wasm/${example}.html
-            sed -i'' "s/name-of-example/${example}/g" wasm/${example}.html
+            sed -i '' "s/name-of-example/${example}/g" wasm/${example}.html
           done
           for example in "layers"
           do
             echo "Building $example"
             cargo build --target wasm32-unknown-unknown --release --example $example --features "bevy/webgl2,avian2d,avian3d,detailed-layers"
             wasm-bindgen --no-typescript --out-dir wasm --target web target/wasm32-unknown-unknown/release/examples/$example.wasm
-            # wasm-opt -Oz wasm/${example}_bg.wasm --output wasm/${example}-opt.wasm
-            # rm wasm/${example}_bg.wasm
-            # mv wasm/${example}-opt.wasm wasm/${example}_bg.wasm
+            wasm-opt -Oz wasm/${example}_bg.wasm --output wasm/${example}-opt.wasm
+            rm wasm/${example}_bg.wasm
+            mv wasm/${example}-opt.wasm wasm/${example}_bg.wasm
             cp wasm/example.html wasm/${example}.html
-            sed -i'' "s/name-of-example/${example}/g" wasm/${example}.html
+            sed -i '' "s/name-of-example/${example}/g" wasm/${example}.html
           done
 
       - name: Copy Assets
