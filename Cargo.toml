@@ -95,6 +95,10 @@ name = "layers_basic"
 required-features = ["avian3d"]
 
 [[example]]
+name = "auto_layers"
+required-features = ["avian3d"]
+
+[[example]]
 name = "layers_inclined"
 required-features = ["avian3d", "detailed-layers"]
 

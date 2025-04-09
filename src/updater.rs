@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use itertools::Itertools;
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
@@ -13,6 +14,7 @@ use bevy::{
     prelude::*,
     tasks::AsyncComputeTaskPool,
     transform::TransformSystem,
+    utils::{hashbrown::HashSet, HashMap},
 };
 use polyanya::{Layer, Mesh, Triangulation};
 
@@ -57,6 +59,33 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
     }
 }
 
+#[derive(Clone, Debug)]
+/// The ground of the [`NavMesh`]: Authorized parts before adding obstacles.
+pub enum Ground {
+    /// The ground is defined by a [`Triangulation`].
+    Triangulation(Triangulation),
+    /// The ground is defined by a [`bevy::prelude::Mesh`], which will be transformed into a [`Triangulation`] by taking its outer edges.
+    Mesh(Handle<bevy::prelude::Mesh>),
+}
+
+#[derive(Clone, Debug)]
+/// Layers are used when the [`NavMesh`] has overlapping parts, or parts with different traversal costs.
+pub enum LayerSettings {
+    /// First layer will be updated, without stitching attempts.
+    None,
+    /// Specify the layer to update, and how to stitch it with other layers.
+    Layer {
+        /// The specific layer to update in the [`NavMesh`].
+        id: u8,
+        /// Segments used to stitch together multiple layers in the [`NavMesh`].
+        stitches: Vec<((u8, u8), [Vec2; 2])>,
+    },
+    AutoLayer {
+        /// The specific layer to update in the [`NavMesh`].
+        id: u8,
+    },
+}
+
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
 #[require(ManagedNavMesh(ManagedNavMesh::single))]
@@ -81,10 +110,6 @@ pub struct NavMeshSettings {
     /// This controls the number of time of the circle used to search for a point in a [`NavMesh`] is expanded by the [`Self::default_search_delta`]. The default value is `4`.
     /// Increasing this value can help if you often get pathfinding errors when agents are too close to a border. Those errors happens because of rounding errors.
     pub default_search_steps: u32,
-    /// The fixed edges and obstacles that define the structure of the [`NavMesh`].
-    ///
-    /// Creating this [`Triangulation`] can be done with the [`Triangulation::from_outer_edges`] method, and static obstacles added with [`Triangulation::add_obstacles`].
-    pub fixed: Triangulation,
     /// The duration in seconds after which a [`NavMesh`] build is canceled if not completed.
     pub build_timeout: Option<f32>,
     /// A cache of the last build from obstacles marked as [`CachableObstacle`].
@@ -94,12 +119,12 @@ pub struct NavMeshSettings {
     /// This value should be greater than `0.0` in 3D environments, as colliders lying flat on a surface are not considered intersecting.
     /// The default value is `0.1`.
     pub upward_shift: f32,
-    /// The specific layer to update in the [`NavMesh`]. If `None`, the first layer will be updated.
+    /// The fixed edges and obstacles that define the structure of the [`NavMesh`].
     ///
+    /// Creating this [`Triangulation`] can be done with the [`Triangulation::from_outer_edges`] method, and static obstacles added with [`Triangulation::add_obstacles`].
+    pub ground: Ground,
     /// Layers are used when the [`NavMesh`] has overlapping parts, or parts with different traversal costs.
-    pub layer: Option<u8>,
-    /// Segments used to stitch together multiple layers in the [`NavMesh`].
-    pub stitches: Vec<((u8, u8), [Vec2; 2])>,
+    pub layer: LayerSettings,
     /// The scale of the [`NavMesh`], defaulting to `Vec2::ONE`.
     ///
     /// This scale is used to adjust the size of the [`NavMesh`] when displaying it.
@@ -117,17 +142,16 @@ pub struct NavMeshSettings {
 impl Default for NavMeshSettings {
     fn default() -> Self {
         Self {
-            simplify: 0.0,
+            simplify: 0.001,
             merge_steps: 0,
             default_search_delta: 0.01,
             default_search_steps: 4,
-            fixed: Triangulation::from_outer_edges(&[]),
             build_timeout: None,
             cached: None,
             // Value is arbitrary, but shouldn't be 0.0. colliders lying flat on a surface are not considered as intersecting with 0.0
             upward_shift: 0.1,
-            layer: None,
-            stitches: vec![],
+            ground: Ground::Triangulation(Triangulation::from_outer_edges(&[])),
+            layer: LayerSettings::None,
             scale: Vec2::ONE,
             agent_radius: 0.0,
             agent_radius_on_outer_edge: false,
@@ -185,11 +209,11 @@ fn build_navmesh<T: ObstacleSource>(
     cached_obstacles: Vec<(GlobalTransform, T)>,
     settings: NavMeshSettings,
     mesh_transform: Transform,
+    mut base: Triangulation,
 ) -> (Option<Triangulation>, Layer) {
     let up = (mesh_transform.forward(), settings.upward_shift);
     let scale = settings.scale;
     let base = if settings.cached.is_none() {
-        let mut base = settings.fixed;
         base.set_agent_radius(settings.agent_radius);
         base.set_agent_radius_simplification(settings.simplify);
         base.agent_radius_on_outer_edge(settings.agent_radius_on_outer_edge);
@@ -317,6 +341,169 @@ type ObstacleQueries<'world, 'state, 'a, 'b, 'c, Obstacle, Marker> = (
     >,
 );
 
+#[derive(Debug, Clone)]
+struct ComputedTriangulation {
+    triangulation: Triangulation,
+    stitches: HashMap<u8, Vec<Vec2>>,
+    local_edges: Vec<Vec2>,
+    transformed_edges: Vec<Vec3>,
+    handle: Handle<NavMesh>,
+    layer: u8,
+    entity: Entity,
+}
+
+#[derive(Debug, Resource, Deref, DerefMut, Default)]
+struct ComputedTriangulations(HashMap<Handle<bevy::prelude::Mesh>, ComputedTriangulation>);
+
+fn compute_triangulation_from_meshes(
+    meshes: Res<Assets<bevy::prelude::Mesh>>,
+    mut computed_triangulations: ResMut<ComputedTriangulations>,
+    navmeshes: Query<(Entity, &ManagedNavMesh, &NavMeshSettings, &GlobalTransform)>,
+) {
+    for (entity, handle, navmesh, transform) in &navmeshes {
+        if let Ground::Mesh(mesh_handle) = &navmesh.ground {
+            if computed_triangulations.0.contains_key(mesh_handle) {
+                continue;
+            }
+            let Some(mesh) = meshes.get(mesh_handle) else {
+                continue;
+            };
+            let positions = mesh
+                .attribute(bevy::prelude::Mesh::ATTRIBUTE_POSITION)
+                .unwrap();
+            let indices = mesh.indices().unwrap();
+            match mesh.primitive_topology() {
+                bevy::render::mesh::PrimitiveTopology::TriangleList => {
+                    let edges = indices
+                        .iter()
+                        .chunks(3)
+                        .into_iter()
+                        .flat_map(|mut chunk| {
+                            let a = chunk.next().unwrap();
+                            let b = chunk.next().unwrap();
+                            let c = chunk.next().unwrap();
+                            [(a, b), (b, c), (c, a)]
+                        })
+                        .collect::<Vec<_>>();
+                    let mut unique_edges = HashSet::new();
+                    let mut seen_edges = HashSet::new();
+                    for edge in edges {
+                        if !(seen_edges.contains(&edge) || seen_edges.contains(&(edge.1, edge.0))) {
+                            unique_edges.insert(edge);
+                        } else {
+                            unique_edges.remove(&edge);
+                            unique_edges.remove(&(edge.1, edge.0));
+                        }
+                        seen_edges.insert(edge);
+                    }
+                    let mut ordered_edges = vec![];
+                    let first = *unique_edges.iter().next().unwrap();
+                    unique_edges.remove(&first);
+                    ordered_edges.push(first.0);
+                    let mut current = first.1;
+                    while !unique_edges.is_empty() {
+                        let next = *unique_edges.iter().find(|(a, _)| *a == current).unwrap();
+                        ordered_edges.push(current);
+                        unique_edges.remove(&next);
+                        current = next.1;
+                    }
+                    ordered_edges.push(current);
+
+                    let edges = ordered_edges
+                        .iter()
+                        .map(|a| positions.as_float3().unwrap()[*a])
+                        .map(|a| Vec2::new(a[0], a[1]))
+                        .collect::<Vec<_>>();
+                    let local_edges = edges
+                        .iter()
+                        .map(|v| (transform.translation() + v.extend(0.0).xzy()).xz())
+                        .collect();
+                    let transformed_edges = edges
+                        .iter()
+                        .map(|v| transform.transform_point(v.extend(0.0).xzy()))
+                        .collect();
+                    let triangulation = Triangulation::from_outer_edges(&edges);
+                    let mut new_ct = ComputedTriangulation {
+                        triangulation,
+                        local_edges,
+                        transformed_edges,
+                        layer: match navmesh.layer {
+                            LayerSettings::None => 0,
+                            LayerSettings::Layer { id, .. } => id,
+                            LayerSettings::AutoLayer { id } => id,
+                        },
+                        handle: handle.0.clone(),
+                        entity,
+                        stitches: Default::default(),
+                    };
+                    if matches!(navmesh.layer, LayerSettings::AutoLayer { .. }) {
+                        for ct in computed_triangulations.0.values_mut() {
+                            if ct.handle == new_ct.handle && ct.layer != new_ct.layer {
+                                let stitches =
+                                    find_stitch_points_between_triangulations(&new_ct, ct);
+                                if stitches.is_empty() {
+                                    continue;
+                                }
+                                new_ct.stitches.insert(ct.layer, stitches.clone());
+                                ct.stitches.insert(new_ct.layer, stitches);
+                            }
+                        }
+                    }
+                    computed_triangulations.insert(mesh_handle.clone(), new_ct);
+                }
+                _ => unimplemented!(),
+            }
+        }
+    }
+}
+
+fn find_stitch_points_between_triangulations(
+    a: &ComputedTriangulation,
+    b: &ComputedTriangulation,
+) -> Vec<Vec2> {
+    // v2:
+    // - for each edge in triangulation A
+    // - check if it's colinear to an edge in triangulation B
+    // - check if their transformed height is the same
+    // - if both are true, find the longest segment that is on both edges
+    // - add the new points to both triangulations
+    // - add the new points to the list of stitch points
+
+    // TODO: need to be able to modify both triangulations
+
+    // TODO: check per edge and not per point
+    let mut points = vec![];
+
+    for (ia, edge_a) in a.local_edges.iter().enumerate() {
+        for (ib, edge_b) in b.local_edges.iter().enumerate() {
+            if edge_a == edge_b {
+                if a.transformed_edges[ia].y == b.transformed_edges[ib].y {
+                    points.push(edge_a.clone());
+                }
+            }
+        }
+    }
+
+    for edge_a in a.local_edges.as_slice().windows(2) {
+        let direction_a = (edge_a[1] - edge_a[0]).normalize();
+        for edge_b in b.local_edges.as_slice().windows(2) {
+            let direction_b = (edge_b[1] - edge_b[0]).normalize();
+            if (direction_a - direction_b).length_squared() < 0.01 {
+                // colinear
+                // TODO: need to check if they overlap, and if so their common segment
+                // as they're all on a single line, they can be expressed as a single scalar f(x) = a * x + b
+                // then we can compare the x of each point
+                // with xa0 < xa1 and xb0 < xb1:
+                // if (xa1 - xb0 >= 0 and xb1 - xa0 >=0 ) { // overlap
+                //   OverlapInterval = [ max(xa0, xb0), min(xa1, xb1) ]
+                // }
+            }
+        }
+    }
+
+    points
+}
+
 fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     mut commands: Commands,
     (dynamic_obstacles, cachable_obstacles): ObstacleQueries<Obstacle, Marker>,
@@ -325,6 +512,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     mut navmeshes: NavMeshToUpdateQuery,
     time: Res<Time>,
     mut ready_to_update: Local<EntityHashMap<(f32, bool)>>,
+    triangulations: Res<ComputedTriangulations>,
 ) {
     let keys = ready_to_update.keys().cloned().collect::<Vec<_>>();
     let mut retrigger = vec![];
@@ -423,6 +611,14 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             *status = NavMeshStatus::Building;
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
+            let triangulation = match &settings.ground {
+                Ground::Triangulation(triangulation) => triangulation.clone(),
+                Ground::Mesh(mesh) => match triangulations.get(mesh) {
+                    Some(computed_triangulation) => computed_triangulation.triangulation.clone(),
+                    None => continue,
+                },
+            }
+            .clone();
             if is_blocking.is_some() {
                 let start = bevy::utils::Instant::now();
                 let (to_cache, layer) = build_navmesh(
@@ -430,6 +626,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                     cached_obstacles,
                     settings_local,
                     transform_local,
+                    triangulation,
                 );
                 *writer.write().unwrap() = Some(TaskResult {
                     layer,
@@ -445,6 +642,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                             cached_obstacles,
                             settings_local,
                             transform_local,
+                            triangulation,
                         );
                         *writer.write().unwrap() = Some(TaskResult {
                             layer,
@@ -477,6 +675,7 @@ fn update_navmesh_asset(
     mut live_navmeshes: NavMeshWaitingUpdateQuery,
     mut navmeshes: ResMut<Assets<NavMesh>>,
     mut diagnostics: Diagnostics,
+    triangulations: Res<ComputedTriangulations>,
 ) {
     for (entity, handle, task, global_transform, mut status, mut settings) in &mut live_navmeshes {
         let mut task = task.0.write().unwrap();
@@ -497,7 +696,7 @@ fn update_navmesh_asset(
                 "navmesh {:?} ({:?}) built{}",
                 handle,
                 entity,
-                if let Some(layer) = &settings.layer {
+                if let LayerSettings::Layer { id: layer, .. } = &settings.layer {
                     format!(" (layer {})", layer)
                 } else {
                     "".to_string()
@@ -526,119 +725,242 @@ fn update_navmesh_asset(
                     )
                 };
 
-            if let Some(layer_id) = &settings.layer {
-                *status = NavMeshStatus::Built;
+            match &settings.layer {
+                LayerSettings::AutoLayer { id: layer_id } => {
+                    *status = NavMeshStatus::Built;
 
-                if mesh.layers.len() < *layer_id as usize + 1 {
-                    mesh.layers.resize(
-                        mesh.layers.len().max(*layer_id as usize + 1),
-                        Layer::default(),
-                    );
-                }
-                mesh.remove_stitches_to_layer(*layer_id);
-                mesh.layers[*layer_id as usize] = layer;
-                // TODO: rotate this to get the value in the correct space
-                mesh.layers[*layer_id as usize].offset = global_transform.translation().xz();
+                    if mesh.layers.len() < *layer_id as usize + 1 {
+                        mesh.layers.resize(
+                            mesh.layers.len().max(*layer_id as usize + 1),
+                            Layer::default(),
+                        );
+                    }
+                    mesh.remove_stitches_to_layer(*layer_id);
+                    mesh.layers[*layer_id as usize] = layer;
+                    // TODO: rotate this to get the value in the correct space
+                    mesh.layers[*layer_id as usize].offset = global_transform.translation().xz();
 
-                let stitch_segments =
-                    settings
-                        .stitches
+                    let stitches = match &settings.ground {
+                        Ground::Triangulation(_) => None,
+                        Ground::Mesh(handle) => triangulations.get(handle).map(|ct| &ct.stitches),
+                    };
+                    let Some(stitches) = stitches else {
+                        continue;
+                    };
+
+                    // TODO: handle cases where more than two points are found
+                    let stitch_segments = stitches
                         .iter()
-                        .filter_map(|((from, to), segment)| {
-                            let other = if from == layer_id {
-                                to
-                            } else if to == layer_id {
-                                from
-                            } else {
-                                return None;
-                            };
-                            Some((other, [segment[0], segment[1]]))
-                        });
-                let layer_from = &mesh.layers[*layer_id as usize];
-                let mut stitch_vertices = vec![];
-                'stitching: for (target_layer, stitch_segment) in stitch_segments {
-                    if mesh.layers.len() < *target_layer as usize + 1 {
-                        *status = NavMeshStatus::Invalid;
-                        continue 'stitching;
-                    }
-                    if mesh.layers[*target_layer as usize].vertices.is_empty() {
-                        *status = NavMeshStatus::Invalid;
-                        continue 'stitching;
-                    }
-                    let layer_to = &mesh.layers[*target_layer as usize];
+                        .map(|(other, segment)| (other, [segment[0], segment[1]]));
 
-                    let indices_from = layer_from.get_vertices_on_segment(
-                        stitch_segment[0] - layer_from.offset,
-                        stitch_segment[1] - layer_from.offset,
-                    );
-                    let indices_to = layer_to.get_vertices_on_segment(
-                        stitch_segment[0] - layer_to.offset,
-                        stitch_segment[1] - layer_to.offset,
-                    );
-                    if indices_from.len() != indices_to.len() {
-                        debug!(
+                    // let stitch_segments = stitches.iter().filter_map(|((from, to), segment)| {
+                    //     let other = if from == layer_id {
+                    //         to
+                    //     } else if to == layer_id {
+                    //         from
+                    //     } else {
+                    //         return None;
+                    //     };
+                    //     Some((other, [segment[0], segment[1]]))
+                    // });
+                    let layer_from = &mesh.layers[*layer_id as usize];
+                    let mut stitch_vertices = vec![];
+                    'stitching: for (target_layer, stitch_segment) in stitch_segments {
+                        if mesh.layers.len() < *target_layer as usize + 1 {
+                            *status = NavMeshStatus::Invalid;
+                            continue 'stitching;
+                        }
+                        if mesh.layers[*target_layer as usize].vertices.is_empty() {
+                            *status = NavMeshStatus::Invalid;
+                            continue 'stitching;
+                        }
+                        let layer_to = &mesh.layers[*target_layer as usize];
+
+                        let indices_from = layer_from.get_vertices_on_segment(
+                            stitch_segment[0] - layer_from.offset,
+                            stitch_segment[1] - layer_from.offset,
+                        );
+                        let indices_to = layer_to.get_vertices_on_segment(
+                            stitch_segment[0] - layer_to.offset,
+                            stitch_segment[1] - layer_to.offset,
+                        );
+                        if indices_from.len() != indices_to.len() {
+                            debug!(
                             "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?} (different number of stitching points on each side)",
                             handle, entity, layer_id, target_layer
                         );
-                        *status = NavMeshStatus::Failed;
-                        failed_stitches.push((*layer_id, *target_layer));
-                        continue 'stitching;
-                    }
-
-                    let stitch_indices = indices_from
-                        .into_iter()
-                        .zip(indices_to.into_iter())
-                        .collect::<Vec<_>>();
-                    for indices in &stitch_indices {
-                        if (layer_from.vertices[indices.0].coords + layer_from.offset)
-                            .distance_squared(layer_to.vertices[indices.1].coords + layer_to.offset)
-                            > 0.001
-                        {
-                            debug!(
-                                "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?} (stitching points don't match)",
-                                handle, entity, layer_id, target_layer
-                            );
                             *status = NavMeshStatus::Failed;
                             failed_stitches.push((*layer_id, *target_layer));
                             continue 'stitching;
                         }
+
+                        let stitch_indices = indices_from
+                            .into_iter()
+                            .zip(indices_to.into_iter())
+                            .collect::<Vec<_>>();
+                        for indices in &stitch_indices {
+                            if (layer_from.vertices[indices.0].coords + layer_from.offset)
+                                .distance_squared(
+                                    layer_to.vertices[indices.1].coords + layer_to.offset,
+                                )
+                                > 0.001
+                            {
+                                debug!(
+                                "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?} (stitching points don't match)",
+                                handle, entity, layer_id, target_layer
+                            );
+                                *status = NavMeshStatus::Failed;
+                                failed_stitches.push((*layer_id, *target_layer));
+                                continue 'stitching;
+                            }
+                        }
+
+                        previously_failed
+                            .retain(|(from, to)| !(*from == *layer_id && *to == *target_layer));
+                        previously_failed
+                            .retain(|(from, to)| !(*to == *layer_id && *from == *target_layer));
+                        stitch_vertices.push(((*layer_id, *target_layer), stitch_indices));
                     }
+                    mesh.restitch_layer_at_vertices(*layer_id, stitch_vertices, false);
 
-                    previously_failed
-                        .retain(|(from, to)| !(*from == *layer_id && *to == *target_layer));
-                    previously_failed
-                        .retain(|(from, to)| !(*to == *layer_id && *from == *target_layer));
-                    stitch_vertices.push(((*layer_id, *target_layer), stitch_indices));
-                }
-                mesh.restitch_layer_at_vertices(*layer_id, stitch_vertices, false);
-
-                if *status == NavMeshStatus::Built && previously_failed.is_empty() {
-                    let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
-                    if *layer_id == 0 {
-                        navmesh.set_transform(global_transform.compute_transform());
+                    if *status == NavMeshStatus::Built && previously_failed.is_empty() {
+                        let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
+                        if *layer_id == 0 {
+                            navmesh.set_transform(global_transform.compute_transform());
+                        } else {
+                            navmesh.set_transform(previous_navmesh_transform);
+                        }
+                        navmeshes.insert(&handle.0, navmesh);
+                    } else if let Some(navmesh) = navmeshes.get_mut(&handle.0) {
+                        failed_stitches.extend(previously_failed);
+                        failed_stitches.sort_unstable();
+                        failed_stitches.dedup();
+                        navmesh.building = Some(crate::BuildingMesh {
+                            mesh,
+                            failed_stitches,
+                        });
                     } else {
-                        navmesh.set_transform(previous_navmesh_transform);
+                        let navmesh = NavMesh::from_polyanya_mesh(mesh);
+                        navmeshes.insert(&handle.0, navmesh);
+                        *status = NavMeshStatus::Invalid;
                     }
-                    navmeshes.insert(&handle.0, navmesh);
-                } else if let Some(navmesh) = navmeshes.get_mut(&handle.0) {
-                    failed_stitches.extend(previously_failed);
-                    failed_stitches.sort_unstable();
-                    failed_stitches.dedup();
-                    navmesh.building = Some(crate::BuildingMesh {
-                        mesh,
-                        failed_stitches,
-                    });
-                } else {
-                    let navmesh = NavMesh::from_polyanya_mesh(mesh);
-                    navmeshes.insert(&handle.0, navmesh);
-                    *status = NavMeshStatus::Invalid;
                 }
-            } else {
-                mesh.layers = vec![layer];
-                let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
-                navmesh.set_transform(global_transform.compute_transform());
-                navmeshes.insert(&handle.0, navmesh);
-                *status = NavMeshStatus::Built;
+                LayerSettings::Layer {
+                    id: layer_id,
+                    stitches,
+                } => {
+                    *status = NavMeshStatus::Built;
+
+                    if mesh.layers.len() < *layer_id as usize + 1 {
+                        mesh.layers.resize(
+                            mesh.layers.len().max(*layer_id as usize + 1),
+                            Layer::default(),
+                        );
+                    }
+                    mesh.remove_stitches_to_layer(*layer_id);
+                    mesh.layers[*layer_id as usize] = layer;
+                    // TODO: rotate this to get the value in the correct space
+                    mesh.layers[*layer_id as usize].offset = global_transform.translation().xz();
+
+                    let stitch_segments = stitches.iter().filter_map(|((from, to), segment)| {
+                        let other = if from == layer_id {
+                            to
+                        } else if to == layer_id {
+                            from
+                        } else {
+                            return None;
+                        };
+                        Some((other, [segment[0], segment[1]]))
+                    });
+                    let layer_from = &mesh.layers[*layer_id as usize];
+                    let mut stitch_vertices = vec![];
+                    'stitching: for (target_layer, stitch_segment) in stitch_segments {
+                        if mesh.layers.len() < *target_layer as usize + 1 {
+                            *status = NavMeshStatus::Invalid;
+                            continue 'stitching;
+                        }
+                        if mesh.layers[*target_layer as usize].vertices.is_empty() {
+                            *status = NavMeshStatus::Invalid;
+                            continue 'stitching;
+                        }
+                        let layer_to = &mesh.layers[*target_layer as usize];
+
+                        let indices_from = layer_from.get_vertices_on_segment(
+                            stitch_segment[0] - layer_from.offset,
+                            stitch_segment[1] - layer_from.offset,
+                        );
+                        let indices_to = layer_to.get_vertices_on_segment(
+                            stitch_segment[0] - layer_to.offset,
+                            stitch_segment[1] - layer_to.offset,
+                        );
+                        if indices_from.len() != indices_to.len() {
+                            debug!(
+                            "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?} (different number of stitching points on each side)",
+                            handle, entity, layer_id, target_layer
+                        );
+                            *status = NavMeshStatus::Failed;
+                            failed_stitches.push((*layer_id, *target_layer));
+                            continue 'stitching;
+                        }
+
+                        let stitch_indices = indices_from
+                            .into_iter()
+                            .zip(indices_to.into_iter())
+                            .collect::<Vec<_>>();
+                        for indices in &stitch_indices {
+                            if (layer_from.vertices[indices.0].coords + layer_from.offset)
+                                .distance_squared(
+                                    layer_to.vertices[indices.1].coords + layer_to.offset,
+                                )
+                                > 0.001
+                            {
+                                debug!(
+                                "navmesh {:?} ({:?}) layer {} update: error stitching to layer {:?} (stitching points don't match)",
+                                handle, entity, layer_id, target_layer
+                            );
+                                *status = NavMeshStatus::Failed;
+                                failed_stitches.push((*layer_id, *target_layer));
+                                continue 'stitching;
+                            }
+                        }
+
+                        previously_failed
+                            .retain(|(from, to)| !(*from == *layer_id && *to == *target_layer));
+                        previously_failed
+                            .retain(|(from, to)| !(*to == *layer_id && *from == *target_layer));
+                        stitch_vertices.push(((*layer_id, *target_layer), stitch_indices));
+                    }
+                    mesh.restitch_layer_at_vertices(*layer_id, stitch_vertices, false);
+
+                    if *status == NavMeshStatus::Built && previously_failed.is_empty() {
+                        let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
+                        if *layer_id == 0 {
+                            navmesh.set_transform(global_transform.compute_transform());
+                        } else {
+                            navmesh.set_transform(previous_navmesh_transform);
+                        }
+                        navmeshes.insert(&handle.0, navmesh);
+                    } else if let Some(navmesh) = navmeshes.get_mut(&handle.0) {
+                        failed_stitches.extend(previously_failed);
+                        failed_stitches.sort_unstable();
+                        failed_stitches.dedup();
+                        navmesh.building = Some(crate::BuildingMesh {
+                            mesh,
+                            failed_stitches,
+                        });
+                    } else {
+                        let navmesh = NavMesh::from_polyanya_mesh(mesh);
+                        navmeshes.insert(&handle.0, navmesh);
+                        *status = NavMeshStatus::Invalid;
+                    }
+                }
+                LayerSettings::None => {
+                    mesh.layers = vec![layer];
+                    let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
+                    navmesh.set_transform(global_transform.compute_transform());
+                    navmeshes.insert(&handle.0, navmesh);
+                    *status = NavMeshStatus::Built;
+                }
             }
             diagnostics.add_measurement(&NAVMESH_BUILD_DURATION, || duration.as_secs_f64());
         }
@@ -697,12 +1019,18 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
     for NavmeshUpdaterPlugin<Obstacle, Marker>
 {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            PostUpdate,
-            trigger_navmesh_build::<Marker, Obstacle>.after(TransformSystem::TransformPropagate),
-        )
-        .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
-        .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));
+        app.init_resource::<ComputedTriangulations>()
+            .add_systems(
+                PostUpdate,
+                (
+                    compute_triangulation_from_meshes,
+                    trigger_navmesh_build::<Marker, Obstacle>,
+                )
+                    .chain()
+                    .after(TransformSystem::TransformPropagate),
+            )
+            .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
+            .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));
 
         #[cfg(feature = "avian2d")]
         {
