@@ -312,12 +312,12 @@ fn spawn_obstacle_on_click(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // Click was on a UI button that triggered a settings change, ignore it.
-    if settings.single().is_changed() {
+    if settings.single().unwrap().is_changed() {
         return;
     }
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let (camera, camera_transform) = camera_q.single();
-        let window = primary_window.single();
+        let (camera, camera_transform) = camera_q.single().unwrap();
+        let window = primary_window.single().unwrap();
         if let Some(position) = window
             .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
@@ -346,7 +346,7 @@ fn remove_obstacles(
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         for entity in obstacles.iter() {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }

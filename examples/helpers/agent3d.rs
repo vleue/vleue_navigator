@@ -65,7 +65,7 @@ pub fn give_target_to_navigator<const X: u32, const Y: u32>(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (entity, transform, navigator) in &navigators {
-        let Some(navmesh) = navmeshes.get_mut(navmesh.single()) else {
+        let Some(navmesh) = navmeshes.get_mut(navmesh.single().unwrap()) else {
             continue;
         };
 
@@ -124,7 +124,7 @@ pub fn refresh_path<const X: u32, const Y: u32>(
     transforms: Query<&Transform>,
     mut deltas: Local<EntityHashMap<f32>>,
 ) {
-    let (navmesh_handle, status) = navmesh.single();
+    let (navmesh_handle, status) = navmesh.single().unwrap();
     if (!status.is_changed() || *status != NavMeshStatus::Built) && deltas.is_empty() {
         return;
     }
@@ -181,7 +181,7 @@ pub fn move_navigator<const SIZE: u32>(
                 distance_to_next = transform.translation.distance(path.current);
             } else {
                 commands.entity(entity).remove::<Path>();
-                commands.entity(path.target).despawn_recursive();
+                commands.entity(path.target).despawn();
                 break;
             }
         }
