@@ -217,7 +217,8 @@ fn setup_scene(
                             .mesh,
                     )
                     .unwrap(),
-            );
+            )
+            .unwrap();
 
             let mut material: StandardMaterial = Color::Srgba(palettes::css::ANTIQUE_WHITE).into();
             material.unlit = true;
