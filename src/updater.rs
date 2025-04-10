@@ -315,7 +315,12 @@ type ObstacleQueries<'world, 'state, 'a, 'b, 'c, Obstacle, Marker> = (
     Query<
         'world,
         'state,
-        (Entity, &'a GlobalTransform, &'b Obstacle, Ref<'c, CachableObstacle>),
+        (
+            Entity,
+            &'a GlobalTransform,
+            &'b Obstacle,
+            Ref<'c, CachableObstacle>,
+        ),
         With<Marker>,
     >,
 );
@@ -411,14 +416,18 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             let cached_obstacles = if settings.cached.is_none() {
                 cachable_obstacles
                     .iter()
-                    .filter_map(|(e, t, o, _)| (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone())))
+                    .filter_map(|(e, t, o, _)| {
+                        (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone()))
+                    })
                     .collect::<Vec<_>>()
             } else {
                 vec![]
             };
             let obstacles_local = dynamic_obstacles
                 .iter()
-                .filter_map(|(e, t, o)| (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone())))
+                .filter_map(|(e, t, o)| {
+                    (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone()))
+                })
                 .collect::<Vec<_>>();
             let settings_local = settings.clone();
             let transform_local = global_transform.compute_transform();
