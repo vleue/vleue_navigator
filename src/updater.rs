@@ -22,7 +22,7 @@ use crate::{obstacles::ObstacleSource, NavMesh};
 ///
 /// Caching obstacles can help to optimize the [`NavMesh`] generation process.
 /// A partial [`NavMesh`] will be built with them, then updated with the dynamic obstacles.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 pub struct CachableObstacle;
 
 /// A NavMesh that will be updated automatically.
@@ -338,14 +338,16 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             ready_to_update.remove(&key);
         }
     }
-    if !removed_cachable_obstacles.is_empty()
-        || cachable_obstacles.iter().any(|(_, _, c)| c.is_added())
-    {
+
+    let cachable_obstacles_changed = !removed_cachable_obstacles.is_empty()
+        || cachable_obstacles.iter().any(|(_, _, c)| c.is_added());
+    if cachable_obstacles_changed {
         for (_, mut settings, ..) in &mut navmeshes {
             debug!("cache cleared due to cachable obstacle change");
             settings.bypass_change_detection().cached = None;
         }
     }
+
     for (_, mut settings, ..) in &mut navmeshes {
         if settings.is_changed() {
             debug!("cache cleared due to settings change");
@@ -358,6 +360,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
         .iter_mut()
         .filter_map(|(entity, settings, _, mode, ..)| {
             if settings.is_changed()
+                || cachable_obstacles_changed
                 || has_removed_obstacles
                 || matches!(mode, NavMeshUpdateMode::OnDemand(true))
                 || dynamic_obstacles
