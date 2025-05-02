@@ -65,8 +65,8 @@ features = [
 default-features = false
 
 [patch.crates-io]
-avian2d = { git = "https://github.com/Jondolf/avian.git", rev = "86f3c48" }
-avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "86f3c48" }
+avian2d = { git = "https://github.com/Jondolf/avian.git" }
+avian3d = { git = "https://github.com/Jondolf/avian.git" }
 
 [features]
 default = ["debug-with-gizmos"]
