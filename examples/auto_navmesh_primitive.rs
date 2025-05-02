@@ -247,7 +247,7 @@ fn display_mesh(
     window_resized: EventReader<WindowResized>,
     navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
-    let (navmesh_handle, status) = navmesh.single().unwrap();
+    let (navmesh_handle, status) = navmesh.single();
     if (!status.is_changed() || *status != NavMeshStatus::Built) && window_resized.is_empty() {
         return;
     }
@@ -256,7 +256,7 @@ fn display_mesh(
         return;
     };
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
 
     *current_mesh_entity = Some(
@@ -288,12 +288,12 @@ fn spawn_obstacle_on_click(
     settings: Query<Ref<NavMeshSettings>>,
 ) {
     // Click was on a UI button that triggered a settings change, ignore it.
-    if settings.single().unwrap().is_changed() {
+    if settings.single().is_changed() {
         return;
     }
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let (camera, camera_transform) = camera_q.single().unwrap();
-        let window = primary_window.single().unwrap();
+        let (camera, camera_transform) = camera_q.single();
+        let window = primary_window.single();
         if let Some(position) = window
             .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())

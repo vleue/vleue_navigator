@@ -132,7 +132,7 @@ fn life_of_obstacle(
         lifetime.0.tick(time.delta());
 
         if lifetime.0.finished() {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         } else if lifetime.0.fraction() < 0.2 {
             transform.scale = Vec3::new(
                 lifetime.0.fraction() * 4.0,
@@ -441,7 +441,7 @@ fn display_mesh(
     mut current_mesh_entity: Local<Option<Entity>>,
     navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
-    let (navmesh_handle, status) = navmesh.single().unwrap();
+    let (navmesh_handle, status) = navmesh.single();
     if !status.is_changed() || *status != NavMeshStatus::Built {
         return;
     }
@@ -450,7 +450,7 @@ fn display_mesh(
         return;
     };
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
 
     *current_mesh_entity = Some(

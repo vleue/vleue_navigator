@@ -6,12 +6,12 @@ use std::{
 
 use bevy::{
     color::palettes,
-    app::TaskPoolThreadAssignmentPolicy,
+    core::TaskPoolThreadAssignmentPolicy,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::Vec3Swizzles,
     prelude::*,
     tasks::AsyncComputeTaskPool,
-    platform_support::time::Instant,
+    utils::Instant,
     window::{PrimaryWindow, WindowResized},
 };
 use rand::prelude::*;
@@ -37,13 +37,11 @@ fn main() {
                             min_threads: 1,
                             max_threads: usize::MAX,
                             percent: 1.0,
-                            on_thread_spawn: None,
-                            on_thread_destroy: None,
                         },
                         ..default()
                     },
                 }),
-            FrameTimeDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin,
             LogDiagnosticsPlugin::default(),
             VleueNavigatorPlugin,
         ))
@@ -141,7 +139,7 @@ fn on_mesh_change(
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
             }
-            let window = primary_window.single().unwrap();
+            let window = primary_window.single();
             let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
             *current_mesh_entity = Some(
                 commands
@@ -187,7 +185,7 @@ fn spawn(
     known_meshes: Res<Meshes>,
 ) {
     if navmeshes.contains(&known_meshes.aurora) {
-        let window = primary_window.single().unwrap();
+        let window = primary_window.single();
         let mut rng = rand::thread_rng();
         let screen = Vec2::new(window.width(), window.height());
         let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
@@ -255,7 +253,7 @@ fn compute_paths(
         return;
     };
     for (entity, target, transform) in &with_target {
-        let window = primary_window.single().unwrap();
+        let window = primary_window.single();
         let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
         let in_mesh = transform.translation.truncate() / factor + MESH_SIZE / 2.0;
@@ -313,7 +311,7 @@ fn poll_path_tasks(
                     .insert(Path { path: path.path })
                     .remove::<FindingPath>();
             } else {
-                let window = primary_window.single().unwrap();
+                let window = primary_window.single();
                 let screen = Vec2::new(window.width(), window.height());
                 let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
@@ -340,7 +338,7 @@ fn move_navigator(
     time: Res<Time>,
     par_commands: ParallelCommands,
 ) {
-    let window = primary_window.single().unwrap();
+    let window = primary_window.single();
     let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
     query
         .par_iter_mut()
@@ -393,7 +391,7 @@ fn update_ui(
     task_mode: Res<TaskMode>,
 ) {
     let new_count = agents.iter().len();
-    let text = ui_query.single().unwrap();
+    let text = ui_query.single();
     *text_writer.text(text, 2) = format!("{}\n", new_count);
     *text_writer.text(text, 4) = format!(
         "{:.2}\n",

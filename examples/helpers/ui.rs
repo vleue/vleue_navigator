@@ -27,7 +27,7 @@ pub struct ExampleSettings {
     pub cache_enabled: bool,
 }
 
-fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildSpawnerCommands) {
+fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildBuilder) {
     parent
         .spawn((
             Node {
@@ -210,7 +210,7 @@ pub fn display_settings(
     mut buttons: Query<(&mut BackgroundColor, &UiSettings), With<Button>>,
     mut text_writer: TextUiWriter,
 ) {
-    let Ok(settings) = settings.single() else {return;};
+    let settings = settings.single();
     if settings.is_changed() {
         for (text, param) in &mut texts {
             match param {
@@ -271,7 +271,7 @@ pub fn update_settings<const STEP: u32>(
     for (interaction, button, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                let Ok(mut settings) = settings.single_mut() else {return;};
+                let mut settings = settings.single_mut();
                 match *button {
                     UiSettingsButtons::SimplifyDec => {
                         settings.simplify = (settings.simplify - STEP as f32 / 1000.0).max(0.0);
@@ -374,13 +374,13 @@ pub fn update_stats<T: Component>(
     diagnostics: Res<DiagnosticsStore>,
     mut text_writer: TextUiWriter,
 ) {
-    let Ok((status, handle)) = navmesh.single() else {return;};
+    let (status, handle) = navmesh.single();
 
     if !status.is_changed() && !status.is_added() {
         return;
     }
 
-    let Ok(text) = text.single_mut() else { return; };
+    let text = text.single_mut();
     *text_writer.text(text, 2) = format!("{:?}", *status);
     *text_writer.color(text, 2) = match *status {
         NavMeshStatus::Building => palettes::tailwind::AMBER_500.into(),

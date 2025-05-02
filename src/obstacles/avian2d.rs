@@ -160,11 +160,11 @@ impl InnerObstacleSource for TypedShape<'_> {
 }
 
 pub fn on_sleeping_inserted(trigger: Trigger<OnInsert, Sleeping>, mut commands: Commands) {
-    commands.entity(trigger.target()).insert(CachableObstacle);
+    commands.entity(trigger.entity()).insert(CachableObstacle);
 }
 
 pub fn on_sleeping_removed(trigger: Trigger<OnRemove, Sleeping>, mut commands: Commands) {
     commands
-        .entity(trigger.target())
+        .entity(trigger.entity())
         .remove::<CachableObstacle>();
 }

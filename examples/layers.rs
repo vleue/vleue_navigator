@@ -47,7 +47,7 @@ fn main() {
         .get_resource_mut::<GizmoConfigStore>()
         .unwrap();
     let (config, _) = config_store.config_mut::<PathGizmo>();
-    config.line.width = 5.0;
+    config.line_width = 5.0;
 
     app.run();
 }

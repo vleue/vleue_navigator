@@ -154,10 +154,10 @@ fn on_mesh_change(
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
             }
-            if let Ok(entity) = navigator.single() {
+            if let Ok(entity) = navigator.get_single() {
                 commands.entity(entity).despawn();
             }
-            let window = primary_window.single().unwrap();
+            let window = primary_window.single();
             let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
             *current_mesh_entity = Some(
                 commands
@@ -175,7 +175,7 @@ fn on_mesh_change(
                     ))
                     .id(),
             );
-            if let Ok(entity) = text.single() {
+            if let Ok(entity) = text.get_single() {
                 commands.entity(entity).despawn();
             }
 
@@ -284,8 +284,8 @@ fn on_click(
     navmeshes: Res<Assets<NavMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let (camera, camera_transform) = camera_q.single().unwrap();
-        let window = primary_window.single().unwrap();
+        let (camera, camera_transform) = camera_q.single();
+        let window = primary_window.single();
         if let Some(position) = window
             .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
@@ -303,7 +303,7 @@ fn on_click(
                 .map(|mesh| mesh.is_in_mesh(in_mesh))
                 .unwrap_or_default()
             {
-                if let Ok(navigator) = query.single() {
+                if let Ok(navigator) = query.get_single() {
                     info!("going to {}", in_mesh);
                     commands.entity(navigator).insert(Target {
                         target: in_mesh,
@@ -343,7 +343,7 @@ fn compute_paths(
     mesh: Res<MeshDetails>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_window.single().unwrap();
+    let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     for (entity, target, transform) in &with_target {
@@ -387,7 +387,7 @@ fn move_navigator(
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let window = primary_window.single().unwrap();
+    let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
     for (entity, mut transform, mut path, navigator) in &mut query {
         let next = (path.path[0] - mesh.size / 2.0) * factor;
@@ -413,7 +413,7 @@ fn display_path(
     mesh: Res<MeshDetails>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_window.single().unwrap();
+    let window = primary_window.single();
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     for (transform, path) in &query {

@@ -35,7 +35,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     navmesh: Query<&ManagedNavMesh>,
 ) {
     for (entity, transform) in &navigator {
-        let Some(navmesh) = navmeshes.get(navmesh.single().unwrap()) else {
+        let Some(navmesh) = navmeshes.get(navmesh.single()) else {
             continue;
         };
         let mut x = 1.0;
@@ -67,7 +67,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
                     Transform::from_translation(
                         remaining.first().unwrap_or(&first.xy()).extend(1.5),
                     )
-                        .with_scale(Vec3::splat(SIZE as f32)),
+                    .with_scale(Vec3::splat(SIZE as f32)),
                 ))
                 .id();
             commands.entity(entity).insert(Path {
@@ -87,7 +87,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     transforms: Query<&Transform>,
     mut delta: Local<f32>,
 ) {
-    let Ok((navmesh_handle, status)) = navmesh.single() else { return; };
+    let (navmesh_handle, status) = navmesh.single();
     if (!status.is_changed() || *status != NavMeshStatus::Built) && *delta == 0.0 {
         return;
     }
@@ -138,7 +138,7 @@ pub fn move_navigator(
                 path.current = next;
             } else {
                 commands.entity(entity).remove::<Path>();
-                commands.entity(path.target).despawn();
+                commands.entity(path.target).despawn_recursive();
                 break;
             }
         }
@@ -146,7 +146,7 @@ pub fn move_navigator(
 }
 
 pub fn display_navigator_path(navigator: Query<(&Transform, &Path)>, mut gizmos: Gizmos) {
-    let Ok((transform, path)) = navigator.single() else {
+    let Ok((transform, path)) = navigator.get_single() else {
         return;
     };
     let mut to_display = path.next.clone();
