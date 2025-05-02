@@ -143,7 +143,7 @@ fn puck_back_to_start(
     navmeshes: Res<Assets<NavMesh>>,
     navmesh: Query<&ManagedNavMesh>,
 ) {
-    let Some(navmesh) = navmeshes.get(navmesh.single()) else {
+    let Some(navmesh) = navmeshes.get(navmesh.single().unwrap()) else {
         return;
     };
 

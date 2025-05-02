@@ -59,7 +59,7 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
 
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
-#[require(ManagedNavMesh(ManagedNavMesh::single))]
+#[require(ManagedNavMesh = ManagedNavMesh::single() )]
 pub struct NavMeshSettings {
     /// The minimum area that a point of an obstacle must impact. Otherwise, the obstacle will be simplified by removing this point.
     ///
@@ -436,7 +436,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
             if is_blocking.is_some() {
-                let start = bevy::utils::Instant::now();
+                let start = bevy::platform_support::time::Instant::now();
                 let (to_cache, layer) = build_navmesh(
                     obstacles_local,
                     cached_obstacles,
@@ -451,7 +451,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             } else {
                 AsyncComputeTaskPool::get()
                     .spawn(async move {
-                        let start = bevy::utils::Instant::now();
+                        let start = bevy::platform_support::time::Instant::now();
                         let (to_cache, layer) = build_navmesh(
                             obstacles_local,
                             cached_obstacles,
