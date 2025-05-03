@@ -14,7 +14,7 @@ use bevy::{
     tasks::AsyncComputeTaskPool,
     transform::TransformSystem,
 };
-
+use bevy::asset::uuid::Uuid;
 use polyanya::{Layer, Mesh, Triangulation};
 
 use crate::{obstacles::ObstacleSource, NavMesh};
@@ -34,7 +34,9 @@ pub struct ManagedNavMesh(Handle<NavMesh>);
 impl ManagedNavMesh {
     /// Create a new [`ManagedNavMesh`] with the provided id.
     pub fn from_id(id: u128) -> Self {
-        Self(Handle::<NavMesh>::weak_from_u128(id))
+        Self(Handle::Weak(AssetId::Uuid {
+            uuid: Uuid::from_u128(id),
+        }))
     }
 
     /// Create a new [`ManagedNavMesh`].
@@ -42,7 +44,9 @@ impl ManagedNavMesh {
     /// This can be used when there is a single NavMesh in the scene.
     /// Otherwise use [`Self::from_id`] with unique IDs for each NavMesh.
     pub fn single() -> Self {
-        Self(Handle::<NavMesh>::weak_from_u128(0))
+        Self(Handle::Weak(AssetId::Uuid {
+            uuid: Uuid::from_u128(0),
+        }))
     }
 }
 
