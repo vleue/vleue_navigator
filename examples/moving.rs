@@ -284,7 +284,9 @@ fn on_click(
     navmeshes: Res<Assets<NavMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let Ok((camera, camera_transform)) = camera_q.single() else {return};
+        let Ok((camera, camera_transform)) = camera_q.single() else {
+            return;
+        };
 
         let window = *primary_window;
         if let Some(position) = window

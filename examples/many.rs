@@ -6,8 +6,8 @@ use std::{
 };
 
 use bevy::{
-    color::palettes,
     app::TaskPoolThreadAssignmentPolicy,
+    color::palettes,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::Vec3Swizzles,
     prelude::*,
@@ -393,7 +393,7 @@ fn update_ui(
     task_mode: Res<TaskMode>,
 ) {
     let new_count = agents.iter().len();
-    let Ok(text) = ui_query.single() else {return};
+    let Ok(text) = ui_query.single() else { return };
     *text_writer.text(text, 2) = format!("{}\n", new_count);
     *text_writer.text(text, 4) = format!(
         "{:.2}\n",

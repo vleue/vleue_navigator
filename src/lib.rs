@@ -22,9 +22,9 @@ use bevy::{
     prelude::{Component, Gizmos, Query, Res, Resource},
 };
 use bevy::{
-    log::{debug, warn},
     app::{App, Plugin},
     asset::{Asset, AssetApp},
+    log::{debug, warn},
     math::{Affine3A, Quat, Vec2, Vec3, Vec3Swizzles},
     prelude::{Mesh, Transform, TransformPoint},
     reflect::TypePath,

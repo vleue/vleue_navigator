@@ -1,6 +1,6 @@
-use std::ops::Deref;
 use bevy::{color::palettes, ecs::entity::EntityHashMap, prelude::*};
 use rand::Rng;
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -66,8 +66,12 @@ pub fn give_target_to_navigator<const X: u32, const Y: u32>(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (entity, transform, navigator) in &navigators {
-        let Ok(navmesh) = navmesh.single() else {continue;};
-        let Some(navmesh) = navmeshes.get_mut(navmesh) else { continue;};
+        let Ok(navmesh) = navmesh.single() else {
+            continue;
+        };
+        let Some(navmesh) = navmeshes.get_mut(navmesh) else {
+            continue;
+        };
 
         let mut target;
 

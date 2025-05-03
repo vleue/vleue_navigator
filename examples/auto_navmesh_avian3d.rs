@@ -46,24 +46,22 @@ fn main() {
 pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> = Handle::weak_from_u128(0);
 pub const MATERIAL_OBSTACLE_CACHED: Handle<StandardMaterial> = Handle::weak_from_u128(1);
 
-    fn setup(
-        mut commands: Commands,
-        mut materials: ResMut<Assets<StandardMaterial>>,
-        mut meshes: ResMut<Assets<Mesh>>,
-    ) {
-        materials.insert(&MATERIAL_OBSTACLE_LIVE, Color::srgb(0.2, 0.7, 0.9).into());
-        materials.insert(&MATERIAL_OBSTACLE_CACHED, Color::srgb(0.2, 0.9, 0.7).into());
-
-        let arena_mesh = meshes.add(Cuboid::default());
-        let arena_material = materials.add(Color::srgb(0.7, 0.7, 0.8));
-
-        // Ground
-        commands.spawn((
-            Mesh3d(arena_mesh.clone()),
-            MeshMaterial3d(arena_material.clone()),
-            Transform::from_xyz(0.0, -5.0, 0.0).with_scale(Vec3::new(50.0, 10.0, 50.0)),
-            RigidBody::Static,
-            Collider::cuboid(1.0, 1.0, 1.0),
+fn setup(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
+    materials.insert(&MATERIAL_OBSTACLE_LIVE, Color::srgb(0.2, 0.7, 0.9).into());
+    materials.insert(&MATERIAL_OBSTACLE_CACHED, Color::srgb(0.2, 0.9, 0.7).into());
+    let arena_mesh = meshes.add(Cuboid::default());
+    let arena_material = materials.add(Color::srgb(0.7, 0.7, 0.8));
+    // Ground
+    commands.spawn((
+        Mesh3d(arena_mesh.clone()),
+        MeshMaterial3d(arena_material.clone()),
+        Transform::from_xyz(0.0, -5.0, 0.0).with_scale(Vec3::new(50.0, 10.0, 50.0)),
+        RigidBody::Static,
+        Collider::cuboid(1.0, 1.0, 1.0),
     ));
     commands.spawn((
         Mesh3d(arena_mesh.clone()),

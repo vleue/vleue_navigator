@@ -1,10 +1,10 @@
-use std::f32::consts::{FRAC_PI_2, PI};
-use std::ops::Deref;
 use bevy::{
     color::palettes, ecs::entity::EntityHashSet, math::vec2, prelude::*, render::view::RenderLayers,
 };
 use polyanya::Triangulation;
 use rand::Rng;
+use std::f32::consts::{FRAC_PI_2, PI};
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
@@ -77,7 +77,6 @@ fn main() {
 
 fn pause(keyboard_input: Res<ButtonInput<KeyCode>>, mut virtual_time: ResMut<Time<Virtual>>) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-
         if virtual_time.is_paused() {
             virtual_time.unpause();
         } else {

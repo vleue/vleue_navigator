@@ -1,5 +1,5 @@
-use std::ops::Deref;
 use bevy::{color::palettes, diagnostic::DiagnosticsStore, prelude::*};
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -381,7 +381,7 @@ pub fn update_stats<T: Component>(
         return;
     }
 
-    let Ok(text) = text.single_mut() else {return};
+    let Ok(text) = text.single_mut() else { return };
     *text_writer.text(text, 2) = format!("{:?}", *status);
     *text_writer.color(text, 2) = match **status {
         NavMeshStatus::Building => palettes::tailwind::AMBER_500.into(),

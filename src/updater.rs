@@ -8,13 +8,13 @@ use std::{
 use tracing::instrument;
 
 use bevy::{
+    asset::uuid::Uuid,
     diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
     ecs::entity::EntityHashMap,
     prelude::*,
     tasks::AsyncComputeTaskPool,
     transform::TransformSystem,
 };
-use bevy::asset::uuid::Uuid;
 use polyanya::{Layer, Mesh, Triangulation};
 
 use crate::{obstacles::ObstacleSource, NavMesh};

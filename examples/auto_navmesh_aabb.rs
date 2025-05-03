@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-use std::ops::Deref;
 use bevy::{
     color::palettes,
     math::vec2,
@@ -9,6 +7,8 @@ use bevy::{
 };
 use polyanya::Triangulation;
 use rand::Rng;
+use std::f32::consts::PI;
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent2d.rs"]
@@ -175,7 +175,9 @@ fn spawn_obstacle_on_click(
         return;
     }
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let Ok((camera, camera_transform)) = camera_q.single() else {return};
+        let Ok((camera, camera_transform)) = camera_q.single() else {
+            return;
+        };
         let window = *primary_window;
         if let Some(position) = window
             .cursor_position()

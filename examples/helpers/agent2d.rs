@@ -1,6 +1,6 @@
-use std::ops::Deref;
 use bevy::{color::palettes, prelude::*};
 use rand::Rng;
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -36,7 +36,9 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     navmesh: Query<&ManagedNavMesh>,
 ) {
     for (entity, transform) in &navigator {
-        let Ok(navmesh) = navmesh.single() else {continue;};
+        let Ok(navmesh) = navmesh.single() else {
+            continue;
+        };
         let Some(navmesh) = navmeshes.get(navmesh) else {
             continue;
         };
