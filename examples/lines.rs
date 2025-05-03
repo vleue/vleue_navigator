@@ -150,9 +150,11 @@ fn on_mesh_change(
     };
     let navmesh = navmeshes.get(handle).unwrap();
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
-    let window = primary_window.single();
+    let Ok(window) = primary_window.single() else {
+        return;
+    };
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     *current_mesh_entity = Some(
@@ -242,15 +244,17 @@ struct NewPathStepEvent(Vec2);
 fn on_click(
     mut path_step_event: EventWriter<NewPathStepEvent>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
     navmeshes: Res<Assets<NavMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let (camera, camera_transform) = camera_q.single();
-        let window = primary_window.single();
+        let Ok((camera, camera_transform)) = camera_q.single() else {
+            return;
+        };
+        let window = *primary_window;
         if let Some(position) = window
             .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
@@ -312,9 +316,9 @@ fn update_path_display(
     path_to_display: Res<PathToDisplay>,
     mut gizmos: Gizmos,
     mesh: Res<MeshDetails>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_window.single();
+    let window = *primary_window;
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     let path = path_to_display

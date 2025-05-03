@@ -65,6 +65,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(AmbientLight {
         color: palettes::css::SEA_GREEN.into(),
         brightness: 100.0,
+        affects_lightmapped_meshes: false,
     });
 
     commands.spawn((
@@ -329,13 +330,13 @@ fn give_target_on_click(
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
 ) {
     if mouse_buttons.just_pressed(MouseButton::Left) {
         let navmesh = navmeshes.get(&current_mesh.0).unwrap();
         let Some(target) = (|| {
-            let position = primary_window.single().cursor_position()?;
+            let position = primary_window.cursor_position()?;
             let (camera, transform) = camera.get_single().ok()?;
             let ray = camera.viewport_to_world(transform, position).ok()?;
             let denom = Vec3::Y.dot(ray.direction.into());
@@ -385,7 +386,7 @@ fn give_target_on_click(
             }
         }
         for entity in &targets {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -404,7 +405,7 @@ fn move_object(
             } else {
                 commands.entity(entity).remove::<Path>();
                 let target_entity = object.0.take().unwrap();
-                commands.entity(target_entity).despawn_recursive();
+                commands.entity(target_entity).despawn();
             }
         }
     }

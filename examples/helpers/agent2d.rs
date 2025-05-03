@@ -1,5 +1,6 @@
 use bevy::{color::palettes, prelude::*};
 use rand::Rng;
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -35,7 +36,10 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     navmesh: Query<&ManagedNavMesh>,
 ) {
     for (entity, transform) in &navigator {
-        let Some(navmesh) = navmeshes.get(navmesh.single()) else {
+        let Ok(navmesh) = navmesh.single() else {
+            continue;
+        };
+        let Some(navmesh) = navmeshes.get(navmesh) else {
             continue;
         };
         let mut x = 1.0;
@@ -83,15 +87,15 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
     mut navigator: Query<(Entity, &Transform, &mut Path), With<Navigator>>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
-    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
+    navmesh: Single<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
     transforms: Query<&Transform>,
     mut delta: Local<f32>,
 ) {
-    let (navmesh_handle, status) = navmesh.single();
-    if (!status.is_changed() || *status != NavMeshStatus::Built) && *delta == 0.0 {
+    let (navmesh_handle, status) = navmesh.deref();
+    if (!status.is_changed() || **status != NavMeshStatus::Built) && *delta == 0.0 {
         return;
     }
-    let Some(navmesh) = navmeshes.get_mut(navmesh_handle) else {
+    let Some(navmesh) = navmeshes.get_mut(*navmesh_handle) else {
         return;
     };
 

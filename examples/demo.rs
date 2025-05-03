@@ -1,10 +1,10 @@
-use std::f32::consts::{FRAC_PI_2, PI};
-
 use bevy::{
     color::palettes, ecs::entity::EntityHashSet, math::vec2, prelude::*, render::view::RenderLayers,
 };
 use polyanya::Triangulation;
 use rand::Rng;
+use std::f32::consts::{FRAC_PI_2, PI};
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
@@ -132,7 +132,7 @@ fn life_of_obstacle(
         lifetime.0.tick(time.delta());
 
         if lifetime.0.finished() {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         } else if lifetime.0.fraction() < 0.2 {
             transform.scale = Vec3::new(
                 lifetime.0.fraction() * 4.0,
@@ -439,18 +439,18 @@ fn display_mesh(
     mut meshes: ResMut<Assets<Mesh>>,
     navmeshes: Res<Assets<NavMesh>>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
+    navmesh: Single<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
-    let (navmesh_handle, status) = navmesh.single();
-    if !status.is_changed() || *status != NavMeshStatus::Built {
+    let (navmesh_handle, status) = navmesh.deref();
+    if !status.is_changed() || **status != NavMeshStatus::Built {
         return;
     }
 
-    if navmeshes.get(navmesh_handle).is_none() {
+    if navmeshes.get(*navmesh_handle).is_none() {
         return;
     };
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     *current_mesh_entity = Some(

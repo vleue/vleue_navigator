@@ -141,9 +141,9 @@ fn puck_back_to_start(
     mut commands: Commands,
     query: Query<(Entity, Ref<Transform>, &Puck), Without<Path>>,
     navmeshes: Res<Assets<NavMesh>>,
-    navmesh: Query<&ManagedNavMesh>,
+    navmesh: Single<&ManagedNavMesh>,
 ) {
-    let Some(navmesh) = navmeshes.get(navmesh.single()) else {
+    let Some(navmesh) = navmeshes.get(*navmesh) else {
         return;
     };
 
