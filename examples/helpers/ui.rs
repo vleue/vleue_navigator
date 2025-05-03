@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use bevy::{color::palettes, diagnostic::DiagnosticsStore, prelude::*};
 use vleue_navigator::prelude::*;
 
@@ -27,7 +28,7 @@ pub struct ExampleSettings {
     pub cache_enabled: bool,
 }
 
-fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildBuilder) {
+fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildSpawnerCommands) {
     parent
         .spawn((
             Node {
@@ -204,14 +205,14 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
 }
 
 pub fn display_settings(
-    settings: Query<Ref<NavMeshSettings>>,
+    settings: Single<Ref<NavMeshSettings>>,
     example_settings: Res<ExampleSettings>,
     mut texts: Query<(Entity, &UiSettings)>,
     mut buttons: Query<(&mut BackgroundColor, &UiSettings), With<Button>>,
     mut text_writer: TextUiWriter,
 ) {
-    let settings = settings.single();
-    if settings.is_changed() {
+    let settings = settings.deref();
+    if (*settings).is_changed() {
         for (text, param) in &mut texts {
             match param {
                 UiSettings::Simplify => {
@@ -265,13 +266,13 @@ pub fn update_settings<const STEP: u32>(
         ),
         (Changed<Interaction>, With<Button>),
     >,
-    mut settings: Query<&mut NavMeshSettings>,
+    mut settings: Single<&mut NavMeshSettings>,
     mut example_settings: ResMut<ExampleSettings>,
 ) {
     for (interaction, button, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                let mut settings = settings.single_mut();
+                let mut settings = settings.as_mut();
                 match *button {
                     UiSettingsButtons::SimplifyDec => {
                         settings.simplify = (settings.simplify - STEP as f32 / 1000.0).max(0.0);
@@ -369,20 +370,20 @@ pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
 pub fn update_stats<T: Component>(
     mut text: Query<Entity, With<UiStats>>,
     obstacles: Query<&T>,
-    navmesh: Query<(Ref<NavMeshStatus>, &ManagedNavMesh)>,
+    navmesh: Single<(Ref<NavMeshStatus>, &ManagedNavMesh)>,
     navmeshes: Res<Assets<NavMesh>>,
     diagnostics: Res<DiagnosticsStore>,
     mut text_writer: TextUiWriter,
 ) {
-    let (status, handle) = navmesh.single();
+    let (status, handle) = navmesh.deref();
 
     if !status.is_changed() && !status.is_added() {
         return;
     }
 
-    let text = text.single_mut();
+    let Ok(text) = text.single_mut() else {return};
     *text_writer.text(text, 2) = format!("{:?}", *status);
-    *text_writer.color(text, 2) = match *status {
+    *text_writer.color(text, 2) = match **status {
         NavMeshStatus::Building => palettes::tailwind::AMBER_500.into(),
         NavMeshStatus::Built => palettes::tailwind::GREEN_400.into(),
         NavMeshStatus::Failed => palettes::tailwind::RED_600.into(),
@@ -393,7 +394,7 @@ pub fn update_stats<T: Component>(
     *text_writer.text(text, 6) = format!(
         "{}",
         navmeshes
-            .get(handle)
+            .get(*handle)
             .map(|nm| nm
                 .get()
                 .layers

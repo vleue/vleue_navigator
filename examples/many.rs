@@ -2,16 +2,16 @@ use std::{
     collections::VecDeque,
     sync::{Arc, RwLock},
     time::Duration,
+    time::Instant,
 };
 
 use bevy::{
     color::palettes,
-    core::TaskPoolThreadAssignmentPolicy,
+    app::TaskPoolThreadAssignmentPolicy,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::Vec3Swizzles,
     prelude::*,
     tasks::AsyncComputeTaskPool,
-    utils::Instant,
     window::{PrimaryWindow, WindowResized},
 };
 use rand::prelude::*;
@@ -37,11 +37,13 @@ fn main() {
                             min_threads: 1,
                             max_threads: usize::MAX,
                             percent: 1.0,
+                            on_thread_spawn: None,
+                            on_thread_destroy: None,
                         },
                         ..default()
                     },
                 }),
-            FrameTimeDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin::default(),
             LogDiagnosticsPlugin::default(),
             VleueNavigatorPlugin,
         ))
@@ -128,7 +130,7 @@ fn on_mesh_change(
     mut materials: ResMut<Assets<ColorMaterial>>,
     known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     mut wait_for_mesh: Local<bool>,
 ) {
@@ -139,7 +141,7 @@ fn on_mesh_change(
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
             }
-            let window = primary_window.single();
+            let window = *primary_window;
             let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
             *current_mesh_entity = Some(
                 commands
@@ -179,13 +181,13 @@ struct Path {
 }
 
 fn spawn(
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     mut commands: Commands,
     navmeshes: Res<Assets<NavMesh>>,
     known_meshes: Res<Meshes>,
 ) {
     if navmeshes.contains(&known_meshes.aurora) {
-        let window = primary_window.single();
+        let window = *primary_window;
         let mut rng = rand::thread_rng();
         let screen = Vec2::new(window.width(), window.height());
         let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
@@ -243,7 +245,7 @@ fn compute_paths(
     mut commands: Commands,
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
     meshes: Res<Assets<NavMesh>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     task_mode: Res<TaskMode>,
     mesh: Res<Meshes>,
 ) {
@@ -253,7 +255,7 @@ fn compute_paths(
         return;
     };
     for (entity, target, transform) in &with_target {
-        let window = primary_window.single();
+        let window = *primary_window;
         let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
         let in_mesh = transform.translation.truncate() / factor + MESH_SIZE / 2.0;
@@ -296,7 +298,7 @@ fn poll_path_tasks(
     mut stats: ResMut<Stats>,
     navmeshes: Res<Assets<NavMesh>>,
     meshes: Res<Meshes>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
 ) {
     for (entity, task, transform) in &computing {
         let mut task = task.0.write().unwrap();
@@ -311,7 +313,7 @@ fn poll_path_tasks(
                     .insert(Path { path: path.path })
                     .remove::<FindingPath>();
             } else {
-                let window = primary_window.single();
+                let window = *primary_window;
                 let screen = Vec2::new(window.width(), window.height());
                 let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
@@ -334,11 +336,11 @@ fn poll_path_tasks(
 
 fn move_navigator(
     mut query: Query<(Entity, &mut Transform, &mut Path, &Navigator)>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     par_commands: ParallelCommands,
 ) {
-    let window = primary_window.single();
+    let window = *primary_window;
     let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
     query
         .par_iter_mut()
@@ -391,7 +393,7 @@ fn update_ui(
     task_mode: Res<TaskMode>,
 ) {
     let new_count = agents.iter().len();
-    let text = ui_query.single();
+    let Ok(text) = ui_query.single() else {return};
     *text_writer.text(text, 2) = format!("{}\n", new_count);
     *text_writer.text(text, 4) = format!(
         "{:.2}\n",
