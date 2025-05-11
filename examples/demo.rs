@@ -286,6 +286,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Rectangle(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -307,6 +308,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Circle(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -328,6 +330,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Ellipse(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -347,6 +350,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Capsule(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -366,6 +370,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::RegularPolygon(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -385,6 +390,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::Rhombus(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -405,6 +411,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::CircularSector(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),
@@ -424,6 +431,7 @@ fn new_obstacle(
             commands
                 .spawn((
                     transform,
+                    Visibility::Visible,
                     PrimitiveObstacle::CircularSegment(primitive),
                     Lifetime(Timer::from_seconds(
                         rng.gen_range(20.0..40.0),

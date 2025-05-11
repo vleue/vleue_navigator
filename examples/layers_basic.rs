@@ -2,7 +2,6 @@ use std::{f32::consts::FRAC_PI_2, time::Duration};
 
 use avian3d::{math::Vector, prelude::*};
 use bevy::{
-    asset::weak_handle,
     color::palettes,
     math::{vec2, vec3},
     prelude::*,
@@ -263,8 +262,7 @@ fn despawn_obstacles(
 }
 
 fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos) {
-    let Some(navmesh) = navmeshes.get(weak_handle!("BB8430DF-B783-4668-B8B2-89A6F043118D").id())
-    else {
+    let Some(navmesh) = navmeshes.get(&ManagedNavMesh::get_single()) else {
         return;
     };
     for points in [

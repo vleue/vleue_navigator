@@ -8,7 +8,7 @@ use std::{
 use tracing::instrument;
 
 use bevy::{
-    asset::uuid::Uuid,
+    asset::uuid::{self, Uuid},
     diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
     ecs::entity::EntityHashMap,
     platform::time::Instant,
@@ -35,9 +35,15 @@ pub struct ManagedNavMesh(Handle<NavMesh>);
 impl ManagedNavMesh {
     /// Create a new [`ManagedNavMesh`] with the provided id.
     pub fn from_id(id: u128) -> Self {
-        Self(Handle::Weak(AssetId::Uuid {
+        Self(Self::get_from_id(id))
+    }
+
+    /// Get the [`NavMesh`] handle from an id
+    #[inline(always)]
+    pub const fn get_from_id(id: u128) -> Handle<NavMesh> {
+        Handle::Weak(AssetId::Uuid {
             uuid: Uuid::from_u128(id),
-        }))
+        })
     }
 
     /// Create a new [`ManagedNavMesh`].
@@ -45,9 +51,15 @@ impl ManagedNavMesh {
     /// This can be used when there is a single NavMesh in the scene.
     /// Otherwise use [`Self::from_id`] with unique IDs for each NavMesh.
     pub fn single() -> Self {
-        Self(Handle::Weak(AssetId::Uuid {
-            uuid: Uuid::from_u128(0),
-        }))
+        Self(Self::get_single())
+    }
+
+    /// Get the [`NavMesh`] handle used when having a single navmesh
+    #[inline(always)]
+    pub const fn get_single() -> Handle<NavMesh> {
+        Handle::Weak(AssetId::Uuid {
+            uuid: uuid::uuid!("91C38D03-ED0F-4997-B7BC-1CDD185317D4"),
+        })
     }
 }
 
