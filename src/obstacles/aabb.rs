@@ -1,5 +1,5 @@
 use bevy::{
-    math::{vec3, Dir3, Quat, Vec2, Vec3, Vec3Swizzles},
+    math::{Dir3, Quat, Vec2, Vec3, Vec3Swizzles, vec3},
     render::primitives::Aabb,
     transform::components::{GlobalTransform, Transform},
 };

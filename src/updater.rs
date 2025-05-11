@@ -17,7 +17,7 @@ use bevy::{
 };
 use polyanya::{Layer, Mesh, Triangulation};
 
-use crate::{obstacles::ObstacleSource, NavMesh};
+use crate::{NavMesh, obstacles::ObstacleSource};
 
 /// A Marker component for an obstacle that can be cached.
 ///

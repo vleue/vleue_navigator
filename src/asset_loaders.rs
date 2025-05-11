@@ -2,7 +2,7 @@
 
 use std::{error::Error, fmt::Display};
 
-use bevy::asset::{io::Reader, AssetLoader, LoadContext};
+use bevy::asset::{AssetLoader, LoadContext, io::Reader};
 use polyanya::PolyanyaFile;
 
 use crate::NavMesh;

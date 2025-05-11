@@ -5,7 +5,7 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
 use std::f32::consts::PI;
 use std::ops::Deref;
 use vleue_navigator::prelude::*;

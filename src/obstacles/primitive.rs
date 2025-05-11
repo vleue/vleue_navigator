@@ -1,5 +1,5 @@
 use bevy::{
-    math::{vec2, Dir3, Quat, Rot2, Vec2, Vec3, Vec3Swizzles},
+    math::{Dir3, Quat, Rot2, Vec2, Vec3, Vec3Swizzles, vec2},
     prelude::{
         Capsule2d, Circle, CircularSector, CircularSegment, Component, Ellipse, Rectangle,
         RegularPolygon, Rhombus,

@@ -12,8 +12,8 @@ use polyanya::Triangulation;
 use rand::Rng;
 use std::{f32::consts::FRAC_PI_2, time::Duration};
 use vleue_navigator::{
-    prelude::{ManagedNavMesh, NavMeshSettings, NavMeshUpdateMode, NavmeshUpdaterPlugin},
     NavMesh, NavMeshDebug, VleueNavigatorPlugin,
+    prelude::{ManagedNavMesh, NavMeshSettings, NavMeshUpdateMode, NavmeshUpdaterPlugin},
 };
 
 #[derive(Component)]
