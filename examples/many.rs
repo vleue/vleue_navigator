@@ -2,7 +2,6 @@ use std::{
     collections::VecDeque,
     sync::{Arc, RwLock},
     time::Duration,
-    time::Instant,
 };
 
 use bevy::{
@@ -10,6 +9,7 @@ use bevy::{
     color::palettes,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::Vec3Swizzles,
+    platform::time::Instant,
     prelude::*,
     tasks::AsyncComputeTaskPool,
     window::{PrimaryWindow, WindowResized},

@@ -1,7 +1,7 @@
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 #[cfg(feature = "tracing")]
@@ -11,6 +11,7 @@ use bevy::{
     asset::uuid::Uuid,
     diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
     ecs::entity::EntityHashMap,
+    platform::time::Instant,
     prelude::*,
     tasks::AsyncComputeTaskPool,
     transform::TransformSystem,
