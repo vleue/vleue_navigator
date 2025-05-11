@@ -104,8 +104,8 @@ fn on_mesh_change(
             })
             .id(),
     );
-    if let Ok(entity) = text.get_single() {
-        commands.entity(entity).despawn_recursive();
+    if let Ok(entity) = text.single() {
+        commands.entity(entity).despawn();
     }
     commands
         .spawn((
@@ -204,7 +204,7 @@ fn on_click(
                 .unwrap_or_default()
             {
                 info!("going to {}", in_mesh);
-                path_step_event.send(NewPathStepEvent(in_mesh));
+                path_step_event.write(NewPathStepEvent(in_mesh));
             } else {
                 info!("clicked outside of mesh");
             }

@@ -436,7 +436,7 @@ fn move_obstacles(mut query: Query<(&mut Transform, &Obstacle)>, time: Res<Time>
 }
 
 fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos<PathGizmo>) {
-    let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
+    let Some(navmesh) = navmeshes.get(&ManagedNavMesh::get_single()) else {
         return;
     };
     for points in [(

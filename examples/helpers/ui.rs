@@ -272,7 +272,7 @@ pub fn update_settings<const STEP: u32>(
     for (interaction, button, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                let mut settings = settings.as_mut();
+                let settings = settings.as_mut();
                 match *button {
                     UiSettingsButtons::SimplifyDec => {
                         settings.simplify = (settings.simplify - STEP as f32 / 1000.0).max(0.0);

@@ -43,11 +43,11 @@ mod updater;
 /// Prelude for imports
 pub mod prelude {
     pub use crate::obstacles::{
-        cached::CachedObstacle, primitive::PrimitiveObstacle, ObstacleSource,
+        ObstacleSource, cached::CachedObstacle, primitive::PrimitiveObstacle,
     };
     pub use crate::updater::{
-        CachableObstacle, ManagedNavMesh, NavMeshSettings, NavMeshStatus, NavMeshUpdateMode,
-        NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin, NAVMESH_BUILD_DURATION,
+        CachableObstacle, ManagedNavMesh, NAVMESH_BUILD_DURATION, NavMeshSettings, NavMeshStatus,
+        NavMeshUpdateMode, NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin,
     };
     pub use crate::{NavMesh, Triangulation, VleueNavigatorPlugin};
     #[cfg(feature = "debug-with-gizmos")]
@@ -561,11 +561,11 @@ mod tests {
             {
                 let nearly_same_coords =
                     (expected_vertex.coords - actual_vertex.coords).length_squared() < 1e-8;
-                assert!(nearly_same_coords
-               ,
-                "\nvertex {index} does not have the expected coords.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
-            );
+                assert!(
+                    nearly_same_coords,
+                    "\nvertex {index} does not have the expected coords.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
+                    expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
+                );
 
                 let adjusted_actual = wrap_to_first(&actual_vertex.polygons, |index| *index != u32::MAX).unwrap_or_else(||
                 panic!("vertex {index}: Found only surrounded by obstacles.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
@@ -579,10 +579,10 @@ mod tests {
                            expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices));
 
                 assert_eq!(
-                adjusted_expectation, adjusted_actual,
-                "\nvertex {index} does not have the expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
-                expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
-            );
+                    adjusted_expectation, adjusted_actual,
+                    "\nvertex {index} does not have the expected polygons.\nExpected vertices: {0:?}\nGot vertices: {1:?}",
+                    expected_mesh.layers[i].vertices, actual_mesh.layers[i].vertices
+                );
             }
         }
     }

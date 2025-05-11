@@ -1,5 +1,5 @@
 use bevy::{
-    asset::LoadState,
+    asset::{LoadState, weak_handle},
     color::palettes,
     gltf::{Gltf, GltfMesh},
     math::Vec3Swizzles,
@@ -11,7 +11,8 @@ use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
-const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> = Handle::weak_from_u128(0);
+const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> =
+    weak_handle!("100AD183-2C5C-49A1-AB32-142000E87828");
 
 fn main() {
     App::new()
@@ -337,7 +338,7 @@ fn give_target_on_click(
         let navmesh = navmeshes.get(&current_mesh.0).unwrap();
         let Some(target) = (|| {
             let position = primary_window.cursor_position()?;
-            let (camera, transform) = camera.get_single().ok()?;
+            let (camera, transform) = camera.single().ok()?;
             let ray = camera.viewport_to_world(transform, position).ok()?;
             let denom = Vec3::Y.dot(ray.direction.into());
             let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;

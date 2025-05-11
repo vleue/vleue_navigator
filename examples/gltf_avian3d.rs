@@ -12,8 +12,8 @@ use polyanya::Triangulation;
 use rand::Rng;
 use std::{f32::consts::FRAC_PI_2, time::Duration};
 use vleue_navigator::{
-    prelude::{ManagedNavMesh, NavMeshSettings, NavMeshUpdateMode, NavmeshUpdaterPlugin},
     NavMesh, NavMeshDebug, VleueNavigatorPlugin,
+    prelude::{ManagedNavMesh, NavMeshSettings, NavMeshUpdateMode, NavmeshUpdaterPlugin},
 };
 
 #[derive(Component)]
@@ -326,7 +326,7 @@ fn move_object(
             } else {
                 commands.entity(entity).remove::<Path>();
                 let target_entity = object.0.take().unwrap();
-                commands.entity(target_entity).despawn_recursive();
+                commands.entity(target_entity).despawn();
             }
         }
     }

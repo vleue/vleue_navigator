@@ -7,7 +7,7 @@ use avian2d::{
     prelude::Collider,
 };
 use bevy::{
-    math::{vec3, Vec3Swizzles},
+    math::{Vec3Swizzles, vec3},
     prelude::*,
 };
 

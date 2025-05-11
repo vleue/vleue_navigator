@@ -262,7 +262,7 @@ fn despawn_obstacles(
 }
 
 fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos) {
-    let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
+    let Some(navmesh) = navmeshes.get(&ManagedNavMesh::get_single()) else {
         return;
     };
     for points in [

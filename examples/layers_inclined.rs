@@ -355,7 +355,7 @@ fn display_path(
     {
         return;
     }
-    let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
+    let Some(navmesh) = navmeshes.get(&ManagedNavMesh::get_single()) else {
         return;
     };
     for points in [

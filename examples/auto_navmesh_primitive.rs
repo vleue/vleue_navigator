@@ -5,7 +5,7 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
 use std::f32::consts::PI;
 use std::ops::Deref;
 use vleue_navigator::prelude::*;
@@ -256,7 +256,7 @@ fn display_mesh(
         return;
     };
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     *current_mesh_entity = Some(

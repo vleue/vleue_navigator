@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use avian3d::{math::*, prelude::*};
-use bevy::{color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer};
+use bevy::{
+    asset::weak_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
+};
 
 use vleue_navigator::prelude::*;
 
@@ -43,8 +45,10 @@ fn main() {
     app.run();
 }
 
-pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> = Handle::weak_from_u128(0);
-pub const MATERIAL_OBSTACLE_CACHED: Handle<StandardMaterial> = Handle::weak_from_u128(1);
+pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> =
+    weak_handle!("369EA0F5-EC58-457E-94E4-BDB70D99AA20");
+pub const MATERIAL_OBSTACLE_CACHED: Handle<StandardMaterial> =
+    weak_handle!("5895917E-BCB3-402B-AF02-39400A0D8F65");
 
 fn setup(
     mut commands: Commands,
