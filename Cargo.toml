@@ -18,15 +18,13 @@ tracing = { version = "0.1", optional = true }
 log = "0.4.27"
 
 [dependencies.avian2d]
-git = "https://github.com/Jondolf/avian"
-branch = "main"
+version = "0.3"
 features = ["2d", "f32", "parry-f32"]
 default-features = false
 optional = true
 
 [dependencies.avian3d]
-git = "https://github.com/Jondolf/avian"
-branch = "main"
+version = "0.3"
 features = ["3d", "f32", "parry-f32"]
 default-features = false
 optional = true
