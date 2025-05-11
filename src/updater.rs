@@ -1,13 +1,14 @@
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
 use bevy::{
+    asset::uuid::Uuid,
     diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
     ecs::entity::EntityHashMap,
     prelude::*,
@@ -33,7 +34,9 @@ pub struct ManagedNavMesh(Handle<NavMesh>);
 impl ManagedNavMesh {
     /// Create a new [`ManagedNavMesh`] with the provided id.
     pub fn from_id(id: u128) -> Self {
-        Self(Handle::<NavMesh>::weak_from_u128(id))
+        Self(Handle::Weak(AssetId::Uuid {
+            uuid: Uuid::from_u128(id),
+        }))
     }
 
     /// Create a new [`ManagedNavMesh`].
@@ -41,7 +44,9 @@ impl ManagedNavMesh {
     /// This can be used when there is a single NavMesh in the scene.
     /// Otherwise use [`Self::from_id`] with unique IDs for each NavMesh.
     pub fn single() -> Self {
-        Self(Handle::<NavMesh>::weak_from_u128(0))
+        Self(Handle::Weak(AssetId::Uuid {
+            uuid: Uuid::from_u128(0),
+        }))
     }
 }
 
@@ -59,7 +64,7 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
 
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
-#[require(ManagedNavMesh(ManagedNavMesh::single))]
+#[require(ManagedNavMesh = ManagedNavMesh::single())]
 pub struct NavMeshSettings {
     /// The minimum area that a point of an obstacle must impact. Otherwise, the obstacle will be simplified by removing this point.
     ///
@@ -424,7 +429,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
             if is_blocking.is_some() {
-                let start = bevy::utils::Instant::now();
+                let start = Instant::now();
                 let (to_cache, layer) = build_navmesh(
                     obstacles_local,
                     cached_obstacles,
@@ -439,7 +444,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             } else {
                 AsyncComputeTaskPool::get()
                     .spawn(async move {
-                        let start = bevy::utils::Instant::now();
+                        let start = Instant::now();
                         let (to_cache, layer) = build_navmesh(
                             obstacles_local,
                             cached_obstacles,

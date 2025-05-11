@@ -53,10 +53,8 @@ fn setup(
 ) {
     materials.insert(&MATERIAL_OBSTACLE_LIVE, Color::srgb(0.2, 0.7, 0.9).into());
     materials.insert(&MATERIAL_OBSTACLE_CACHED, Color::srgb(0.2, 0.9, 0.7).into());
-
     let arena_mesh = meshes.add(Cuboid::default());
     let arena_material = materials.add(Color::srgb(0.7, 0.7, 0.8));
-
     // Ground
     commands.spawn((
         Mesh3d(arena_mesh.clone()),
