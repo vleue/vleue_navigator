@@ -2,6 +2,7 @@ use std::f32::consts::FRAC_PI_2;
 
 use avian3d::{math::Vector, prelude::*};
 use bevy::{
+    asset::weak_handle,
     color::palettes,
     math::{vec2, vec3},
     prelude::*,
@@ -436,7 +437,8 @@ fn move_obstacles(mut query: Query<(&mut Transform, &Obstacle)>, time: Res<Time>
 }
 
 fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos<PathGizmo>) {
-    let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
+    let Some(navmesh) = navmeshes.get(weak_handle!("E421BF7E-E414-4459-9BAC-3C93C4AC28D0").id())
+    else {
         return;
     };
     for points in [(

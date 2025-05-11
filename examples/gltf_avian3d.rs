@@ -326,7 +326,7 @@ fn move_object(
             } else {
                 commands.entity(entity).remove::<Path>();
                 let target_entity = object.0.take().unwrap();
-                commands.entity(target_entity).despawn_recursive();
+                commands.entity(target_entity).despawn();
             }
         }
     }

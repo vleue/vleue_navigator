@@ -154,7 +154,7 @@ fn on_mesh_change(
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
             }
-            if let Ok(entity) = navigator.get_single() {
+            if let Ok(entity) = navigator.single() {
                 commands.entity(entity).despawn();
             }
             let window = *primary_window;
@@ -175,7 +175,7 @@ fn on_mesh_change(
                     ))
                     .id(),
             );
-            if let Ok(entity) = text.get_single() {
+            if let Ok(entity) = text.single() {
                 commands.entity(entity).despawn();
             }
 
@@ -306,7 +306,7 @@ fn on_click(
                 .map(|mesh| mesh.is_in_mesh(in_mesh))
                 .unwrap_or_default()
             {
-                if let Ok(navigator) = query.get_single() {
+                if let Ok(navigator) = query.single() {
                     info!("going to {}", in_mesh);
                     commands.entity(navigator).insert(Target {
                         target: in_mesh,

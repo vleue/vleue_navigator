@@ -256,7 +256,7 @@ fn display_mesh(
         return;
     };
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     *current_mesh_entity = Some(

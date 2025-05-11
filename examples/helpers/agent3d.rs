@@ -185,7 +185,7 @@ pub fn move_navigator<const SIZE: u32>(
                 distance_to_next = transform.translation.distance(path.current);
             } else {
                 commands.entity(entity).remove::<Path>();
-                commands.entity(path.target).despawn_recursive();
+                commands.entity(path.target).despawn();
                 break;
             }
         }

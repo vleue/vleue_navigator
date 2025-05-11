@@ -142,7 +142,7 @@ pub fn move_navigator(
                 path.current = next;
             } else {
                 commands.entity(entity).remove::<Path>();
-                commands.entity(path.target).despawn_recursive();
+                commands.entity(path.target).despawn();
                 break;
             }
         }
@@ -150,7 +150,7 @@ pub fn move_navigator(
 }
 
 pub fn display_navigator_path(navigator: Query<(&Transform, &Path)>, mut gizmos: Gizmos) {
-    let Ok((transform, path)) = navigator.get_single() else {
+    let Ok((transform, path)) = navigator.single() else {
         return;
     };
     let mut to_display = path.next.clone();

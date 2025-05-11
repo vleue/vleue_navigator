@@ -2,6 +2,7 @@ use std::{f32::consts::FRAC_PI_2, time::Duration};
 
 use avian3d::{math::Vector, prelude::*};
 use bevy::{
+    asset::weak_handle,
     color::palettes,
     math::{vec2, vec3},
     prelude::*,
@@ -355,7 +356,8 @@ fn display_path(
     {
         return;
     }
-    let Some(navmesh) = navmeshes.get(Handle::<NavMesh>::weak_from_u128(0).id()) else {
+    let Some(navmesh) = navmeshes.get(weak_handle!("B7B8516E-6027-44BD-A2AB-BDB8D1320033").id())
+    else {
         return;
     };
     for points in [

@@ -1,7 +1,9 @@
 use std::{f32::consts::FRAC_PI_8, time::Duration};
 
 use avian3d::{math::*, prelude::*};
-use bevy::{color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer};
+use bevy::{
+    asset::weak_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
+};
 
 use rand::Rng;
 use vleue_navigator::prelude::*;
@@ -35,7 +37,8 @@ fn main() {
         .run();
 }
 
-pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> = Handle::weak_from_u128(0);
+pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> =
+    weak_handle!("2DA56E2B-135A-47EB-843F-523360043F82");
 const ANGLE: f32 = FRAC_PI_8;
 
 fn setup(
