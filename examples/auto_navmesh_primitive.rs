@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use bevy::{
     color::palettes,
     math::vec2,
@@ -7,7 +5,9 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
+use std::f32::consts::PI;
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent2d.rs"]
@@ -245,18 +245,18 @@ fn display_mesh(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
     window_resized: EventReader<WindowResized>,
-    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
+    navmesh: Single<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
-    let (navmesh_handle, status) = navmesh.single();
-    if (!status.is_changed() || *status != NavMeshStatus::Built) && window_resized.is_empty() {
+    let (navmesh_handle, status) = navmesh.deref();
+    if (!status.is_changed() || **status != NavMeshStatus::Built) && window_resized.is_empty() {
         return;
     }
 
-    let Some(navmesh) = navmeshes.get(navmesh_handle) else {
+    let Some(navmesh) = navmeshes.get(*navmesh_handle) else {
         return;
     };
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     *current_mesh_entity = Some(
@@ -282,18 +282,20 @@ fn display_mesh(
 
 fn spawn_obstacle_on_click(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mut commands: Commands,
-    settings: Query<Ref<NavMeshSettings>>,
+    settings: Single<Ref<NavMeshSettings>>,
 ) {
     // Click was on a UI button that triggered a settings change, ignore it.
-    if settings.single().is_changed() {
+    if settings.is_changed() {
         return;
     }
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let (camera, camera_transform) = camera_q.single();
-        let window = primary_window.single();
+        let Ok((camera, camera_transform)) = camera_q.single() else {
+            return;
+        };
+        let window = *primary_window;
         if let Some(position) = window
             .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())

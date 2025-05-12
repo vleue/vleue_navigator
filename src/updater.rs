@@ -8,21 +8,23 @@ use std::{
 use tracing::instrument;
 
 use bevy::{
+    asset::uuid::{self, Uuid},
     diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
     ecs::entity::{EntityHashMap, EntityHashSet},
+    platform::time::Instant,
     prelude::*,
     tasks::AsyncComputeTaskPool,
     transform::TransformSystem,
 };
 use polyanya::{Layer, Mesh, Triangulation};
 
-use crate::{obstacles::ObstacleSource, NavMesh};
+use crate::{NavMesh, obstacles::ObstacleSource};
 
 /// A Marker component for an obstacle that can be cached.
 ///
 /// Caching obstacles can help to optimize the [`NavMesh`] generation process.
 /// A partial [`NavMesh`] will be built with them, then updated with the dynamic obstacles.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 pub struct CachableObstacle;
 
 /// A NavMesh that will be updated automatically.
@@ -33,7 +35,15 @@ pub struct ManagedNavMesh(Handle<NavMesh>);
 impl ManagedNavMesh {
     /// Create a new [`ManagedNavMesh`] with the provided id.
     pub fn from_id(id: u128) -> Self {
-        Self(Handle::<NavMesh>::weak_from_u128(id))
+        Self(Self::get_from_id(id))
+    }
+
+    /// Get the [`NavMesh`] handle from an id
+    #[inline(always)]
+    pub const fn get_from_id(id: u128) -> Handle<NavMesh> {
+        Handle::Weak(AssetId::Uuid {
+            uuid: Uuid::from_u128(id),
+        })
     }
 
     /// Create a new [`ManagedNavMesh`].
@@ -41,7 +51,15 @@ impl ManagedNavMesh {
     /// This can be used when there is a single NavMesh in the scene.
     /// Otherwise use [`Self::from_id`] with unique IDs for each NavMesh.
     pub fn single() -> Self {
-        Self(Handle::<NavMesh>::weak_from_u128(0))
+        Self(Self::get_single())
+    }
+
+    /// Get the [`NavMesh`] handle used when having a single navmesh
+    #[inline(always)]
+    pub const fn get_single() -> Handle<NavMesh> {
+        Handle::Weak(AssetId::Uuid {
+            uuid: uuid::uuid!("91C38D03-ED0F-4997-B7BC-1CDD185317D4"),
+        })
     }
 }
 
@@ -59,7 +77,7 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
 
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
-#[require(ManagedNavMesh(ManagedNavMesh::single))]
+#[require(ManagedNavMesh = ManagedNavMesh::single())]
 pub struct NavMeshSettings {
     /// The minimum area that a point of an obstacle must impact. Otherwise, the obstacle will be simplified by removing this point.
     ///
@@ -346,14 +364,16 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             ready_to_update.remove(&key);
         }
     }
-    if !removed_cachable_obstacles.is_empty()
-        || cachable_obstacles.iter().any(|(_, _, _, c)| c.is_added())
-    {
+
+    let cachable_obstacles_changed = !removed_cachable_obstacles.is_empty()
+        || cachable_obstacles.iter().any(|(_, _, _, c)| c.is_added());
+    if cachable_obstacles_changed {
         for (_, mut settings, ..) in &mut navmeshes {
             debug!("cache cleared due to cachable obstacle change");
             settings.bypass_change_detection().cached = None;
         }
     }
+
     for (_, mut settings, ..) in &mut navmeshes {
         if settings.is_changed() {
             debug!("cache cleared due to settings change");
@@ -366,6 +386,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
         .iter_mut()
         .filter_map(|(entity, settings, _, mode, ..)| {
             if settings.is_changed()
+                || cachable_obstacles_changed
                 || has_removed_obstacles
                 || matches!(mode, NavMeshUpdateMode::OnDemand(true))
                 || dynamic_obstacles
@@ -436,7 +457,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             let updating = NavmeshUpdateTask(Arc::new(RwLock::new(None)));
             let writer = updating.0.clone();
             if is_blocking.is_some() {
-                let start = bevy::utils::Instant::now();
+                let start = Instant::now();
                 let (to_cache, layer) = build_navmesh(
                     obstacles_local,
                     cached_obstacles,
@@ -451,7 +472,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             } else {
                 AsyncComputeTaskPool::get()
                     .spawn(async move {
-                        let start = bevy::utils::Instant::now();
+                        let start = Instant::now();
                         let (to_cache, layer) = build_navmesh(
                             obstacles_local,
                             cached_obstacles,

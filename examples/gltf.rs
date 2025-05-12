@@ -1,5 +1,5 @@
 use bevy::{
-    asset::LoadState,
+    asset::{LoadState, weak_handle},
     color::palettes,
     gltf::{Gltf, GltfMesh},
     math::Vec3Swizzles,
@@ -11,7 +11,8 @@ use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
-const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> = Handle::weak_from_u128(0);
+const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> =
+    weak_handle!("100AD183-2C5C-49A1-AB32-142000E87828");
 
 fn main() {
     App::new()
@@ -65,6 +66,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(AmbientLight {
         color: palettes::css::SEA_GREEN.into(),
         brightness: 100.0,
+        affects_lightmapped_meshes: false,
     });
 
     commands.spawn((
@@ -329,14 +331,14 @@ fn give_target_on_click(
     mut materials: ResMut<Assets<StandardMaterial>>,
     current_mesh: Res<CurrentMesh>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
 ) {
     if mouse_buttons.just_pressed(MouseButton::Left) {
         let navmesh = navmeshes.get(&current_mesh.0).unwrap();
         let Some(target) = (|| {
-            let position = primary_window.single().cursor_position()?;
-            let (camera, transform) = camera.get_single().ok()?;
+            let position = primary_window.cursor_position()?;
+            let (camera, transform) = camera.single().ok()?;
             let ray = camera.viewport_to_world(transform, position).ok()?;
             let denom = Vec3::Y.dot(ray.direction.into());
             let t = (Vec3::ZERO - ray.origin).dot(Vec3::Y) / denom;
@@ -385,7 +387,7 @@ fn give_target_on_click(
             }
         }
         for entity in &targets {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -404,7 +406,7 @@ fn move_object(
             } else {
                 commands.entity(entity).remove::<Path>();
                 let target_entity = object.0.take().unwrap();
-                commands.entity(target_entity).despawn_recursive();
+                commands.entity(target_entity).despawn();
             }
         }
     }

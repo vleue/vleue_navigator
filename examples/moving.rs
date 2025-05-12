@@ -137,7 +137,7 @@ fn on_mesh_change(
     mut materials: ResMut<Assets<ColorMaterial>>,
     known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     navigator: Query<Entity, With<Navigator>>,
     window_resized: EventReader<WindowResized>,
     text: Query<Entity, With<Text>>,
@@ -154,10 +154,10 @@ fn on_mesh_change(
             if let Some(entity) = *current_mesh_entity {
                 commands.entity(entity).despawn();
             }
-            if let Ok(entity) = navigator.get_single() {
+            if let Ok(entity) = navigator.single() {
                 commands.entity(entity).despawn();
             }
-            let window = primary_window.single();
+            let window = *primary_window;
             let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
             *current_mesh_entity = Some(
                 commands
@@ -175,7 +175,7 @@ fn on_mesh_change(
                     ))
                     .id(),
             );
-            if let Ok(entity) = text.get_single() {
+            if let Ok(entity) = text.single() {
                 commands.entity(entity).despawn();
             }
 
@@ -275,7 +275,7 @@ struct Path {
 
 fn on_click(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,
@@ -284,8 +284,11 @@ fn on_click(
     navmeshes: Res<Assets<NavMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let (camera, camera_transform) = camera_q.single();
-        let window = primary_window.single();
+        let Ok((camera, camera_transform)) = camera_q.single() else {
+            return;
+        };
+
+        let window = *primary_window;
         if let Some(position) = window
             .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
@@ -303,7 +306,7 @@ fn on_click(
                 .map(|mesh| mesh.is_in_mesh(in_mesh))
                 .unwrap_or_default()
             {
-                if let Ok(navigator) = query.get_single() {
+                if let Ok(navigator) = query.single() {
                     info!("going to {}", in_mesh);
                     commands.entity(navigator).insert(Target {
                         target: in_mesh,
@@ -341,9 +344,9 @@ fn compute_paths(
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
     meshes: Res<Assets<NavMesh>>,
     mesh: Res<MeshDetails>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_window.single();
+    let window = *primary_window;
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     for (entity, target, transform) in &with_target {
@@ -383,11 +386,11 @@ fn poll_path_tasks(mut commands: Commands, computing: Query<(Entity, &FindingPat
 fn move_navigator(
     mut query: Query<(Entity, &mut Transform, &mut Path, &Navigator)>,
     mesh: Res<MeshDetails>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let window = primary_window.single();
+    let window = primary_window;
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
     for (entity, mut transform, mut path, navigator) in &mut query {
         let next = (path.path[0] - mesh.size / 2.0) * factor;
@@ -411,9 +414,9 @@ fn display_path(
     query: Query<(&Transform, &Path)>,
     mut gizmos: Gizmos,
     mesh: Res<MeshDetails>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_window.single();
+    let window = *primary_window;
     let factor = (window.width() / mesh.size.x).min(window.height() / mesh.size.y);
 
     for (transform, path) in &query {

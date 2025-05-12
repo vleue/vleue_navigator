@@ -61,7 +61,7 @@ fn on_mesh_change(
     mut materials: ResMut<Assets<ColorMaterial>>,
     known_meshes: Res<MyNavMesh>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     window_resized: EventReader<WindowResized>,
     text: Query<Entity, With<Text>>,
     mut waiting_for_available: Local<bool>,
@@ -76,9 +76,9 @@ fn on_mesh_change(
     };
     *waiting_for_available = false;
     if let Some(entity) = *current_mesh_entity {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
-    let window = primary_window.single();
+    let window = *primary_window;
     let factor = (window.width() / MESH_WIDTH).min(window.height() / MESH_HEIGHT);
 
     *current_mesh_entity = Some(
@@ -104,8 +104,8 @@ fn on_mesh_change(
             })
             .id(),
     );
-    if let Ok(entity) = text.get_single() {
-        commands.entity(entity).despawn_recursive();
+    if let Ok(entity) = text.single() {
+        commands.entity(entity).despawn();
     }
     commands
         .spawn((
@@ -179,14 +179,16 @@ struct NewPathStepEvent(Vec2);
 fn on_click(
     mut path_step_event: EventWriter<NewPathStepEvent>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     meshes: Res<MyNavMesh>,
     navmeshes: Res<Assets<NavMesh>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        let (camera, camera_transform) = camera_q.single();
-        let window = primary_window.single();
+        let Ok((camera, camera_transform)) = camera_q.single() else {
+            return;
+        };
+        let window = *primary_window;
         if let Some(position) = window
             .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
@@ -202,7 +204,7 @@ fn on_click(
                 .unwrap_or_default()
             {
                 info!("going to {}", in_mesh);
-                path_step_event.send(NewPathStepEvent(in_mesh));
+                path_step_event.write(NewPathStepEvent(in_mesh));
             } else {
                 info!("clicked outside of mesh");
             }
@@ -236,9 +238,9 @@ fn compute_paths(
 fn update_path_display(
     path_to_display: Res<PathToDisplay>,
     mut gizmos: Gizmos,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_window.single();
+    let window = *primary_window;
     let factor = (window.width() / MESH_WIDTH).min(window.height() / MESH_HEIGHT);
 
     let path = path_to_display
