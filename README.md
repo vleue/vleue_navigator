@@ -29,22 +29,24 @@ Spawn entities marked as obstacles, create the NavMesh live from them. See [auto
 ## Reading list
 
 Pathfinding:
-* [Compromise-free Pathfinding on a Navigation Mesh](https://www.ijcai.org/proceedings/2017/0070.pdf): Fast and optimal path finding on a generalized navmesh
+
+- [Compromise-free Pathfinding on a Navigation Mesh](https://www.ijcai.org/proceedings/2017/0070.pdf): Fast and optimal path finding on a generalized navmesh
 
 NavMesh building:
-* [Line Generalisation by Repeated Elimination of Points](https://hull-repository.worktribe.com/preview/376364/000870493786962263.pdf): Geometry simplification while keeping the general shape
-* [Constrained Delaunay Triangulation](https://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation): Building a tri-mesh from edges
-* [Polygon Offsetting by Computing Winding Numbers](https://mcmains.me.berkeley.edu/pubs/DAC05OffsetPolygon.pdf): Agent radius
 
+- [Line Generalisation by Repeated Elimination of Points](https://hull-repository.worktribe.com/preview/376364/000870493786962263.pdf): Geometry simplification while keeping the general shape
+- [Constrained Delaunay Triangulation](https://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation): Building a tri-mesh from edges
+- [Polygon Offsetting by Computing Winding Numbers](https://mcmains.me.berkeley.edu/pubs/DAC05OffsetPolygon.pdf): Agent radius
 
 ### To Implement
 
-* Steering Behaviors For Autonomous Characters https://www.red3d.com/cwr/steer/
+- Steering Behaviors For Autonomous Characters https://www.red3d.com/cwr/steer/
 
 ## Bevy Supported Versions
 
-|Bevy|vleue_navigator|avian|
-|---|---|---|
-|0.15|0.11.1|0.2|
-|0.14|0.10|0.1|
-|0.13|0.7|x|
+| Bevy | vleue_navigator | avian |
+| ---- | --------------- | ----- |
+| 0.16 | 0.12            | 0.3   |
+| 0.15 | 0.11.1          | 0.2   |
+| 0.14 | 0.10            | 0.1   |
+| 0.13 | 0.7             | x     |
