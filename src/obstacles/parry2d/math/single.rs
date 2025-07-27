@@ -16,6 +16,8 @@ pub type Vector = Vec2;
 pub type Vector2 = Vec2;
 /// The vector type used by Avian. This is always a 3D vector regardless of the chosen dimension.
 pub type Vector3 = Vec3;
+/// The `i32` vector type chosen based on the dimension.
+pub type IVector = IVec2;
 
 impl AdjustPrecision for f32 {
     type Adjusted = Scalar;

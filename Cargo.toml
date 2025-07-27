@@ -30,12 +30,18 @@ default-features = false
 optional = true
 
 [dependencies.parry2d]
-version = "0.22.0"
+version = "0.22"
 optional = true
+
 [dependencies.nalgebra]
 version = "0.33"
 features = ["convert-glam029"]
 optional = true
+
+[dependencies.bitflags]
+version = "2.9"
+optional = true
+
 [dependencies.polyanya]
 version = "0.13.0"
 
@@ -77,7 +83,7 @@ debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]
 avian3d = ["dep:avian3d"]
-parry2d = ["dep:parry2d", "dep:nalgebra"]
+parry2d = ["dep:parry2d", "dep:nalgebra","dep:bitflags"]
 
 [[example]]
 name = "auto_navmesh_avian2d"

@@ -132,7 +132,7 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Tran
                         transform.translation.xy(),
                         Rot2::radians(transform.rotation.to_axis_angle().1),
                     ),
-                    cuboid.half_extents.xy().into(),
+                    (cuboid.half_extents.xy() * 2.0).into(),
                     Color::WHITE,
                 );
             }
@@ -153,7 +153,7 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Tran
 
 fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) {
     commands.spawn((
-        match rng.gen_range(0..4) {
+        match rng.gen_range(0..6) {
             0 => SharedShapeStorage::rectangle(
                 rng.gen_range(1.0..5.0) * FACTOR,
                 rng.gen_range(1.0..5.0) * FACTOR,
@@ -167,7 +167,15 @@ fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transfo
                 rng.gen_range(1.0..3.0) * FACTOR,
                 rng.gen_range(1.5..5.0) * FACTOR,
             ),
-
+            4 => SharedShapeStorage::round_rectangle(
+                rng.gen_range(1.0..3.0) * FACTOR,
+                rng.gen_range(1.5..5.0) * FACTOR,
+                rng.gen_range(1.0..2.0) * FACTOR,
+            ),
+            5 => SharedShapeStorage::regular_polygon(
+                rng.gen_range(1.0..5.0) * FACTOR,
+                rng.gen_range(3..8),
+            ),
             _ => unreachable!(),
         },
         transform,

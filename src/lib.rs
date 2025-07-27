@@ -43,7 +43,7 @@ mod updater;
 /// Prelude for imports
 pub mod prelude {
     pub use crate::obstacles::{
-        ObstacleSource, cached::CachedObstacle, parry2d::SharedShapeStorage,
+        ObstacleSource, cached::CachedObstacle, parry2d::shape::SharedShapeStorage,
         primitive::PrimitiveObstacle,
     };
     pub use crate::updater::{

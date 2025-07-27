@@ -11,18 +11,17 @@ use parry2d::{
 
 use nalgebra::{Point2, UnitVector2, Vector2};
 
-use crate::{
-    obstacles::parry2d::math::{na_iso_to_iso, AdjustPrecision, AsF32, Scalar, FRAC_PI_2, PI, TAU},
-    prelude::ObstacleSource,
+use crate::obstacles::parry2d::math::{
+    AdjustPrecision, AsF32, FRAC_PI_2, PI, Scalar, TAU, na_iso_to_iso,
 };
-/// An ellipse shape that can be stored in a [`SharedShape`] for an ellipse [`Collider`].
+/// An ellipse shape that can be stored in a [`SharedShape`] for an [`Ellipse`].
 ///
-/// This wrapper is required to allow implementing the necessary traits from [`parry`]
+/// This wrapper is required to allow implementing the necessary traits from [`parry2d`]
 /// for Bevy's [`Ellipse`] type.
 #[derive(Clone, Copy, Debug, Deref, DerefMut)]
-pub struct EllipseColliderShape(pub Ellipse);
+pub struct EllipseShape(pub Ellipse);
 
-impl SupportMap for EllipseColliderShape {
+impl SupportMap for EllipseShape {
     #[inline]
     fn local_support_point(&self, direction: &Vector2<Scalar>) -> Point2<Scalar> {
         let [a, b] = self.half_size.adjust_precision().to_array();
@@ -31,7 +30,7 @@ impl SupportMap for EllipseColliderShape {
     }
 }
 
-impl Shape for EllipseColliderShape {
+impl Shape for EllipseShape {
     fn clone_dyn(&self) -> Box<dyn Shape> {
         Box::new(*self)
     }
@@ -42,7 +41,7 @@ impl Shape for EllipseColliderShape {
         _num_subdivisions: u32,
     ) -> Option<Box<dyn Shape>> {
         let half_size = Vec2::from(*scale).f32() * self.half_size;
-        Some(Box::new(EllipseColliderShape(Ellipse::new(
+        Some(Box::new(EllipseShape(Ellipse::new(
             half_size.x,
             half_size.y,
         ))))
@@ -117,11 +116,11 @@ impl Shape for EllipseColliderShape {
     }
 
     fn as_support_map(&self) -> Option<&dyn SupportMap> {
-        Some(self as &dyn SupportMap)
+        Some(self)
     }
 }
 
-impl RayCast for EllipseColliderShape {
+impl RayCast for EllipseShape {
     fn cast_local_ray_and_get_normal(
         &self,
         ray: &parry2d::query::Ray,
@@ -138,7 +137,7 @@ impl RayCast for EllipseColliderShape {
     }
 }
 
-impl PointQuery for EllipseColliderShape {
+impl PointQuery for EllipseShape {
     fn project_local_point(
         &self,
         pt: &parry2d::math::Point<Scalar>,
@@ -155,15 +154,14 @@ impl PointQuery for EllipseColliderShape {
     }
 }
 
-
-/// A regular polygon shape that can be stored in a [`SharedShape`] for a regular polygon [`Collider`].
+/// A regular polygon shape that can be stored in a [`SharedShape`] for a regular polygon.
 ///
-/// This wrapper is required to allow implementing the necessary traits from [`parry`]
+/// This wrapper is required to allow implementing the necessary traits from [`parry2d`]
 /// for Bevy's [`RegularPolygon`] type.
 #[derive(Clone, Copy, Debug, Deref, DerefMut)]
-pub struct RegularPolygonColliderShape(pub RegularPolygon);
+pub struct RegularPolygonShape(pub RegularPolygon);
 
-impl SupportMap for RegularPolygonColliderShape {
+impl SupportMap for RegularPolygonShape {
     #[inline]
     fn local_support_point(&self, direction: &Vector2<Scalar>) -> Point2<Scalar> {
         // TODO: For polygons with a small number of sides, maybe just iterating
@@ -190,7 +188,7 @@ impl SupportMap for RegularPolygonColliderShape {
     }
 }
 
-impl PolygonalFeatureMap for RegularPolygonColliderShape {
+impl PolygonalFeatureMap for RegularPolygonShape {
     #[inline]
     fn local_support_feature(
         &self,
@@ -232,7 +230,7 @@ impl PolygonalFeatureMap for RegularPolygonColliderShape {
     }
 }
 
-impl Shape for RegularPolygonColliderShape {
+impl Shape for RegularPolygonShape {
     fn clone_dyn(&self) -> Box<dyn Shape> {
         Box::new(*self)
     }
@@ -243,7 +241,7 @@ impl Shape for RegularPolygonColliderShape {
         _num_subdivisions: u32,
     ) -> Option<Box<dyn Shape>> {
         let circumradius = Vec2::from(*scale).f32() * self.circumradius();
-        Some(Box::new(RegularPolygonColliderShape(RegularPolygon::new(
+        Some(Box::new(RegularPolygonShape(RegularPolygon::new(
             circumradius.length(),
             self.sides,
         ))))
@@ -322,11 +320,11 @@ impl Shape for RegularPolygonColliderShape {
     }
 
     fn as_support_map(&self) -> Option<&dyn SupportMap> {
-        Some(self as &dyn SupportMap)
+        Some(self)
     }
 
     fn as_polygonal_feature_map(&self) -> Option<(&dyn PolygonalFeatureMap, Scalar)> {
-        Some((self as &dyn PolygonalFeatureMap, 0.0))
+        Some((self, 0.0))
     }
 
     fn feature_normal_at_point(
@@ -354,7 +352,7 @@ impl Shape for RegularPolygonColliderShape {
     }
 }
 
-impl RayCast for RegularPolygonColliderShape {
+impl RayCast for RegularPolygonShape {
     fn cast_local_ray_and_get_normal(
         &self,
         ray: &parry2d::query::Ray,
@@ -371,7 +369,7 @@ impl RayCast for RegularPolygonColliderShape {
     }
 }
 
-impl PointQuery for RegularPolygonColliderShape {
+impl PointQuery for RegularPolygonShape {
     fn project_local_point(
         &self,
         pt: &parry2d::math::Point<Scalar>,

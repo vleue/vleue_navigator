@@ -89,7 +89,6 @@ impl Rotation {
     /// can be a result of incorrect construction or floating point error caused by
     /// successive operations.
     #[inline]
-    #[doc(alias = "norm2")]
     pub fn length_squared(self) -> Scalar {
         Vector::new(self.sin, self.cos).length_squared()
     }
@@ -115,7 +114,7 @@ impl From<&GlobalTransform> for Position {
 impl Ease for Position {
     fn interpolating_curve_unbounded(start: Self, end: Self) -> impl Curve<Self> {
         FunctionCurve::new(Interval::UNIT, move |t| {
-            Position(Vector::lerp(start.0, end.0, t as Scalar))
+            Position(Vector::lerp(start.0, end.0, t))
         })
     }
 }
