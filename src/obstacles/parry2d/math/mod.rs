@@ -37,7 +37,6 @@ impl AsF32 for Vec2 {
     }
 }
 
-#[expect(clippy::unnecessary_cast)]
 pub(crate) fn na_iso_to_iso(isometry: &Isometry<Scalar>) -> Isometry2d {
     Isometry2d::new(
         Vector::from(isometry.translation).f32(),

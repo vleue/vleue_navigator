@@ -187,6 +187,7 @@ mod copypasta {
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn arc_2d_inner(
         direction_angle: f64,
         arc_angle: f64,
