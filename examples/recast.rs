@@ -18,9 +18,9 @@ fn main() {
             .map(|(i, v)| {
                 Vertex::new(
                     Vec2::new(
-                        v.z as f32 * polygon_mesh.cell_size,
                         v.x as f32 * polygon_mesh.cell_size,
-                    ),
+                        v.z as f32 * polygon_mesh.cell_size,
+                    ) + polygon_mesh.aabb.min.xz(),
                     polygon_mesh
                         .polygons()
                         .iter()
@@ -39,11 +39,49 @@ fn main() {
     )
     .unwrap();
 
-    let navmesh = polyanya::Mesh {
+    let mut navmesh = polyanya::Mesh {
         layers: vec![layer],
         search_delta: 0.1,
         search_steps: 5,
     };
+    navmesh.reorder_neighbors_ccw_and_fix_corners();
+
+    let mut rdr =
+        std::io::BufReader::new(std::fs::File::open("assets/recast/detail_mesh.json").unwrap());
+    let detailed_mesh: DetailedMesh = serde_json::from_reader(&mut rdr).unwrap();
+
+    let layer = Layer::new(
+        detailed_mesh
+            .vertices
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                Vertex::new(
+                    Vec2::new(v.x, v.z),
+                    detailed_mesh
+                        .triangles()
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, p)| p.contains(&(i as u32)))
+                        .map(|(n, _)| n as u32)
+                        .collect(),
+                )
+            })
+            .collect(),
+        detailed_mesh
+            .triangles()
+            .into_iter()
+            .map(|p| polyanya::Polygon::new(p.into_iter().map(|i| i as u32).collect(), false))
+            .collect(),
+    )
+    .unwrap();
+
+    let mut detailed_navmesh = polyanya::Mesh {
+        layers: vec![layer],
+        search_delta: 0.1,
+        search_steps: 5,
+    };
+    detailed_navmesh.reorder_neighbors_ccw_and_fix_corners();
 
     App::new()
         .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
@@ -55,12 +93,12 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, (draw_recast_navmesh, draw_parsed_recast_navmesh))
         .insert_resource(polygon_mesh)
-        .insert_resource(RecastNavmesh(navmesh))
+        .insert_resource(RecastNavmesh(navmesh, detailed_navmesh))
         .run();
 }
 
 #[derive(Resource)]
-struct RecastNavmesh(polyanya::Mesh);
+struct RecastNavmesh(polyanya::Mesh, polyanya::Mesh);
 
 fn setup(
     mut commands: Commands,
@@ -72,9 +110,9 @@ fn setup(
         Transform::from_xyz(50.0, 150.0, -30.0).looking_at(Vec3::new(0.0, 0.0, -30.0), Vec3::Y),
     ));
 
-    commands.spawn(SceneRoot(
-        asset_server.load(GltfAssetLabel::Scene(0).from_asset("recast/dungeon.glb")),
-    ));
+    // commands.spawn(SceneRoot(
+    //     asset_server.load(GltfAssetLabel::Scene(0).from_asset("recast/dungeon.glb")),
+    // ));
 
     commands.spawn((
         DirectionalLight {
@@ -91,34 +129,69 @@ fn setup(
 }
 
 fn draw_recast_navmesh(mut gizmos: Gizmos, recast: Res<PolygonMesh>) {
-    for polygon in recast.polygons() {
-        let points = recast.polygon(polygon);
-        let mut points: Vec<_> = points
-            .iter()
-            .map(|p| {
-                p.as_vec3() * Vec3::new(recast.cell_size, recast.cell_height, recast.cell_size)
-                    + recast.aabb.min
-            })
-            .collect();
-        points.push(points[0]);
+    // for polygon in recast.polygons() {
+    //     let points = recast.polygon(polygon);
+    //     let mut points: Vec<_> = points
+    //         .iter()
+    //         .map(|p| {
+    //             p.as_vec3() * Vec3::new(recast.cell_size, recast.cell_height, recast.cell_size)
+    //                 + recast.aabb.min
+    //         })
+    //         .collect();
+    //     points.push(points[0]);
 
-        gizmos.linestrip(points, Color::linear_rgb(1.0, 0.0, 0.0));
-    }
+    //     gizmos.linestrip(points, Color::linear_rgb(1.0, 0.0, 0.0));
+    // }
 }
 
 fn draw_parsed_recast_navmesh(
     mut gizmos: Gizmos,
     recast: Res<RecastNavmesh>,
     recast_original: Res<PolygonMesh>,
+    time: Res<Time>,
 ) {
-    display_mesh_gizmo(
-        &recast.0,
-        &Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -FRAC_PI_2, 0.0, -FRAC_PI_2))
-            .with_translation(recast_original.aabb.min)
-            .into(),
-        palettes::tailwind::RED_400.into(),
-        &mut gizmos,
+    let start = vec2(46.998413, 1.717747);
+    let end = vec2(20.703018, -80.770203);
+
+    gizmos.sphere(
+        vec3(start.x, recast_original.aabb.min.y, start.y),
+        1.0,
+        palettes::tailwind::LIME_400,
     );
+    gizmos.sphere(
+        vec3(end.x, recast_original.aabb.min.y, end.y),
+        1.0,
+        palettes::tailwind::YELLOW_400,
+    );
+
+    let Some(path) = (if time.elapsed_secs() as u32 % 2 == 0 {
+        display_mesh_gizmo(
+            &recast.0,
+            &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2))
+                .with_translation(Vec3::Y * recast_original.aabb.min.y)
+                .into(),
+            palettes::tailwind::RED_400.into(),
+            &mut gizmos,
+        );
+        recast.0.path(start, end)
+    } else {
+        display_mesh_gizmo(
+            &recast.1,
+            &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)).into(),
+            palettes::tailwind::BLUE_400.into(),
+            &mut gizmos,
+        );
+        recast.1.path(start, end)
+    }) else {
+        return;
+    };
+    let mut path = path
+        .path
+        .iter()
+        .map(|v| vec3(v.x, recast_original.aabb.min.y, v.y))
+        .collect::<Vec<_>>();
+    path.insert(0, vec3(start.x, recast_original.aabb.min.y, start.y));
+    gizmos.linestrip(path, palettes::tailwind::BLUE_600);
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Deserialize, Resource)]
@@ -175,5 +248,49 @@ impl PolygonMesh {
             .iter()
             .map(|&vertex| self.vertices[vertex as usize])
             .collect()
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Resource)]
+pub struct DetailedMesh {
+    meshes: Vec<SubMesh>,
+    vertices: Vec<Vec3>,
+    triangles: Vec<([u32; 3], u32)>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Resource)]
+pub struct SubMesh {
+    first_vertex_index: u32,
+    vertex_count: u32,
+    first_triangle_index: u32,
+    triangle_count: u32,
+}
+
+impl DetailedMesh {
+    fn triangles(&self) -> Vec<[u32; 3]> {
+        self.meshes
+            .iter()
+            .flat_map(|mesh| {
+                self.triangles
+                    .iter()
+                    .skip(mesh.first_triangle_index as usize)
+                    .take(mesh.triangle_count as usize)
+                    .map(|&([a, b, c], _)| {
+                        [
+                            a + mesh.first_vertex_index,
+                            b + mesh.first_vertex_index,
+                            c + mesh.first_vertex_index,
+                        ]
+                    })
+            })
+            .collect()
+    }
+
+    fn triangle(&self, vertices: [u32; 3]) -> [Vec3; 3] {
+        [
+            self.vertices[vertices[0] as usize],
+            self.vertices[vertices[1] as usize],
+            self.vertices[vertices[2] as usize],
+        ]
     }
 }
