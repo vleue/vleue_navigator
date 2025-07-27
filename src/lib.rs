@@ -430,25 +430,47 @@ pub fn display_navmesh(
             let Some(layer) = &navmesh.layers.get(settings.layer.unwrap_or(0) as usize) else {
                 continue;
             };
-            #[cfg(feature = "detailed-layers")]
-            let scale = layer.scale;
-            #[cfg(not(feature = "detailed-layers"))]
-            let scale = Vec2::ONE;
-            for polygon in &layer.polygons {
-                let mut v = polygon
-                    .vertices
-                    .iter()
-                    .filter(|i| **i != u32::MAX)
-                    .map(|i| layer.vertices[*i as usize].coords * scale)
-                    .map(|v| mesh_to_world.transform_point(v.extend(0.0)))
-                    .collect::<Vec<_>>();
-                if !v.is_empty() {
-                    let first = polygon.vertices[0];
-                    let first = &layer.vertices[first as usize];
-                    v.push(mesh_to_world.transform_point((first.coords * scale).extend(0.0)));
-                    gizmos.linestrip(v, color);
-                }
-            }
+            display_layer_gizmo(layer, mesh_to_world, color, &mut gizmos);
+        }
+    }
+}
+
+#[cfg(feature = "debug-with-gizmos")]
+pub fn display_mesh_gizmo(
+    mesh: &polyanya::Mesh,
+    mesh_to_world: &bevy::prelude::GlobalTransform,
+    color: Color,
+    gizmos: &mut Gizmos,
+) {
+    for layer in &mesh.layers {
+        display_layer_gizmo(&layer, mesh_to_world, color, gizmos);
+    }
+}
+
+#[cfg(feature = "debug-with-gizmos")]
+pub fn display_layer_gizmo(
+    layer: &polyanya::Layer,
+    mesh_to_world: &bevy::prelude::GlobalTransform,
+    color: Color,
+    gizmos: &mut Gizmos,
+) {
+    #[cfg(feature = "detailed-layers")]
+    let scale = layer.scale;
+    #[cfg(not(feature = "detailed-layers"))]
+    let scale = Vec2::ONE;
+    for polygon in &layer.polygons {
+        let mut v = polygon
+            .vertices
+            .iter()
+            .filter(|i| **i != u32::MAX)
+            .map(|i| layer.vertices[*i as usize].coords * scale)
+            .map(|v| mesh_to_world.transform_point(v.extend(0.0)))
+            .collect::<Vec<_>>();
+        if !v.is_empty() {
+            let first = polygon.vertices[0];
+            let first = &layer.vertices[first as usize];
+            v.push(mesh_to_world.transform_point((first.coords * scale).extend(0.0)));
+            gizmos.linestrip(v, color);
         }
     }
 }
