@@ -1,6 +1,6 @@
 use std::f32::consts::FRAC_PI_2;
 
-use bevy::{color::palettes, prelude::*};
+use bevy::{color::palettes, platform::collections::HashMap, prelude::*};
 use polyanya::{Layer, Vertex};
 use serde::Deserialize;
 use vleue_navigator::{VleueNavigatorPlugin, display_mesh_gizmo, prelude::*};
@@ -25,8 +25,7 @@ fn main() {
                         .polygons()
                         .iter()
                         .enumerate()
-                        .filter(|(_, p)| p.contains(&(i as u16)))
-                        .map(|(n, _)| n as u32)
+                        .filter_map(|(n, p)| p.contains(&(i as u16)).then_some(n as u32))
                         .collect(),
                 )
             })
@@ -55,6 +54,7 @@ fn main() {
         std::io::BufReader::new(std::fs::File::open("assets/recast/detail_mesh.json").unwrap());
     let detailed_mesh: DetailedMesh = serde_json::from_reader(&mut rdr).unwrap();
 
+    let common = detailed_mesh.common_vertices();
     let layer = Layer::new(
         detailed_mesh
             .vertices
@@ -67,8 +67,14 @@ fn main() {
                         .triangles()
                         .iter()
                         .enumerate()
-                        .filter(|(_, p)| p.contains(&(i as u32)))
-                        .map(|(n, _)| n as u32)
+                        .filter_map(|(n, p)| {
+                            common
+                                .get(&(i as u32))
+                                .unwrap()
+                                .iter()
+                                .find(|ii| p.contains(&(**ii as u32)))
+                                .map(|_| n as u32)
+                        })
                         .collect(),
                 )
             })
@@ -76,7 +82,7 @@ fn main() {
         detailed_mesh
             .triangles()
             .into_iter()
-            .map(|p| polyanya::Polygon::new(p.into_iter().map(|i| i as u32).collect(), false))
+            .map(|p| polyanya::Polygon::new(vec![p[2] as u32, p[1] as u32, p[0] as u32], false))
             .collect(),
     )
     .unwrap();
@@ -108,7 +114,7 @@ struct RecastNavmesh(polyanya::Mesh, polyanya::Mesh);
 
 fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    // asset_server: Res<AssetServer>,
     mut config_store: ResMut<GizmoConfigStore>,
 ) {
     commands.spawn((
@@ -134,7 +140,8 @@ fn setup(
     }
 }
 
-fn draw_recast_navmesh(mut gizmos: Gizmos, recast: Res<PolygonMesh>) {
+fn draw_recast_navmesh(// mut gizmos: Gizmos, recast: Res<PolygonMesh>
+) {
     // for polygon in recast.polygons() {
     //     let points = recast.polygon(polygon);
     //     let mut points: Vec<_> = points
@@ -170,25 +177,18 @@ fn draw_parsed_recast_navmesh(
         palettes::tailwind::YELLOW_400,
     );
 
-    let Some(path) = (if time.elapsed_secs() as u32 % 2 == 0 {
-        display_mesh_gizmo(
-            &recast.0,
-            &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2))
-                .with_translation(Vec3::Y * recast_original.aabb.min.y)
-                .into(),
-            palettes::tailwind::BLUE_400.into(),
-            &mut gizmos,
-        );
-        recast.0.path(start.xz(), end.xz())
+    let mesh = if time.elapsed_secs() as u32 % 2 == 0 {
+        &recast.0
     } else {
-        display_mesh_gizmo(
-            &recast.1,
-            &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)).into(),
-            palettes::tailwind::BLUE_400.into(),
-            &mut gizmos,
-        );
-        recast.1.path(start, end)
-    }) else {
+        &recast.1
+    };
+    display_mesh_gizmo(
+        mesh,
+        &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)).into(),
+        palettes::tailwind::BLUE_400.into(),
+        &mut gizmos,
+    );
+    let Some(path) = mesh.path(start.xz(), end.xz()) else {
         return;
     };
 
@@ -250,12 +250,12 @@ impl PolygonMesh {
             .collect()
     }
 
-    fn polygon(&self, vertices: Vec<u16>) -> Vec<UVec3> {
-        vertices
-            .iter()
-            .map(|&vertex| self.vertices[vertex as usize])
-            .collect()
-    }
+    // fn polygon(&self, vertices: Vec<u16>) -> Vec<UVec3> {
+    //     vertices
+    //         .iter()
+    //         .map(|&vertex| self.vertices[vertex as usize])
+    //         .collect()
+    // }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Deserialize, Resource)]
@@ -293,11 +293,28 @@ impl DetailedMesh {
             .collect()
     }
 
-    fn triangle(&self, vertices: [u32; 3]) -> [Vec3; 3] {
-        [
-            self.vertices[vertices[0] as usize],
-            self.vertices[vertices[1] as usize],
-            self.vertices[vertices[2] as usize],
-        ]
+    fn common_vertices(&self) -> HashMap<u32, Vec<u32>> {
+        self.vertices
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                (
+                    i as u32,
+                    self.vertices
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i2, v2)| (v == v2).then_some(i2 as u32))
+                        .collect(),
+                )
+            })
+            .collect()
     }
+
+    // fn triangle(&self, vertices: [u32; 3]) -> [Vec3; 3] {
+    //     [
+    //         self.vertices[vertices[0] as usize],
+    //         self.vertices[vertices[1] as usize],
+    //         self.vertices[vertices[2] as usize],
+    //     ]
+    // }
 }
