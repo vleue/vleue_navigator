@@ -428,8 +428,7 @@ fn move_obstacles(mut query: Query<(&mut Transform, &Obstacle)>, time: Res<Time>
                 transform.rotate(Quat::from_rotation_y(time.delta_secs() / speed))
             }
             Obstacle::Sliding(center_x) => {
-                transform.translation.x =
-                    center_x + (time.elapsed_secs() * 4.0).sin() * 35.0;
+                transform.translation.x = center_x + (time.elapsed_secs() * 4.0).sin() * 35.0;
             }
         }
     }

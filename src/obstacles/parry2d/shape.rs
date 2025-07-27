@@ -472,8 +472,7 @@ impl SharedShapeStorage {
         params: &VhacdParameters,
     ) -> Self {
         let vertices = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
-        SharedShape::convex_decomposition_with_params(&vertices, &indices, &(*params).into())
-            .into()
+        SharedShape::convex_decomposition_with_params(&vertices, &indices, &(*params).into()).into()
     }
 
     /// Creates a collider with a [convex polygon](https://en.wikipedia.org/wiki/Convex_polygon) shape obtained after computing
@@ -550,18 +549,14 @@ impl SharedShapeStorage {
     fn ivec_array_from_point_int_array(points: &[IVector]) -> Vec<Point<i32>> {
         points
             .iter()
-            .map(|p| {
-                Point::new(p.x, p.y)
-            })
+            .map(|p| Point::new(p.x, p.y))
             .collect::<Vec<_>>()
     }
 
     fn vec_array_from_point_float_array(points: &[Vector]) -> Vec<Point<Scalar>> {
         points
             .iter()
-            .map(|p| {
-                Point::new(p.x, p.y)
-            })
+            .map(|p| Point::new(p.x, p.y))
             .collect::<Vec<_>>()
     }
 
@@ -633,9 +628,7 @@ pub fn scale_shape(
         },
         TypedShape::RoundConvexPolygon(cp) => match cp.inner_shape.clone().scaled(&scale.into()) {
             None => {
-                log::error!(
-                    "Failed to apply scale {scale} to RoundConvexPolygon shape."
-                );
+                log::error!("Failed to apply scale {scale} to RoundConvexPolygon shape.");
                 Ok(SharedShape::ball(0.0))
             }
             Some(scaled) => Ok(SharedShape::new(RoundShape {
