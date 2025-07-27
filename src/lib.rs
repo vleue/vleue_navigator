@@ -42,9 +42,10 @@ mod updater;
 
 /// Prelude for imports
 pub mod prelude {
+    #[cfg(feature = "parry2d")]
+    pub use crate::obstacles::parry2d::shape::SharedShapeStorage;
     pub use crate::obstacles::{
-        ObstacleSource, cached::CachedObstacle, parry2d::shape::SharedShapeStorage,
-        primitive::PrimitiveObstacle,
+        ObstacleSource, cached::CachedObstacle, primitive::PrimitiveObstacle,
     };
     pub use crate::updater::{
         CachableObstacle, ManagedNavMesh, NAVMESH_BUILD_DURATION, NavMeshSettings, NavMeshStatus,
