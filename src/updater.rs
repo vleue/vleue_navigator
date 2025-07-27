@@ -519,7 +519,7 @@ fn update_navmesh_asset(
                 handle,
                 entity,
                 if let Some(layer) = &settings.layer {
-                    format!(" (layer {})", layer)
+                    format!(" (layer {layer})")
                 } else {
                     "".to_string()
                 }

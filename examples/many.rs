@@ -146,7 +146,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn((
-                        Mesh2d(meshes.add(navmesh.to_mesh()).into()),
+                        Mesh2d(meshes.add(navmesh.to_mesh())),
                         Transform::from_translation(Vec3::new(
                             -MESH_SIZE.x / 2.0 * factor,
                             -MESH_SIZE.y / 2.0 * factor,
@@ -394,7 +394,7 @@ fn update_ui(
 ) {
     let new_count = agents.iter().len();
     let Ok(text) = ui_query.single() else { return };
-    *text_writer.text(text, 2) = format!("{}\n", new_count);
+    *text_writer.text(text, 2) = format!("{new_count}\n");
     *text_writer.text(text, 4) = format!(
         "{:.2}\n",
         diagnostics

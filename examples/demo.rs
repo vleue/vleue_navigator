@@ -156,12 +156,9 @@ fn life_of_obstacle(
             if cachable.remove(&entity) {
                 commands.entity(entity).remove::<CachableObstacle>();
             }
-        } else {
-            if example_settings.cache_enabled {
-                if cachable.insert(entity) {
-                    commands.entity(entity).insert(CachableObstacle);
-                }
-            }
+        } else if example_settings.cache_enabled
+        && cachable.insert(entity) {
+            commands.entity(entity).insert(CachableObstacle);
         }
     }
 }
