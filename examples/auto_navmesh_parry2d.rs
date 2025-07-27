@@ -138,7 +138,7 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Tran
             }
             TypedShape::Capsule(capsule) => {
                 gizmos.primitive_2d(
-                    &Capsule2d::new(capsule.radius, capsule.height().into()),
+                    &Capsule2d::new(capsule.radius, capsule.height()),
                     Isometry2d::new(
                         transform.translation.xy(),
                         Rot2::radians(transform.rotation.to_axis_angle().1),

@@ -73,7 +73,7 @@ fn setup(
     for x in (-50..50).step_by(step).skip(1) {
         for (yi, y) in (-50..50).step_by(step).skip(1).enumerate() {
             commands.spawn((
-                Mesh2d(peg_mesh.clone().into()),
+                Mesh2d(peg_mesh.clone()),
                 MeshMaterial2d(peg_material.clone()),
                 Transform::from_xyz(
                     (x as f32
@@ -99,7 +99,7 @@ fn setup(
     for x in (-50..50).step_by(5).skip(1) {
         let start = Vec3::new(x as f32 * 9.5, 300.0, 0.0);
         commands.spawn((
-            Mesh2d(marble_mesh.clone().into()),
+            Mesh2d(marble_mesh.clone()),
             MeshMaterial2d(marble_material.clone()),
             Transform::from_translation(start),
             RigidBody::Dynamic,

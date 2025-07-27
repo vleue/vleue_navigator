@@ -119,8 +119,8 @@ impl Ease for Position {
     }
 }
 
-impl Into<Position> for Vector {
-    fn into(self) -> Position {
-        Position(self.xy())
+impl From<Vector> for Position {
+    fn from(val: Vector) -> Self {
+        Position(val.xy())
     }
 }

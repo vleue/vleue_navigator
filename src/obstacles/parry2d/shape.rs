@@ -472,7 +472,7 @@ impl SharedShapeStorage {
         params: &VhacdParameters,
     ) -> Self {
         let vertices = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
-        SharedShape::convex_decomposition_with_params(&vertices, &indices, &params.clone().into())
+        SharedShape::convex_decomposition_with_params(&vertices, &indices, &(*params).into())
             .into()
     }
 
@@ -540,7 +540,7 @@ impl SharedShapeStorage {
         SharedShape::voxelized_convex_decomposition_with_params(
             &Self::vec_array_from_point_float_array(vertices),
             indices,
-            &parameters.clone().into(),
+            &(*parameters).into(),
         )
         .into_iter()
         .map(|c| c.into())
@@ -551,7 +551,7 @@ impl SharedShapeStorage {
         points
             .iter()
             .map(|p| {
-                return Point::new(p.x, p.y);
+                Point::new(p.x, p.y)
             })
             .collect::<Vec<_>>()
     }
@@ -560,7 +560,7 @@ impl SharedShapeStorage {
         points
             .iter()
             .map(|p| {
-                return Point::new(p.x, p.y);
+                Point::new(p.x, p.y)
             })
             .collect::<Vec<_>>()
     }
@@ -590,7 +590,7 @@ pub fn scale_shape(
         })),
         TypedShape::Capsule(c) => match c.scaled(&scale.abs().into(), num_subdivisions) {
             None => {
-                log::error!("Failed to apply scale {} to Capsule shape.", scale);
+                log::error!("Failed to apply scale {scale} to Capsule shape.");
                 Ok(SharedShape::ball(0.0))
             }
             Some(Either::Left(b)) => Ok(SharedShape::new(b)),
@@ -618,7 +618,7 @@ pub fn scale_shape(
         TypedShape::Polyline(p) => Ok(SharedShape::new(p.clone().scaled(&scale.into()))),
         TypedShape::HalfSpace(h) => match h.scaled(&scale.into()) {
             None => {
-                log::error!("Failed to apply scale {} to HalfSpace shape.", scale);
+                log::error!("Failed to apply scale {scale} to HalfSpace shape.");
                 Ok(SharedShape::ball(0.0))
             }
             Some(scaled) => Ok(SharedShape::new(scaled)),
@@ -626,7 +626,7 @@ pub fn scale_shape(
         TypedShape::HeightField(h) => Ok(SharedShape::new(h.clone().scaled(&scale.into()))),
         TypedShape::ConvexPolygon(cp) => match cp.clone().scaled(&scale.into()) {
             None => {
-                log::error!("Failed to apply scale {} to ConvexPolygon shape.", scale);
+                log::error!("Failed to apply scale {scale} to ConvexPolygon shape.");
                 Ok(SharedShape::ball(0.0))
             }
             Some(scaled) => Ok(SharedShape::new(scaled)),
@@ -634,8 +634,7 @@ pub fn scale_shape(
         TypedShape::RoundConvexPolygon(cp) => match cp.inner_shape.clone().scaled(&scale.into()) {
             None => {
                 log::error!(
-                    "Failed to apply scale {} to RoundConvexPolygon shape.",
-                    scale
+                    "Failed to apply scale {scale} to RoundConvexPolygon shape."
                 );
                 Ok(SharedShape::ball(0.0))
             }

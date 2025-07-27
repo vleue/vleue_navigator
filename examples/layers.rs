@@ -429,7 +429,7 @@ fn move_obstacles(mut query: Query<(&mut Transform, &Obstacle)>, time: Res<Time>
             }
             Obstacle::Sliding(center_x) => {
                 transform.translation.x =
-                    center_x + (time.elapsed_secs() as f32 * 4.0).sin() * 35.0;
+                    center_x + (time.elapsed_secs() * 4.0).sin() * 35.0;
             }
         }
     }
@@ -443,7 +443,7 @@ fn display_path(navmeshes: Res<Assets<NavMesh>>, mut gizmos: Gizmos<PathGizmo>) 
         vec2(MESH_UNIT as f32 * 1.5, -(MESH_UNIT as f32) / 4.0),
         vec2(MESH_UNIT as f32 * 1.5, MESH_UNIT as f32 * 3.25),
     )] {
-        let Some(start) = navmesh.get().get_point_layer(points.0).get(0).cloned() else {
+        let Some(start) = navmesh.get().get_point_layer(points.0).first().cloned() else {
             continue;
         };
         let Some(path) = navmesh.path(points.0, points.1) else {
