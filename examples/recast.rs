@@ -34,7 +34,11 @@ fn main() {
         polygon_mesh
             .polygons()
             .into_iter()
-            .map(|p| polyanya::Polygon::new(p.into_iter().map(|i| i as u32).collect(), false))
+            .map(|p| {
+                let mut p: Vec<_> = p.into_iter().map(|i| i as u32).collect();
+                p.reverse();
+                polyanya::Polygon::new(p.into_iter().map(|i| i as u32).collect(), false)
+            })
             .collect(),
     )
     .unwrap();
@@ -45,6 +49,7 @@ fn main() {
         search_steps: 5,
     };
     navmesh.reorder_neighbors_ccw_and_fix_corners();
+    navmesh.bake();
 
     let mut rdr =
         std::io::BufReader::new(std::fs::File::open("assets/recast/detail_mesh.json").unwrap());
@@ -82,6 +87,7 @@ fn main() {
         search_steps: 5,
     };
     detailed_navmesh.reorder_neighbors_ccw_and_fix_corners();
+    detailed_navmesh.bake();
 
     App::new()
         .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
@@ -150,16 +156,16 @@ fn draw_parsed_recast_navmesh(
     recast_original: Res<PolygonMesh>,
     time: Res<Time>,
 ) {
-    let start = vec2(46.998413, 1.717747);
-    let end = vec2(20.703018, -80.770203);
+    let start = vec3(46.998413, 9.998184, 1.717747);
+    let end = vec3(20.703018, 18.651773, -80.770203);
 
     gizmos.sphere(
-        vec3(start.x, recast_original.aabb.min.y, start.y),
+        vec3(start.x, recast_original.aabb.min.y, start.z),
         1.0,
         palettes::tailwind::LIME_400,
     );
     gizmos.sphere(
-        vec3(end.x, recast_original.aabb.min.y, end.y),
+        vec3(end.x, recast_original.aabb.min.y, end.z),
         1.0,
         palettes::tailwind::YELLOW_400,
     );
@@ -170,10 +176,10 @@ fn draw_parsed_recast_navmesh(
             &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2))
                 .with_translation(Vec3::Y * recast_original.aabb.min.y)
                 .into(),
-            palettes::tailwind::RED_400.into(),
+            palettes::tailwind::BLUE_400.into(),
             &mut gizmos,
         );
-        recast.0.path(start, end)
+        recast.0.path(start.xz(), end.xz())
     } else {
         display_mesh_gizmo(
             &recast.1,
@@ -185,13 +191,14 @@ fn draw_parsed_recast_navmesh(
     }) else {
         return;
     };
+
     let mut path = path
         .path
         .iter()
-        .map(|v| vec3(v.x, recast_original.aabb.min.y, v.y))
+        .map(|v| vec3(v.x, recast_original.aabb.min.y + 0.1, v.y))
         .collect::<Vec<_>>();
-    path.insert(0, vec3(start.x, recast_original.aabb.min.y, start.y));
-    gizmos.linestrip(path, palettes::tailwind::BLUE_600);
+    path.insert(0, vec3(start.x, recast_original.aabb.min.y + 0.1, start.z));
+    gizmos.linestrip(path, palettes::tailwind::RED_600);
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Deserialize, Resource)]
