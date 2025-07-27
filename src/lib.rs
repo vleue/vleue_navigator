@@ -43,7 +43,8 @@ mod updater;
 /// Prelude for imports
 pub mod prelude {
     pub use crate::obstacles::{
-        ObstacleSource, cached::CachedObstacle, primitive::PrimitiveObstacle,
+        ObstacleSource, cached::CachedObstacle, parry2d::SharedShapeStorage,
+        primitive::PrimitiveObstacle,
     };
     pub use crate::updater::{
         CachableObstacle, ManagedNavMesh, NAVMESH_BUILD_DURATION, NavMeshSettings, NavMeshStatus,
