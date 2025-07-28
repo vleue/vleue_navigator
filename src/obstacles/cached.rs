@@ -24,7 +24,7 @@ impl<T: ObstacleSource> CachedObstacle<T> {
             source,
         }
     }
-s
+
     /// Clear the cache for this obstacle
     pub fn clear(&mut self) {
         self.polygon = Arc::new(OnceLock::new());
