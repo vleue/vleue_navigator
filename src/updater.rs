@@ -76,7 +76,7 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum FilterObstaclesKind {
+pub enum FilterObstaclesMode {
     #[default]
     /// Allow all obstacles.
     All,
@@ -142,8 +142,8 @@ pub struct NavMeshSettings {
     pub agent_radius_on_outer_edge: bool,
     /// A set of obstacle entities that should be filter when building the [`NavMesh`].
     pub filter_obstacles: EntityHashSet,
-
-    pub filter_obstacles_type: FilterObstaclesKind,
+    /// The mode which filter obstacle entities that should be filter when building the [`NavMesh`].
+    pub filter_obstacles_mode: FilterObstaclesMode,
 }
 
 impl Default for NavMeshSettings {
@@ -164,7 +164,7 @@ impl Default for NavMeshSettings {
             agent_radius: 0.0,
             agent_radius_on_outer_edge: false,
             filter_obstacles: EntityHashSet::default(),
-            filter_obstacles_type: FilterObstaclesKind::default(),
+            filter_obstacles_mode: FilterObstaclesMode::default(),
         }
     }
 }
@@ -448,18 +448,18 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                 continue;
             }
             let cached_obstacles = if settings.cached.is_none() {
-                match settings.filter_obstacles_type {
-                    FilterObstaclesKind::All => cachable_obstacles
+                match settings.filter_obstacles_mode {
+                    FilterObstaclesMode::All => cachable_obstacles
                         .iter()
                         .map(|(_, t, o, _)| (*t, o.clone()))
                         .collect::<Vec<_>>(),
-                    FilterObstaclesKind::Allow => cachable_obstacles
+                    FilterObstaclesMode::Allow => cachable_obstacles
                         .iter()
                         .filter_map(|(e, t, o, _)| {
                             (settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
                         })
                         .collect::<Vec<_>>(),
-                    FilterObstaclesKind::Ignore => cachable_obstacles
+                    FilterObstaclesMode::Ignore => cachable_obstacles
                         .iter()
                         .filter_map(|(e, t, o, _)| {
                             (!settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
@@ -470,18 +470,18 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                 vec![]
             };
 
-            let obstacles_local = match settings.filter_obstacles_type {
-                FilterObstaclesKind::All => dynamic_obstacles
+            let obstacles_local = match settings.filter_obstacles_mode {
+                FilterObstaclesMode::All => dynamic_obstacles
                     .iter()
                     .map(|(e, t, o)| (*t, o.clone()))
                     .collect::<Vec<_>>(),
-                FilterObstaclesKind::Allow => dynamic_obstacles
+                FilterObstaclesMode::Allow => dynamic_obstacles
                     .iter()
                     .filter_map(|(e, t, o)| {
                         (settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
                     })
                     .collect::<Vec<_>>(),
-                FilterObstaclesKind::Ignore => dynamic_obstacles
+                FilterObstaclesMode::Ignore => dynamic_obstacles
                     .iter()
                     .filter_map(|(e, t, o)| {
                         (!settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
