@@ -4,12 +4,12 @@ use bevy::{
     prelude::*,
     window::{PrimaryWindow, WindowResized},
 };
+use parry2d::shape::{SharedShape, TypedShape};
 use polyanya::Triangulation;
 use rand::{Rng, rngs::ThreadRng};
 use std::f32::consts::PI;
 use std::ops::Deref;
 use vleue_navigator::prelude::*;
-
 #[path = "helpers/agent2d.rs"]
 mod agent;
 #[path = "helpers/ui.rs"]
@@ -33,8 +33,8 @@ fn main() {
             VleueNavigatorPlugin,
             // Auto update the navmesh.
             // Obstacles will be entities with the `Obstacle` marker component,
-            // and use the `Aabb` component as the obstacle data source.
-            NavmeshUpdaterPlugin::<PrimitiveObstacle>::default(),
+            // and use the `SharedShape` component as the obstacle data source.
+            NavmeshUpdaterPlugin::<SharedShapeStorage>::default(),
         ))
         .add_systems(
             Startup,
@@ -52,7 +52,7 @@ fn main() {
                 display_obstacle,
                 display_mesh,
                 spawn_obstacle_on_click.after(ui::update_settings::<10>),
-                ui::update_stats::<PrimitiveObstacle>,
+                ui::update_stats::<SharedShapeStorage>,
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
@@ -98,143 +98,86 @@ fn setup(mut commands: Commands) {
         ))
         .with_scale(Vec3::splat(FACTOR)),
     ));
-
-    let mut rng = rand::rng();
-    for _ in 0..50 {
-        // Obstacles are spawn in world coordinates.
-        let transform = Transform::from_translation(
-            Vec3::new(
-                rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
-                0.0,
-            ) * FACTOR,
-        )
-        .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
-        new_obstacle(&mut commands, &mut rng, transform);
-    }
 }
 
-fn display_obstacle(mut gizmos: Gizmos, query: Query<(&PrimitiveObstacle, &Transform)>) {
-    for (prim, transform) in &query {
-        match prim {
-            PrimitiveObstacle::Rectangle(prim) => {
-                gizmos.primitive_2d(
-                    prim,
+fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Transform)>) {
+    for (shape, transform) in &query {
+        match shape.shape_scaled().as_typed_shape() {
+            TypedShape::Ball(ball) => {
+                gizmos.circle_2d(
                     Isometry2d::new(
                         transform.translation.xy(),
                         Rot2::radians(transform.rotation.to_axis_angle().1),
                     ),
-                    palettes::tailwind::RED_600,
+                    ball.radius,
+                    Color::WHITE,
                 );
             }
-            PrimitiveObstacle::Circle(prim) => {
-                gizmos.primitive_2d(
-                    prim,
+            TypedShape::Cuboid(cuboid) => {
+                gizmos.rect_2d(
                     Isometry2d::new(
                         transform.translation.xy(),
                         Rot2::radians(transform.rotation.to_axis_angle().1),
                     ),
-                    palettes::tailwind::RED_600,
+                    (cuboid.half_extents.xy() * 2.0).into(),
+                    Color::WHITE,
                 );
             }
-            PrimitiveObstacle::Ellipse(prim) => {
+            TypedShape::Capsule(capsule) => {
                 gizmos.primitive_2d(
-                    prim,
+                    &Capsule2d::new(capsule.radius, capsule.height()),
                     Isometry2d::new(
                         transform.translation.xy(),
                         Rot2::radians(transform.rotation.to_axis_angle().1),
                     ),
-                    palettes::tailwind::RED_600,
+                    Color::WHITE,
                 );
             }
-            PrimitiveObstacle::CircularSector(prim) => {
-                gizmos.primitive_2d(
-                    prim,
-                    Isometry2d::new(
-                        transform.translation.xy(),
-                        Rot2::radians(transform.rotation.to_axis_angle().1),
-                    ),
-                    palettes::tailwind::RED_600,
-                );
-            }
-            PrimitiveObstacle::CircularSegment(prim) => {
-                gizmos.primitive_2d(
-                    prim,
-                    Isometry2d::new(
-                        transform.translation.xy(),
-                        Rot2::radians(transform.rotation.to_axis_angle().1),
-                    ),
-                    palettes::tailwind::RED_600,
-                );
-            }
-            PrimitiveObstacle::Capsule(prim) => {
-                gizmos.primitive_2d(
-                    prim,
-                    Isometry2d::new(
-                        transform.translation.xy(),
-                        Rot2::radians(transform.rotation.to_axis_angle().1),
-                    ),
-                    palettes::tailwind::RED_600,
-                );
-            }
-            PrimitiveObstacle::RegularPolygon(prim) => {
-                gizmos.primitive_2d(
-                    prim,
-                    Isometry2d::new(
-                        transform.translation.xy(),
-                        Rot2::radians(transform.rotation.to_axis_angle().1),
-                    ),
-                    palettes::tailwind::RED_600,
-                );
-            }
-            PrimitiveObstacle::Rhombus(prim) => {
-                gizmos.primitive_2d(
-                    prim,
-                    Isometry2d::new(
-                        transform.translation.xy(),
-                        Rot2::radians(transform.rotation.to_axis_angle().1),
-                    ),
-                    palettes::tailwind::RED_600,
-                );
-            }
+            _ => {}
         }
     }
 }
 
 fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) {
+    let rectangle = SharedShape::cuboid(
+        rng.random_range(1.0..5.0) * FACTOR,
+        rng.random_range(1.0..5.0) * FACTOR,
+    );
+
+    let circle = SharedShape::ball(rng.random_range(1.0..5.0) * FACTOR);
+
+    let rectangle_transform = Transform::from_translation(
+        Vec3::new(
+            rng.random_range((-10.)..10.),
+            rng.random_range((-10.)..10.),
+            0.0,
+        ) * FACTOR,
+    )
+    .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
+
+    let circle_transform = Transform::from_translation(
+        Vec3::new(
+            rng.random_range((-10.)..10.),
+            rng.random_range((-10.)..10.),
+            0.0,
+        ) * FACTOR,
+    )
+    .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
+
+    let rectangle_iso = parry2d::math::Isometry::<f32>::new(
+        rectangle_transform.translation.truncate().into(),
+        rectangle_transform.rotation.to_axis_angle().1,
+    );
+    let circle_iso = parry2d::math::Isometry::<f32>::new(
+        circle_transform.translation.truncate().into(),
+        circle_transform.rotation.to_axis_angle().1,
+    );
+
     commands.spawn((
-        match rng.random_range(0..8) {
-            0 => PrimitiveObstacle::Rectangle(Rectangle {
-                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)) * FACTOR,
-            }),
-            1 => PrimitiveObstacle::Circle(Circle {
-                radius: rng.random_range(1.0..5.0) * FACTOR,
-            }),
-            2 => PrimitiveObstacle::Ellipse(Ellipse {
-                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)) * FACTOR,
-            }),
-            3 => PrimitiveObstacle::CircularSector(CircularSector::new(
-                rng.random_range(1.5..5.0) * FACTOR,
-                rng.random_range(0.5..PI),
-            )),
-            4 => PrimitiveObstacle::CircularSegment(CircularSegment::new(
-                rng.random_range(1.5..5.0) * FACTOR,
-                rng.random_range(1.0..PI),
-            )),
-            5 => PrimitiveObstacle::Capsule(Capsule2d::new(
-                rng.random_range(1.0..3.0) * FACTOR,
-                rng.random_range(1.5..5.0) * FACTOR,
-            )),
-            6 => PrimitiveObstacle::RegularPolygon(RegularPolygon::new(
-                rng.random_range(1.0..5.0) * FACTOR,
-                rng.random_range(3..8),
-            )),
-            7 => PrimitiveObstacle::Rhombus(Rhombus::new(
-                rng.random_range(3.0..6.0) * FACTOR,
-                rng.random_range(2.0..3.0) * FACTOR,
-            )),
-            _ => unreachable!(),
-        },
+        SharedShapeStorage::from(SharedShape::compound(vec![
+            (rectangle_iso, rectangle),
+            (circle_iso, circle),
+        ])),
         transform,
     ));
 }
@@ -312,7 +255,7 @@ fn spawn_obstacle_on_click(
 }
 
 fn remove_obstacles(
-    obstacles: Query<Entity, With<PrimitiveObstacle>>,
+    obstacles: Query<Entity, With<SharedShapeStorage>>,
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {

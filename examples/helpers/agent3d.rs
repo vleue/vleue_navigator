@@ -78,9 +78,9 @@ pub fn give_target_to_navigator<const X: u32, const Y: u32>(
         let mut i = 50;
         loop {
             target = Vec3::new(
-                rand::thread_rng().gen_range(0.0..(X as f32)),
+                rand::rng().random_range(0.0..(X as f32)),
                 0.0,
-                rand::thread_rng().gen_range(0.0..(Y as f32)),
+                rand::rng().random_range(0.0..(Y as f32)),
             );
 
             if navmesh.transformed_is_in_mesh(target) {

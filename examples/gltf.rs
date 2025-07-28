@@ -193,14 +193,14 @@ fn setup_scene(
                     ..default()
                 },
                 Transform::from_xyz(
-                    rand::thread_rng().gen_range(-50.0..50.0),
+                    rand::rng().random_range(-50.0..50.0),
                     20.0,
-                    rand::thread_rng().gen_range(-25.0..25.0),
+                    rand::rng().random_range(-25.0..25.0),
                 )
                 .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                 Hover(Vec2::new(
-                    rand::thread_rng().gen_range(-50.0..50.0),
-                    rand::thread_rng().gen_range(-25.0..25.0),
+                    rand::rng().random_range(-50.0..50.0),
+                    rand::rng().random_range(-25.0..25.0),
                 )),
             ));
         }
@@ -274,8 +274,8 @@ fn give_target_auto(
         let mut x;
         let mut z;
         loop {
-            x = rand::thread_rng().gen_range(-50.0..50.0);
-            z = rand::thread_rng().gen_range(-25.0..25.0);
+            x = rand::rng().random_range(-50.0..50.0);
+            z = rand::rng().random_range(-25.0..25.0);
 
             if navmesh.transformed_is_in_mesh(Vec3::new(x, 0.0, z)) {
                 break;
@@ -446,8 +446,8 @@ fn move_hover(mut hovers: Query<(&mut Transform, &mut Hover)>, time: Res<Time>) 
         let current = transform.translation.xz();
         if hover.0.distance_squared(current) < 1.0 {
             hover.0 = Vec2::new(
-                rand::thread_rng().gen_range(-50.0..50.0),
-                rand::thread_rng().gen_range(-25.0..25.0),
+                rand::rng().random_range(-50.0..50.0),
+                rand::rng().random_range(-25.0..25.0),
             );
         }
         transform.translation += ((hover.0 - current).normalize() * time.delta_secs() * 5.0)

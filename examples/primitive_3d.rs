@@ -140,17 +140,17 @@ fn setup(
     // - the `Aabb` component to define the obstacle's shape
     // - the `Transform` component to define the obstacle's position
     // - the `GlobalTransform` so that it's correctly handled by Bevy
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mat = materials.add(StandardMaterial::from(Color::Srgba(
         palettes::tailwind::RED_700,
     )));
     for _ in 0..40 {
         let transform = Transform::from_translation(Vec3::new(
-            rng.gen_range(0.0..(MESH_WIDTH as f32)),
+            rng.random_range(0.0..(MESH_WIDTH as f32)),
             0.0,
-            rng.gen_range(0.0..(MESH_HEIGHT as f32)),
+            rng.random_range(0.0..(MESH_HEIGHT as f32)),
         ))
-        .with_rotation(Quat::from_rotation_y(rng.gen_range(0.0..PI)));
+        .with_rotation(Quat::from_rotation_y(rng.random_range(0.0..PI)));
         new_obstacle(&mut commands, &mut rng, transform, &mut meshes, &mat);
     }
 }
@@ -162,10 +162,10 @@ fn new_obstacle(
     meshes: &mut Assets<Mesh>,
     mat: &Handle<StandardMaterial>,
 ) {
-    match rng.gen_range(0..8) {
+    match rng.random_range(0..8) {
         0 => {
             let primitive = Rectangle {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
+                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)),
             };
             commands
                 .spawn((
@@ -175,7 +175,7 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
@@ -183,7 +183,7 @@ fn new_obstacle(
         }
         1 => {
             let primitive = Circle {
-                radius: rng.gen_range(1.0..5.0),
+                radius: rng.random_range(1.0..5.0),
             };
             commands
                 .spawn((
@@ -193,7 +193,7 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
@@ -201,7 +201,7 @@ fn new_obstacle(
         }
         2 => {
             let primitive = Ellipse {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
+                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)),
             };
             commands
                 .spawn((
@@ -211,7 +211,7 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
@@ -219,7 +219,7 @@ fn new_obstacle(
         }
         3 => {
             let primitive =
-                CircularSector::new(rng.gen_range(1.5..5.0), rng.gen_range(0.5..FRAC_PI_2));
+                CircularSector::new(rng.random_range(1.5..5.0), rng.random_range(0.5..FRAC_PI_2));
             commands
                 .spawn((
                     transform,
@@ -228,14 +228,15 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         4 => {
-            let primitive = CircularSegment::new(rng.gen_range(1.5..5.0), rng.gen_range(1.0..PI));
+            let primitive =
+                CircularSegment::new(rng.random_range(1.5..5.0), rng.random_range(1.0..PI));
             commands
                 .spawn((
                     transform,
@@ -244,14 +245,14 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         5 => {
-            let primitive = Capsule2d::new(rng.gen_range(1.0..3.0), rng.gen_range(1.5..5.0));
+            let primitive = Capsule2d::new(rng.random_range(1.0..3.0), rng.random_range(1.5..5.0));
             commands
                 .spawn((
                     transform,
@@ -260,14 +261,14 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         6 => {
-            let primitive = RegularPolygon::new(rng.gen_range(1.0..5.0), rng.gen_range(3..8));
+            let primitive = RegularPolygon::new(rng.random_range(1.0..5.0), rng.random_range(3..8));
             commands
                 .spawn((
                     transform,
@@ -276,14 +277,14 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         7 => {
-            let primitive = Rhombus::new(rng.gen_range(3.0..6.0), rng.gen_range(2.0..3.0));
+            let primitive = Rhombus::new(rng.random_range(3.0..6.0), rng.random_range(2.0..3.0));
             commands
                 .spawn((
                     transform,
@@ -292,7 +293,7 @@ fn new_obstacle(
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
@@ -329,12 +330,12 @@ fn spawn_obstacle_on_click(
             })
             .map(|(ray, d)| ray.get_point(d))
         {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let mat = materials.add(StandardMaterial::from(Color::Srgba(
                 palettes::tailwind::RED_700,
             )));
             let transform = Transform::from_translation(position)
-                .with_rotation(Quat::from_rotation_y(rng.gen_range(0.0..PI)));
+                .with_rotation(Quat::from_rotation_y(rng.random_range(0.0..PI)));
             new_obstacle(&mut commands, &mut rng, transform, &mut meshes, &mat);
             info!("spawning an obstacle at {}", position);
         }

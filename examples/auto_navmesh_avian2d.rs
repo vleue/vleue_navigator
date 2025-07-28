@@ -73,7 +73,7 @@ fn setup(
     for x in (-50..50).step_by(step).skip(1) {
         for (yi, y) in (-50..50).step_by(step).skip(1).enumerate() {
             commands.spawn((
-                Mesh2d(peg_mesh.clone().into()),
+                Mesh2d(peg_mesh.clone()),
                 MeshMaterial2d(peg_material.clone()),
                 Transform::from_xyz(
                     (x as f32
@@ -82,9 +82,9 @@ fn setup(
                         } else {
                             step as f32 / 4.0
                         }
-                        + rand::thread_rng().gen_range(-1.0..1.0))
+                        + rand::rng().random_range(-1.0..1.0))
                         * 9.5,
-                    (y as f32 + rand::thread_rng().gen_range(-1.0..1.0)) * 6.0,
+                    (y as f32 + rand::rng().random_range(-1.0..1.0)) * 6.0,
                     0.0,
                 ),
                 RigidBody::Static,
@@ -99,14 +99,14 @@ fn setup(
     for x in (-50..50).step_by(5).skip(1) {
         let start = Vec3::new(x as f32 * 9.5, 300.0, 0.0);
         commands.spawn((
-            Mesh2d(marble_mesh.clone().into()),
+            Mesh2d(marble_mesh.clone()),
             MeshMaterial2d(marble_material.clone()),
             Transform::from_translation(start),
             RigidBody::Dynamic,
             LinearVelocity(
                 Vec2::new(
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                    rand::thread_rng().gen_range(-1.0..1.0),
+                    rand::rng().random_range(-1.0..1.0),
+                    rand::rng().random_range(-1.0..1.0),
                 )
                 .normalize()
                     * 200.0,

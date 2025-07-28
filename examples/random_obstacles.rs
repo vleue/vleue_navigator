@@ -84,7 +84,7 @@ fn on_mesh_change(
     *current_mesh_entity = Some(
         commands
             .spawn((
-                Mesh2d(meshes.add(navmesh.to_mesh()).into()),
+                Mesh2d(meshes.add(navmesh.to_mesh())),
                 Transform::from_translation(Vec3::new(
                     -MESH_WIDTH / 2.0 * factor,
                     -MESH_HEIGHT / 2.0 * factor,
@@ -97,7 +97,7 @@ fn on_mesh_change(
             ))
             .with_children(|main_mesh| {
                 main_mesh.spawn((
-                    Mesh2d(meshes.add(navmesh.to_wireframe_mesh()).into()),
+                    Mesh2d(meshes.add(navmesh.to_wireframe_mesh())),
                     Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
                     MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 1.0)))),
                 ));
@@ -152,17 +152,25 @@ fn mesh_change(
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) || meshes.0 == Handle::default() {
         let mut obstacles = vec![];
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for _i in 0..500 {
             let point = vec2(
-                rng.gen_range(0.0..MESH_WIDTH),
-                rng.gen_range(0.0..MESH_HEIGHT),
+                rng.random_range(0.0..MESH_WIDTH),
+                rng.random_range(0.0..MESH_HEIGHT),
             );
             let around = -0.6..0.6;
             obstacles.push(vec![
-                point + vec2(rng.gen_range(around.clone()), rng.gen_range(around.clone())),
-                point + vec2(rng.gen_range(around.clone()), rng.gen_range(around.clone())),
-                point + vec2(rng.gen_range(around.clone()), rng.gen_range(around)),
+                point
+                    + vec2(
+                        rng.random_range(around.clone()),
+                        rng.random_range(around.clone()),
+                    ),
+                point
+                    + vec2(
+                        rng.random_range(around.clone()),
+                        rng.random_range(around.clone()),
+                    ),
+                point + vec2(rng.random_range(around.clone()), rng.random_range(around)),
             ]);
         }
 
