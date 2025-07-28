@@ -31,6 +31,9 @@ optional = true
 
 [dependencies.polyanya]
 version = "0.13.0"
+# path = "../polyanya"
+git = "https://github.com/vleue/polyanya"
+branch = "recast"
 
 [dependencies.bevy]
 version = "0.16.0"
