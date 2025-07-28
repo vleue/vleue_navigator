@@ -266,9 +266,11 @@ pub fn display_settings(
                 }
                 UiSettings::AgentRadiusOuter => (),
                 UiSettings::Cache => (),
-                UiSettings::NavMeshSelect => if let Some(showing_navmesh) = showing_navmesh.0 {
-                    *text_writer.text(text, 1) = format!("{showing_navmesh:.2}")
-                },
+                UiSettings::NavMeshSelect => {
+                    if let Some(showing_navmesh) = showing_navmesh.0 {
+                        *text_writer.text(text, 1) = format!("{showing_navmesh:.2}")
+                    }
+                }
             }
         }
     }
