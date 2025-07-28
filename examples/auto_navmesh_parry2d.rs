@@ -261,7 +261,7 @@ fn spawn_obstacle_on_click(
 }
 
 fn remove_obstacles(
-    obstacles: Query<Entity, With<PrimitiveObstacle>>,
+    obstacles: Query<Entity, With<SharedShapeStorage>>,
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {

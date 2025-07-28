@@ -39,11 +39,12 @@ fn main() {
         .add_systems(
             Startup,
             (
-                setup,
                 ui::setup_stats::<true>,
                 ui::setup_settings::<false>,
-                agent::setup_agent::<10,10,1>,
-            ),
+                agent::setup_agent::<10, 10, 1>,
+                setup,
+            )
+                .chain(),
         )
         .add_systems(
             Update,
@@ -254,7 +255,7 @@ fn spawn_obstacle_on_click(
 }
 
 fn remove_obstacles(
-    obstacles: Query<Entity, With<PrimitiveObstacle>>,
+    obstacles: Query<Entity, With<SharedShapeStorage>>,
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {

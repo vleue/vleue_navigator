@@ -244,7 +244,7 @@ pub fn display_settings(
 ) {
     let settings = match showing_navmesh.0 {
         Some(showing_navmesh) => settings.get(showing_navmesh).unwrap(),
-        None => match settings.iter().nth(0) {
+        None => match settings.iter().next() {
             Some(settings) => settings,
             None => return,
         },
@@ -266,11 +266,8 @@ pub fn display_settings(
                 }
                 UiSettings::AgentRadiusOuter => (),
                 UiSettings::Cache => (),
-                UiSettings::NavMeshSelect => match showing_navmesh.0 {
-                    Some(showing_navmesh) => {
-                        *text_writer.text(text, 1) = format!("{:.2}", showing_navmesh)
-                    }
-                    None => (),
+                UiSettings::NavMeshSelect => if let Some(showing_navmesh) = showing_navmesh.0 {
+                    *text_writer.text(text, 1) = format!("{showing_navmesh:.2}")
                 },
             }
         }
@@ -319,7 +316,7 @@ pub fn update_settings<const STEP: u32>(
             Interaction::Pressed => {
                 let mut settings = match showing_navmesh.0 {
                     Some(showing_navmesh) => settings.get_mut(showing_navmesh).unwrap(),
-                    None => match settings.iter_mut().nth(0) {
+                    None => match settings.iter_mut().next() {
                         Some(settings) => settings,
                         None => return,
                     },
@@ -431,7 +428,7 @@ pub fn update_stats<T: Component>(
 ) {
     let (status, handle) = match showing_navmesh.0 {
         Some(showing_navmesh) => navmesh.get(showing_navmesh).unwrap(),
-        None => match navmesh.iter().nth(0) {
+        None => match navmesh.iter().next() {
             Some(navmesh) => navmesh,
             None => return,
         },

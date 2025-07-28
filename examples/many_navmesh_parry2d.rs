@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
     window::{PrimaryWindow, WindowResized},
 };
-use parry2d::shape::{SharedShape, TypedShape};
+use parry2d::shape::TypedShape;
 use polyanya::Triangulation;
 use rand::{Rng, rngs::ThreadRng};
 use std::{f32::consts::PI, ops::Deref};
@@ -116,6 +116,7 @@ fn setup(
         ))
         .id();
 
+    // Set the currently displayed navmesh to the land navmesh entity.
     showing_navmesh.0 = Some(land_navmesh);
 
     let air_navmesh = commands
@@ -299,7 +300,7 @@ fn spawn_obstacle_on_click(
 }
 
 fn remove_obstacles(
-    obstacles: Query<Entity, With<PrimitiveObstacle>>,
+    obstacles: Query<Entity, With<SharedShapeStorage>>,
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {

@@ -1,6 +1,5 @@
 use bevy::{color::palettes, prelude::*};
 use rand::Rng;
-use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -51,7 +50,7 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     for (entity, transform, special_navmesh_id) in &navigator {
         let navmesh = match special_navmesh_id {
             Some(navmesh_id) => navmesh.get(navmesh_id.0).expect("navmesh not found"),
-            None => navmesh.iter().nth(0).expect("no navmesh found"),
+            None => navmesh.iter().next().expect("no navmesh found"),
         };
 
         let Some(navmesh) = navmeshes.get(navmesh) else {
@@ -114,7 +113,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     for (entity, transform, mut path, special_navmesh_id, mut navigator) in &mut navigators {
         let (navmesh_handle, status) = match special_navmesh_id {
             Some(navmesh_id) => navmesh.get(navmesh_id.0).expect("navmesh not found"),
-            None => navmesh.iter().nth(0).expect("no navmesh found"),
+            None => navmesh.iter().next().expect("no navmesh found"),
         };
 
         if (!status.is_changed() || *status != NavMeshStatus::Built) && navigator.delta != 0.0 {
