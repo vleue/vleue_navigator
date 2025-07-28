@@ -16,6 +16,21 @@ use crate::{
     world_to_mesh,
 };
 
+impl ObstacleSource for SharedShapeStorage {
+    fn get_polygons(
+        &self,
+        obstacle_transform: &GlobalTransform,
+        navmesh_transform: &Transform,
+        up: (Dir3, f32),
+    ) -> Vec<Vec<Vec2>> {
+        vec![self.shape_scaled().as_typed_shape().get_polygon(
+            obstacle_transform,
+            navmesh_transform,
+            up,
+        )]
+    }
+}
+
 trait InnerObstacleSource {
     fn get_polygon(
         &self,
@@ -50,46 +65,47 @@ impl InnerObstacleSource for TypedShape<'_> {
         let to_navmesh = |v: Vec3| world_to_mesh.transform_point3(v).xy();
 
         match self {
-            TypedShape::Ball(collider) => collider
+            TypedShape::Ball(shape) => shape
                 .to_polyline(RESOLUTION)
                 .into_iter()
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::Cuboid(collider) => collider
+            TypedShape::Cuboid(shape) => shape
                 .to_polyline()
                 .into_iter()
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::Capsule(collider) => collider
+            TypedShape::Capsule(shape) => shape
                 .to_polyline(RESOLUTION)
                 .into_iter()
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::Triangle(collider) => [collider.a, collider.b, collider.c]
+            TypedShape::Triangle(shape) => [shape.a, shape.b, shape.c]
                 .into_iter()
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::TriMesh(collider) => collider
+            TypedShape::TriMesh(shape) => shape
                 .vertices()
                 .iter()
                 .map(ref_to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::Polyline(collider) => collider
+            TypedShape::Polyline(shape) => shape
                 .vertices()
                 .iter()
                 .map(ref_to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::Compound(collider) => collider
+            TypedShape::Compound(shape) => shape
                 .shapes()
                 .iter()
                 .flat_map(|(_iso, shape)| {
                     // TODO: handle the isometry of each shape
+                    warn!("TODO: handle the isometry of each shape");
                     shape.as_typed_shape().get_polygon(
                         obstacle_transform,
                         navmesh_transform,
@@ -97,28 +113,28 @@ impl InnerObstacleSource for TypedShape<'_> {
                     )
                 })
                 .collect(),
-            TypedShape::ConvexPolygon(collider) => collider
+            TypedShape::ConvexPolygon(shape) => shape
                 .points()
                 .iter()
                 .map(ref_to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::RoundCuboid(collider) => collider
+            TypedShape::RoundCuboid(shape) => shape
                 .to_polyline(RESOLUTION)
                 .into_iter()
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::RoundTriangle(collider) => [
-                collider.inner_shape.a,
-                collider.inner_shape.b,
-                collider.inner_shape.c,
+            TypedShape::RoundTriangle(shape) => [
+                shape.inner_shape.a,
+                shape.inner_shape.b,
+                shape.inner_shape.c,
             ]
             .into_iter()
             .map(to_world)
             .map(to_navmesh)
             .collect(),
-            TypedShape::RoundConvexPolygon(collider) => collider
+            TypedShape::RoundConvexPolygon(shape) => shape
                 .to_polyline(RESOLUTION)
                 .into_iter()
                 .map(to_world)

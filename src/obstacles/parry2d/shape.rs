@@ -215,20 +215,6 @@ impl From<VhacdParameters> for parry2d::transformation::vhacd::VHACDParameters {
         }
     }
 }
-impl ObstacleSource for SharedShapeStorage {
-    fn get_polygons(
-        &self,
-        obstacle_transform: &GlobalTransform,
-        navmesh_transform: &Transform,
-        up: (Dir3, f32),
-    ) -> Vec<Vec<Vec2>> {
-        vec![self.shape_scaled().as_typed_shape().get_polygon(
-            obstacle_transform,
-            navmesh_transform,
-            up,
-        )]
-    }
-}
 
 impl SharedShapeStorage {
     /// Returns the raw unscaled shape of the collider.
