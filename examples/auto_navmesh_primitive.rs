@@ -98,17 +98,17 @@ fn setup(mut commands: Commands) {
         .with_scale(Vec3::splat(FACTOR)),
     ));
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..50 {
         // Obstacles are spawn in world coordinates.
         let transform = Transform::from_translation(
             Vec3::new(
-                rng.gen_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                rng.gen_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
+                rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
+                rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
                 0.0,
             ) * FACTOR,
         )
-        .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
+        .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
         new_obstacle(&mut commands, &mut rng, transform);
     }
 }
@@ -202,35 +202,35 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&PrimitiveObstacle, &Trans
 
 fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) {
     commands.spawn((
-        match rng.gen_range(0..8) {
+        match rng.random_range(0..8) {
             0 => PrimitiveObstacle::Rectangle(Rectangle {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)) * FACTOR,
+                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)) * FACTOR,
             }),
             1 => PrimitiveObstacle::Circle(Circle {
-                radius: rng.gen_range(1.0..5.0) * FACTOR,
+                radius: rng.random_range(1.0..5.0) * FACTOR,
             }),
             2 => PrimitiveObstacle::Ellipse(Ellipse {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)) * FACTOR,
+                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)) * FACTOR,
             }),
             3 => PrimitiveObstacle::CircularSector(CircularSector::new(
-                rng.gen_range(1.5..5.0) * FACTOR,
-                rng.gen_range(0.5..PI),
+                rng.random_range(1.5..5.0) * FACTOR,
+                rng.random_range(0.5..PI),
             )),
             4 => PrimitiveObstacle::CircularSegment(CircularSegment::new(
-                rng.gen_range(1.5..5.0) * FACTOR,
-                rng.gen_range(1.0..PI),
+                rng.random_range(1.5..5.0) * FACTOR,
+                rng.random_range(1.0..PI),
             )),
             5 => PrimitiveObstacle::Capsule(Capsule2d::new(
-                rng.gen_range(1.0..3.0) * FACTOR,
-                rng.gen_range(1.5..5.0) * FACTOR,
+                rng.random_range(1.0..3.0) * FACTOR,
+                rng.random_range(1.5..5.0) * FACTOR,
             )),
             6 => PrimitiveObstacle::RegularPolygon(RegularPolygon::new(
-                rng.gen_range(1.0..5.0) * FACTOR,
-                rng.gen_range(3..8),
+                rng.random_range(1.0..5.0) * FACTOR,
+                rng.random_range(3..8),
             )),
             7 => PrimitiveObstacle::Rhombus(Rhombus::new(
-                rng.gen_range(3.0..6.0) * FACTOR,
-                rng.gen_range(2.0..3.0) * FACTOR,
+                rng.random_range(3.0..6.0) * FACTOR,
+                rng.random_range(2.0..3.0) * FACTOR,
             )),
             _ => unreachable!(),
         },
@@ -301,9 +301,9 @@ fn spawn_obstacle_on_click(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .map(|ray| ray.origin.truncate())
         {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let transform = Transform::from_translation(position.extend(0.0))
-                .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
+                .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
             new_obstacle(&mut commands, &mut rng, transform);
             info!("spawning an obstacle at {}", position);
         }

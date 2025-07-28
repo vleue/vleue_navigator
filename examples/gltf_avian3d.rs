@@ -240,8 +240,8 @@ fn give_target_auto(
         let mut x = 0.0;
         let mut z = 0.0;
         for _ in 0..50 {
-            x = rand::thread_rng().gen_range(-50.0..50.0);
-            z = rand::thread_rng().gen_range(-25.0..25.0);
+            x = rand::rng().random_range(-50.0..50.0);
+            z = rand::rng().random_range(-25.0..25.0);
 
             if navmesh.transformed_is_in_mesh(Vec3::new(x, 0.0, z)) {
                 break;
@@ -348,8 +348,8 @@ fn move_hover(mut hovers: Query<(&mut Transform, &mut Hover)>, time: Res<Time>) 
         let current = transform.translation.xz();
         if hover.0.distance_squared(current) < 1.0 {
             hover.0 = Vec2::new(
-                rand::thread_rng().gen_range(-50.0..50.0),
-                rand::thread_rng().gen_range(-25.0..25.0),
+                rand::rng().random_range(-50.0..50.0),
+                rand::rng().random_range(-25.0..25.0),
             );
         }
         transform.translation += ((hover.0 - current).normalize() * time.delta_secs() * 5.0)
@@ -363,20 +363,20 @@ fn spawn_obstacles(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let size = rand::thread_rng().gen_range(1.5..2.0);
+    let size = rand::rng().random_range(1.5..2.0);
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(size, size, size))),
         MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
         Transform::from_xyz(
-            rand::thread_rng().gen_range(-50.0..50.0),
+            rand::rng().random_range(-50.0..50.0),
             10.0,
-            rand::thread_rng().gen_range(-25.0..25.0),
+            rand::rng().random_range(-25.0..25.0),
         )
         .looking_to(
             Vec3::new(
-                rand::thread_rng().gen_range(-1.0..1.0),
-                rand::thread_rng().gen_range(-1.0..1.0),
-                rand::thread_rng().gen_range(-1.0..1.0),
+                rand::rng().random_range(-1.0..1.0),
+                rand::rng().random_range(-1.0..1.0),
+                rand::rng().random_range(-1.0..1.0),
             )
             .normalize(),
             Vec3::Y,

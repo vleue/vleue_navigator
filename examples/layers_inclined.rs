@@ -304,10 +304,10 @@ fn spawn_obstacles(
     mut materials: ResMut<Assets<StandardMaterial>>,
     navmeshes: Res<Assets<NavMesh>>,
 ) {
-    let cube_size = rand::thread_rng().gen_range(5.0..10.0);
+    let cube_size = rand::rng().random_range(5.0..10.0);
     loop {
-        let x = rand::thread_rng().gen_range(0.0..(MESH_UNIT as f32 * 3.0));
-        let z = rand::thread_rng().gen_range(0.0..(MESH_UNIT as f32 * 3.0));
+        let x = rand::rng().random_range(0.0..(MESH_UNIT as f32 * 3.0));
+        let z = rand::rng().random_range(0.0..(MESH_UNIT as f32 * 3.0));
 
         if navmeshes.iter().any(|(_, nm)| nm.is_in_mesh(vec2(x, z))) {
             commands.spawn((
@@ -315,9 +315,9 @@ fn spawn_obstacles(
                 MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
                 Transform::from_xyz(x, 125.0, z).looking_to(
                     Vec3::new(
-                        rand::thread_rng().gen_range(-1.0..1.0),
-                        rand::thread_rng().gen_range(-1.0..1.0),
-                        rand::thread_rng().gen_range(-1.0..1.0),
+                        rand::rng().random_range(-1.0..1.0),
+                        rand::rng().random_range(-1.0..1.0),
+                        rand::rng().random_range(-1.0..1.0),
                     )
                     .normalize(),
                     Vec3::Y,

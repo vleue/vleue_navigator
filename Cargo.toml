@@ -13,7 +13,7 @@ documentation = "https://docs.rs/vleue_navigator"
 categories = ["game-development"]
 
 [dependencies]
-itertools = "0.13"
+itertools = "0.14"
 tracing = { version = "0.1", optional = true }
 log = "0.4.27"
 
@@ -43,18 +43,18 @@ version = "2.9"
 optional = true
 
 [dependencies.polyanya]
-version = "0.13.0"
+version = "0.13"
 
 [dependencies.bevy]
-version = "0.16.0"
+version = "0.16"
 features = ["bevy_render", "bevy_asset", "bevy_log"]
 default-features = false
 
 [dev-dependencies]
-rand = "0.8"
+rand = "0.9"
 
 [dev-dependencies.bevy]
-version = "0.16.0"
+version = "0.16"
 features = [
     "bevy_window",
     "bevy_ui",
@@ -78,7 +78,7 @@ features = [
 default-features = false
 
 [features]
-default = ["debug-with-gizmos"]
+default = ["debug-with-gizmos", "parry2d"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]

@@ -104,9 +104,9 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::Compound(shape) => shape
                 .shapes()
                 .iter()
-                .flat_map(|(_iso, shape)| {
+                .flat_map(|(iso, shape)| {
                     // TODO: handle the isometry of each shape
-                    warn!("TODO: handle the isometry of each shape");
+                    info!("isometry transform: {:?}", iso.translation);
                     shape.as_typed_shape().get_polygon(
                         obstacle_transform,
                         navmesh_transform,

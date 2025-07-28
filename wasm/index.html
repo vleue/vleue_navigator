@@ -150,9 +150,9 @@ fn main() {
         return;
     }
     if let Some(navmesh) = navmeshes.get_mut(navmesh_handle) {
-        let mut rng = rand::thread_rng();
-        let from = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
-        let to = vec2(rng.gen_range(0.0..10.0), rng.gen_range(0.0..10.0));
+        let mut rng = rand::rng();
+        let from = vec2(rng.random_range(0.0..10.0), rng.random_range(0.0..10.0));
+        let to = vec2(rng.random_range(0.0..10.0), rng.random_range(0.0..10.0));
 
         if let Some(path) = navmesh.path(from, to) {
             info!("found path from {:?} to {:?}: {:?}", from, to, path);

@@ -98,17 +98,17 @@ fn setup(mut commands: Commands) {
         .with_scale(Vec3::splat(FACTOR)),
     ));
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..50 {
         // Obstacles are spawn in world coordinates.
         let transform = Transform::from_translation(
             Vec3::new(
-                rng.gen_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                rng.gen_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
+                rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
+                rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
                 0.0,
             ) * FACTOR,
         )
-        .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
+        .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
         new_obstacle(&mut commands, &mut rng, transform);
     }
 }
@@ -153,28 +153,28 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Tran
 
 fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) {
     commands.spawn((
-        match rng.gen_range(0..6) {
+        match rng.random_range(0..6) {
             0 => SharedShapeStorage::rectangle(
-                rng.gen_range(1.0..5.0) * FACTOR,
-                rng.gen_range(1.0..5.0) * FACTOR,
+                rng.random_range(1.0..5.0) * FACTOR,
+                rng.random_range(1.0..5.0) * FACTOR,
             ),
-            1 => SharedShapeStorage::circle(rng.gen_range(1.0..5.0) * FACTOR),
+            1 => SharedShapeStorage::circle(rng.random_range(1.0..5.0) * FACTOR),
             2 => SharedShapeStorage::ellipse(
-                rng.gen_range(1.0..5.0) * FACTOR,
-                rng.gen_range(1.0..5.0) * FACTOR,
+                rng.random_range(1.0..5.0) * FACTOR,
+                rng.random_range(1.0..5.0) * FACTOR,
             ),
             3 => SharedShapeStorage::capsule(
-                rng.gen_range(1.0..3.0) * FACTOR,
-                rng.gen_range(1.5..5.0) * FACTOR,
+                rng.random_range(1.0..3.0) * FACTOR,
+                rng.random_range(1.5..5.0) * FACTOR,
             ),
             4 => SharedShapeStorage::round_rectangle(
-                rng.gen_range(1.0..3.0) * FACTOR,
-                rng.gen_range(1.5..5.0) * FACTOR,
-                rng.gen_range(1.0..2.0) * FACTOR,
+                rng.random_range(1.0..3.0) * FACTOR,
+                rng.random_range(1.5..5.0) * FACTOR,
+                rng.random_range(1.0..2.0) * FACTOR,
             ),
             5 => SharedShapeStorage::regular_polygon(
-                rng.gen_range(1.0..5.0) * FACTOR,
-                rng.gen_range(3..8),
+                rng.random_range(1.0..5.0) * FACTOR,
+                rng.random_range(3..8),
             ),
             _ => unreachable!(),
         },
@@ -245,9 +245,9 @@ fn spawn_obstacle_on_click(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .map(|ray| ray.origin.truncate())
         {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let transform = Transform::from_translation(position.extend(0.0))
-                .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..(2.0 * PI))));
+                .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
             new_obstacle(&mut commands, &mut rng, transform);
             info!("spawning an obstacle at {}", position);
         }

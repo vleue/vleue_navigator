@@ -101,7 +101,7 @@ fn cached_material(
     for (children, cachable) in &obstacles {
         if cachable.is_some() && cachable.unwrap().is_added() {
             let mut material = materials.get_mut(children[0]).unwrap();
-            material.0 = match rand::thread_rng().gen_range(0..3) {
+            material.0 = match rand::rng().random_range(0..3) {
                 0 => MATERIAL_OBSTACLE_CACHED_1,
                 1 => MATERIAL_OBSTACLE_CACHED_2,
                 2 => MATERIAL_OBSTACLE_CACHED_3,
@@ -112,7 +112,7 @@ fn cached_material(
     for removed in removed.read() {
         let (children, _) = obstacles.get(removed).unwrap();
         let mut material = materials.get_mut(children[0]).unwrap();
-        material.0 = match rand::thread_rng().gen_range(0..3) {
+        material.0 = match rand::rng().random_range(0..3) {
             0 => MATERIAL_OBSTACLE_1,
             1 => MATERIAL_OBSTACLE_2,
             2 => MATERIAL_OBSTACLE_3,
@@ -163,19 +163,19 @@ fn life_of_obstacle(
 }
 
 fn random_obstacle(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    let mut rng = rand::thread_rng();
-    let mat = match rand::thread_rng().gen_range(0..3) {
+    let mut rng = rand::rng();
+    let mat = match rand::rng().random_range(0..3) {
         0 => MATERIAL_OBSTACLE_1,
         1 => MATERIAL_OBSTACLE_2,
         2 => MATERIAL_OBSTACLE_3,
         _ => unreachable!(),
     };
     let transform = Transform::from_translation(Vec3::new(
-        rng.gen_range(0.0..(MESH_WIDTH as f32)),
+        rng.random_range(0.0..(MESH_WIDTH as f32)),
         0.0,
-        rng.gen_range(0.0..(MESH_HEIGHT as f32)),
+        rng.random_range(0.0..(MESH_HEIGHT as f32)),
     ))
-    .with_rotation(Quat::from_rotation_y(rng.gen_range(0.0..PI)))
+    .with_rotation(Quat::from_rotation_y(rng.random_range(0.0..PI)))
     .with_scale(Vec3::splat(0.0));
     new_obstacle(&mut commands, &mut rng, transform, &mut meshes, &mat);
 }
@@ -274,10 +274,10 @@ fn new_obstacle(
     meshes: &mut Assets<Mesh>,
     mat: &Handle<StandardMaterial>,
 ) {
-    match rng.gen_range(0..8) {
+    match rng.random_range(0..8) {
         0 => {
             let primitive = Rectangle {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
+                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)),
             };
             commands
                 .spawn((
@@ -285,13 +285,13 @@ fn new_obstacle(
                     Visibility::Visible,
                     PrimitiveObstacle::Rectangle(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
@@ -299,7 +299,7 @@ fn new_obstacle(
         }
         1 => {
             let primitive = Circle {
-                radius: rng.gen_range(1.0..5.0),
+                radius: rng.random_range(1.0..5.0),
             };
             commands
                 .spawn((
@@ -307,13 +307,13 @@ fn new_obstacle(
                     Visibility::Visible,
                     PrimitiveObstacle::Circle(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
@@ -321,7 +321,7 @@ fn new_obstacle(
         }
         2 => {
             let primitive = Ellipse {
-                half_size: vec2(rng.gen_range(1.0..5.0), rng.gen_range(1.0..5.0)),
+                half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)),
             };
             commands
                 .spawn((
@@ -329,73 +329,73 @@ fn new_obstacle(
                     Visibility::Visible,
                     PrimitiveObstacle::Ellipse(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         3 => {
-            let primitive = Capsule2d::new(rng.gen_range(1.0..3.0), rng.gen_range(1.5..5.0));
+            let primitive = Capsule2d::new(rng.random_range(1.0..3.0), rng.random_range(1.5..5.0));
             commands
                 .spawn((
                     transform,
                     Visibility::Visible,
                     PrimitiveObstacle::Capsule(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         4 => {
-            let primitive = RegularPolygon::new(rng.gen_range(1.0..5.0), rng.gen_range(3..11));
+            let primitive = RegularPolygon::new(rng.random_range(1.0..5.0), rng.random_range(3..11));
             commands
                 .spawn((
                     transform,
                     Visibility::Visible,
                     PrimitiveObstacle::RegularPolygon(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         5 => {
-            let primitive = Rhombus::new(rng.gen_range(3.0..6.0), rng.gen_range(2.0..3.0));
+            let primitive = Rhombus::new(rng.random_range(3.0..6.0), rng.random_range(2.0..3.0));
             commands
                 .spawn((
                     transform,
                     Visibility::Visible,
                     PrimitiveObstacle::Rhombus(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
@@ -403,40 +403,40 @@ fn new_obstacle(
         }
         6 => {
             let primitive =
-                CircularSector::new(rng.gen_range(1.5..5.0), rng.gen_range(0.5..FRAC_PI_2));
+                CircularSector::new(rng.random_range(1.5..5.0), rng.random_range(0.5..FRAC_PI_2));
             commands
                 .spawn((
                     transform,
                     Visibility::Visible,
                     PrimitiveObstacle::CircularSector(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
                 });
         }
         7 => {
-            let primitive = CircularSegment::new(rng.gen_range(1.5..5.0), rng.gen_range(1.0..PI));
+            let primitive = CircularSegment::new(rng.random_range(1.5..5.0), rng.random_range(1.0..PI));
             commands
                 .spawn((
                     transform,
                     Visibility::Visible,
                     PrimitiveObstacle::CircularSegment(primitive),
                     Lifetime(Timer::from_seconds(
-                        rng.gen_range(20.0..40.0),
+                        rng.random_range(20.0..40.0),
                         TimerMode::Once,
                     )),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.gen_range(5.0..15.0)))),
+                        Mesh3d(meshes.add(Extrusion::new(primitive, rng.random_range(5.0..15.0)))),
                         MeshMaterial3d(mat.clone()),
                         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
                     ));
