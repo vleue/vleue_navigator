@@ -235,7 +235,8 @@ fn new_obstacle(
                 });
         }
         4 => {
-            let primitive = CircularSegment::new(rng.random_range(1.5..5.0), rng.random_range(1.0..PI));
+            let primitive =
+                CircularSegment::new(rng.random_range(1.5..5.0), rng.random_range(1.0..PI));
             commands
                 .spawn((
                     transform,
