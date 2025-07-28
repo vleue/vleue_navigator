@@ -33,7 +33,7 @@ fn main() {
             VleueNavigatorPlugin,
             // Auto update the navmesh.
             // Obstacles will be entities with the `Obstacle` marker component,
-            // and use the `Aabb` component as the obstacle data source.
+            // and use the `SharedShape` component as the obstacle data source.
             NavmeshUpdaterPlugin::<SharedShapeStorage>::default(),
         ))
         .add_systems(

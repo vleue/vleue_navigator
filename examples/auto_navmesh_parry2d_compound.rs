@@ -33,7 +33,7 @@ fn main() {
             VleueNavigatorPlugin,
             // Auto update the navmesh.
             // Obstacles will be entities with the `Obstacle` marker component,
-            // and use the `Aabb` component as the obstacle data source.
+            // and use the `SharedShape` component as the obstacle data source.
             NavmeshUpdaterPlugin::<SharedShapeStorage>::default(),
         ))
         .add_systems(
@@ -147,8 +147,8 @@ fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transfo
 
     let rectangle_transform = Transform::from_translation(
         Vec3::new(
-            rng.random_range((-10.)..(10.)),
-            rng.random_range((-10.)..(10.)),
+            rng.random_range((-10.)..10.),
+            rng.random_range((-10.)..10.),
             0.0,
         ) * FACTOR,
     )
@@ -156,8 +156,8 @@ fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transfo
 
     let circle_transform = Transform::from_translation(
         Vec3::new(
-            rng.random_range((-10.)..(10.)),
-            rng.random_range((-10.)..(10.)),
+            rng.random_range((-10.)..10.),
+            rng.random_range((-10.)..10.),
             0.0,
         ) * FACTOR,
     )
