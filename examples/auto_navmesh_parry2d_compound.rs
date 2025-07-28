@@ -42,7 +42,7 @@ fn main() {
                 setup,
                 ui::setup_stats::<true>,
                 ui::setup_settings::<false>,
-                agent::setup_agent::<10>,
+                agent::setup_agent::<10,10,1>,
             ),
         )
         .add_systems(
@@ -51,7 +51,7 @@ fn main() {
                 display_obstacle,
                 display_mesh,
                 spawn_obstacle_on_click.after(ui::update_settings::<10>),
-                ui::update_stats::<PrimitiveObstacle>,
+                ui::update_stats::<SharedShapeStorage>,
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,

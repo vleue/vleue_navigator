@@ -78,7 +78,7 @@ features = [
 default-features = false
 
 [features]
-default = ["debug-with-gizmos"]
+default = ["debug-with-gizmos", "parry2d"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]
@@ -103,6 +103,10 @@ required-features = ["parry2d"]
 
 [[example]]
 name = "auto_navmesh_parry2d_compound"
+required-features = ["parry2d"]
+
+[[example]]
+name = "many_navmesh_parry2d"
 required-features = ["parry2d"]
 
 [[example]]

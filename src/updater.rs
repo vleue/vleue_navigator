@@ -75,6 +75,7 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
     }
 }
 
+/// Determines how obstacle entities are filtered when building the [`NavMesh`].
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum FilterObstaclesMode {
     #[default]

@@ -42,7 +42,7 @@ fn main() {
                 setup,
                 ui::setup_stats::<true>,
                 ui::setup_settings::<false>,
-                agent::setup_agent::<10>,
+                agent::setup_agent::<10,10,2>,
             ),
         )
         .add_systems(

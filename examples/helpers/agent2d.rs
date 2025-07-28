@@ -5,8 +5,12 @@ use vleue_navigator::prelude::*;
 
 #[derive(Component)]
 pub struct Navigator {
+    delta: f32,
     speed: f32,
 }
+
+#[derive(Component)]
+pub struct SpecialNavmeshId(pub Entity);
 
 #[derive(Component)]
 pub struct Path {
@@ -15,30 +19,41 @@ pub struct Path {
     target: Entity,
 }
 
-pub fn setup_agent<const SIZE: u32>(mut commands: Commands) {
-    commands.spawn((
-        Sprite {
-            color: palettes::css::RED.into(),
-            custom_size: Some(Vec2::ONE),
-            ..default()
-        },
-        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)).with_scale(Vec3::splat(SIZE as f32)),
-        Navigator {
-            speed: SIZE as f32 * 5.0,
-        },
-    ));
+pub fn setup_agent<const SIZE: u32, const SPEED_SIZE: u32, const AGENT_NUM: u32>(
+    mut commands: Commands,
+) {
+    for _ in 0..AGENT_NUM {
+        commands.spawn((
+            Sprite {
+                color: palettes::css::RED.into(),
+                custom_size: Some(Vec2::ONE),
+                ..default()
+            },
+            Transform::from_translation(Vec3::new(0.0, 0.0, 1.0))
+                .with_scale(Vec3::splat(SIZE as f32)),
+            Navigator {
+                delta: 0.0,
+                speed: SPEED_SIZE as f32 * 5.0,
+            },
+        ));
+    }
 }
 
 pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
-    navigator: Query<(Entity, &Transform), (With<Navigator>, Without<Path>)>,
+    navigator: Query<
+        (Entity, &Transform, Option<&SpecialNavmeshId>),
+        (With<Navigator>, Without<Path>),
+    >,
     navmeshes: Res<Assets<NavMesh>>,
     navmesh: Query<&ManagedNavMesh>,
 ) {
-    for (entity, transform) in &navigator {
-        let Ok(navmesh) = navmesh.single() else {
-            continue;
+    for (entity, transform, special_navmesh_id) in &navigator {
+        let navmesh = match special_navmesh_id {
+            Some(navmesh_id) => navmesh.get(navmesh_id.0).expect("navmesh not found"),
+            None => navmesh.iter().nth(0).expect("no navmesh found"),
         };
+
         let Some(navmesh) = navmeshes.get(navmesh) else {
             continue;
         };
@@ -85,25 +100,34 @@ pub fn give_target_to_navigator<const SIZE: u32, const X: u32, const Y: u32>(
 
 pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
     mut commands: Commands,
-    mut navigator: Query<(Entity, &Transform, &mut Path), With<Navigator>>,
+    mut navigators: Query<(
+        Entity,
+        &Transform,
+        &mut Path,
+        Option<&SpecialNavmeshId>,
+        &mut Navigator,
+    )>,
     mut navmeshes: ResMut<Assets<NavMesh>>,
-    navmesh: Single<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
+    navmesh: Query<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
     transforms: Query<&Transform>,
-    mut delta: Local<f32>,
 ) {
-    let (navmesh_handle, status) = navmesh.deref();
-    if (!status.is_changed() || **status != NavMeshStatus::Built) && *delta == 0.0 {
-        return;
-    }
-    let Some(navmesh) = navmeshes.get_mut(*navmesh_handle) else {
-        return;
-    };
+    for (entity, transform, mut path, special_navmesh_id, mut navigator) in &mut navigators {
+        let (navmesh_handle, status) = match special_navmesh_id {
+            Some(navmesh_id) => navmesh.get(navmesh_id.0).expect("navmesh not found"),
+            None => navmesh.iter().nth(0).expect("no navmesh found"),
+        };
 
-    for (entity, transform, mut path) in &mut navigator {
+        if (!status.is_changed() || *status != NavMeshStatus::Built) && navigator.delta != 0.0 {
+            return;
+        }
+        let Some(navmesh) = navmeshes.get_mut(navmesh_handle) else {
+            return;
+        };
+
         let target = transforms.get(path.target).unwrap().translation.xy();
         if !navmesh.transformed_is_in_mesh(transform.translation) {
-            *delta += 0.1;
-            navmesh.set_search_delta(*delta);
+            navigator.delta += 0.1;
+            navmesh.set_search_delta(navigator.delta);
             continue;
         }
         if !navmesh.transformed_is_in_mesh(target.extend(0.0)) {
@@ -123,7 +147,7 @@ pub fn refresh_path<const SIZE: u32, const X: u32, const Y: u32>(
             remaining.reverse();
             path.current = first.xy();
             path.next = remaining;
-            *delta = 0.0;
+            navigator.delta = 0.0;
         }
     }
 }
@@ -150,14 +174,16 @@ pub fn move_navigator(
 }
 
 pub fn display_navigator_path(navigator: Query<(&Transform, &Path)>, mut gizmos: Gizmos) {
-    let Ok((transform, path)) = navigator.single() else {
+    if navigator.is_empty() {
         return;
-    };
-    let mut to_display = path.next.clone();
-    to_display.push(path.current);
-    to_display.push(transform.translation.xy());
-    to_display.reverse();
-    if !to_display.is_empty() {
-        gizmos.linestrip_2d(to_display, palettes::css::YELLOW);
+    }
+    for (transform, path) in &navigator {
+        let mut to_display = path.next.iter().map(|v| v.xy()).collect::<Vec<_>>();
+        to_display.push(path.current);
+        to_display.push(transform.translation.xy());
+        to_display.reverse();
+        if !to_display.is_empty() {
+            gizmos.linestrip_2d(to_display, palettes::css::YELLOW);
+        }
     }
 }

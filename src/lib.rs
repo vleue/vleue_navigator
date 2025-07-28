@@ -48,8 +48,9 @@ pub mod prelude {
         ObstacleSource, cached::CachedObstacle, primitive::PrimitiveObstacle,
     };
     pub use crate::updater::{
-        CachableObstacle, ManagedNavMesh, NAVMESH_BUILD_DURATION, NavMeshSettings, NavMeshStatus,
-        NavMeshUpdateMode, NavMeshUpdateModeBlocking, NavmeshUpdaterPlugin,
+        CachableObstacle, FilterObstaclesMode, ManagedNavMesh, NAVMESH_BUILD_DURATION,
+        NavMeshSettings, NavMeshStatus, NavMeshUpdateMode, NavMeshUpdateModeBlocking,
+        NavmeshUpdaterPlugin,
     };
     pub use crate::{NavMesh, Triangulation, VleueNavigatorPlugin};
     #[cfg(feature = "debug-with-gizmos")]

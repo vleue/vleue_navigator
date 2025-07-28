@@ -4,14 +4,16 @@ use bevy::{
     prelude::*,
     window::{PrimaryWindow, WindowResized},
 };
-use parry2d::shape::TypedShape;
+use parry2d::shape::{SharedShape, TypedShape};
 use polyanya::Triangulation;
 use rand::{Rng, rngs::ThreadRng};
-use std::f32::consts::PI;
-use std::ops::Deref;
+use std::{f32::consts::PI, ops::Deref};
 use vleue_navigator::prelude::*;
 
-use crate::ui::ShowingNavMesh;
+use crate::{
+    agent::{Navigator, SpecialNavmeshId},
+    ui::ShowingNavMesh,
+};
 #[path = "helpers/agent2d.rs"]
 mod agent;
 #[path = "helpers/ui.rs"]
@@ -19,6 +21,12 @@ mod ui;
 
 const MESH_WIDTH: u32 = 150;
 const MESH_HEIGHT: u32 = 100;
+
+#[derive(Debug, Component)]
+pub struct LandNavMesh;
+
+#[derive(Debug, Component)]
+pub struct AirNavMesh;
 
 fn main() {
     App::new()
@@ -43,7 +51,7 @@ fn main() {
             (
                 ui::setup_stats::<true>,
                 ui::setup_settings::<false>,
-                agent::setup_agent::<10, 10, 1>,
+                agent::setup_agent::<10, 10, 2>,
                 setup,
             )
                 .chain(),
@@ -53,15 +61,15 @@ fn main() {
             (
                 display_obstacle,
                 display_mesh,
-                spawn_obstacle_on_click.after(ui::update_settings::<10>),
+                spawn_obstacle_on_click,
                 ui::update_stats::<SharedShapeStorage>,
                 remove_obstacles,
                 ui::display_settings,
                 ui::update_settings::<10>,
                 agent::give_target_to_navigator::<10, MESH_WIDTH, MESH_HEIGHT>,
                 agent::move_navigator,
-                agent::display_navigator_path,
                 agent::refresh_path::<10, MESH_WIDTH, MESH_HEIGHT>,
+                agent::display_navigator_path,
             ),
         )
         .run();
@@ -69,12 +77,17 @@ fn main() {
 
 const FACTOR: f32 = 7.0;
 
-fn setup(mut commands: Commands, mut showing_navmesh: ResMut<ShowingNavMesh>) {
+fn setup(
+    mut commands: Commands,
+    mut showing_navmesh: ResMut<ShowingNavMesh>,
+    mut navigators: Query<(Entity, &mut Sprite), With<Navigator>>,
+) {
     commands.spawn(Camera2d);
-
     // Spawn a new navmesh that will be automatically updated.
-    let navmesh = commands
+    let land_navmesh = commands
         .spawn((
+            LandNavMesh,
+            ManagedNavMesh::from_id(0),
             NavMeshSettings {
                 // Define the outer borders of the navmesh.
                 // This will be in navmesh coordinates
@@ -102,20 +115,45 @@ fn setup(mut commands: Commands, mut showing_navmesh: ResMut<ShowingNavMesh>) {
             .with_scale(Vec3::splat(FACTOR)),
         ))
         .id();
-    showing_navmesh.0 = Some(navmesh);
 
-    let mut rng = rand::rng();
-    for _ in 0..50 {
-        // Obstacles are spawn in world coordinates.
-        let transform = Transform::from_translation(
-            Vec3::new(
-                rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
+    showing_navmesh.0 = Some(land_navmesh);
+
+    let air_navmesh = commands
+        .spawn((
+            AirNavMesh,
+            ManagedNavMesh::from_id(1),
+            NavMeshSettings {
+                fixed: Triangulation::from_outer_edges(&[
+                    vec2(0.0, 0.0),
+                    vec2(MESH_WIDTH as f32, 0.0),
+                    vec2(MESH_WIDTH as f32, MESH_HEIGHT as f32),
+                    vec2(0.0, MESH_HEIGHT as f32),
+                ]),
+                simplify: 0.05,
+                filter_obstacles_mode: FilterObstaclesMode::Ignore,
+                ..default()
+            },
+            NavMeshUpdateMode::Direct,
+            Transform::from_translation(Vec3::new(
+                -(MESH_WIDTH as f32) / 2.0 * FACTOR,
+                -(MESH_HEIGHT as f32) / 2.0 * FACTOR,
                 0.0,
-            ) * FACTOR,
-        )
-        .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
-        new_obstacle(&mut commands, &mut rng, transform);
+            ))
+            .with_scale(Vec3::splat(FACTOR)),
+        ))
+        .id();
+
+    let navmeshs = [land_navmesh, air_navmesh];
+    let colors = [palettes::css::RED, palettes::css::FUCHSIA];
+    for (index, (entity, mut sprite)) in navigators.iter_mut().enumerate() {
+        sprite.color = colors[index].into();
+        commands
+            .entity(entity)
+            .insert(SpecialNavmeshId(navmeshs[index]));
+        info!(
+            "Navigator entity: {:?} use the navmesh id is {:?}",
+            entity, navmeshs[index]
+        );
     }
 }
 
@@ -157,35 +195,37 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Tran
     }
 }
 
-fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) {
-    commands.spawn((
-        match rng.random_range(0..6) {
-            0 => SharedShapeStorage::rectangle(
-                rng.random_range(1.0..5.0) * FACTOR,
-                rng.random_range(1.0..5.0) * FACTOR,
-            ),
-            1 => SharedShapeStorage::circle(rng.random_range(1.0..5.0) * FACTOR),
-            2 => SharedShapeStorage::ellipse(
-                rng.random_range(1.0..5.0) * FACTOR,
-                rng.random_range(1.0..5.0) * FACTOR,
-            ),
-            3 => SharedShapeStorage::capsule(
-                rng.random_range(1.0..3.0) * FACTOR,
-                rng.random_range(1.5..5.0) * FACTOR,
-            ),
-            4 => SharedShapeStorage::round_rectangle(
-                rng.random_range(1.0..3.0) * FACTOR,
-                rng.random_range(1.5..5.0) * FACTOR,
-                rng.random_range(1.0..2.0) * FACTOR,
-            ),
-            5 => SharedShapeStorage::regular_polygon(
-                rng.random_range(1.0..5.0) * FACTOR,
-                rng.random_range(3..8),
-            ),
-            _ => unreachable!(),
-        },
-        transform,
-    ));
+fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) -> Entity {
+    commands
+        .spawn((
+            match rng.random_range(0..6) {
+                0 => SharedShapeStorage::rectangle(
+                    rng.random_range(1.0..5.0) * FACTOR,
+                    rng.random_range(1.0..5.0) * FACTOR,
+                ),
+                1 => SharedShapeStorage::circle(rng.random_range(1.0..5.0) * FACTOR),
+                2 => SharedShapeStorage::ellipse(
+                    rng.random_range(1.0..5.0) * FACTOR,
+                    rng.random_range(1.0..5.0) * FACTOR,
+                ),
+                3 => SharedShapeStorage::capsule(
+                    rng.random_range(1.0..3.0) * FACTOR,
+                    rng.random_range(1.5..5.0) * FACTOR,
+                ),
+                4 => SharedShapeStorage::round_rectangle(
+                    rng.random_range(1.0..3.0) * FACTOR,
+                    rng.random_range(1.5..5.0) * FACTOR,
+                    rng.random_range(1.0..2.0) * FACTOR,
+                ),
+                5 => SharedShapeStorage::regular_polygon(
+                    rng.random_range(1.0..5.0) * FACTOR,
+                    rng.random_range(3..8),
+                ),
+                _ => unreachable!(),
+            },
+            transform,
+        ))
+        .id()
 }
 
 fn display_mesh(
@@ -195,7 +235,7 @@ fn display_mesh(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
     window_resized: EventReader<WindowResized>,
-    navmesh: Single<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
+    navmesh: Single<(&ManagedNavMesh, Ref<NavMeshStatus>), With<LandNavMesh>>,
 ) {
     let (navmesh_handle, status) = navmesh.deref();
     if (!status.is_changed() || **status != NavMeshStatus::Built) && window_resized.is_empty() {
@@ -235,15 +275,11 @@ fn spawn_obstacle_on_click(
     primary_window: Single<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mut commands: Commands,
-    settings: Single<Ref<NavMeshSettings>>,
-) {
-    // Click was on a UI button that triggered a settings change, ignore it.
-    if settings.is_changed() {
-        return;
-    }
-    if mouse_button_input.just_pressed(MouseButton::Left) {
+    mut settings: Single<&mut NavMeshSettings, With<AirNavMesh>>,
+) -> Result {
+    if mouse_button_input.just_pressed(MouseButton::Right) {
         let Ok((camera, camera_transform)) = camera_q.single() else {
-            return;
+            return Ok(());
         };
         let window = *primary_window;
         if let Some(position) = window
@@ -254,10 +290,12 @@ fn spawn_obstacle_on_click(
             let mut rng = rand::rng();
             let transform = Transform::from_translation(position.extend(0.0))
                 .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
-            new_obstacle(&mut commands, &mut rng, transform);
-            info!("spawning an obstacle at {}", position);
+            settings
+                .filter_obstacles
+                .insert(new_obstacle(&mut commands, &mut rng, transform));
         }
     }
+    Ok(())
 }
 
 fn remove_obstacles(
