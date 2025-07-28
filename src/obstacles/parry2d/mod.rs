@@ -24,11 +24,9 @@ impl ObstacleSource for SharedShapeStorage {
         navmesh_transform: &Transform,
         up: (Dir3, f32),
     ) -> Vec<Vec<Vec2>> {
-        vec![self.shape_scaled().as_typed_shape().get_polygon(
-            obstacle_transform,
-            navmesh_transform,
-            up,
-        )]
+        self.shape_scaled()
+            .as_typed_shape()
+            .get_polygon(obstacle_transform, navmesh_transform, up)
     }
 }
 
@@ -38,7 +36,7 @@ trait InnerObstacleSource {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         up: (Dir3, f32),
-    ) -> Vec<Vec2>;
+    ) -> Vec<Vec<Vec2>>;
 }
 
 impl InnerObstacleSource for TypedShape<'_> {
@@ -47,7 +45,7 @@ impl InnerObstacleSource for TypedShape<'_> {
         obstacle_transform: &GlobalTransform,
         navmesh_transform: &Transform,
         (up, _shift): (Dir3, f32),
-    ) -> Vec<Vec2> {
+    ) -> Vec<Vec<Vec2>> {
         let mut transform = obstacle_transform.compute_transform();
         transform.scale = Vec3::ONE;
         let world_to_mesh = world_to_mesh(navmesh_transform);
@@ -66,81 +64,106 @@ impl InnerObstacleSource for TypedShape<'_> {
         let to_navmesh = |v: Vec3| world_to_mesh.transform_point3(v).xy();
 
         match self {
-            TypedShape::Ball(shape) => shape
-                .to_polyline(RESOLUTION)
-                .into_iter()
-                .map(to_world)
-                .map(to_navmesh)
-                .collect(),
-            TypedShape::Cuboid(shape) => shape
-                .to_polyline()
-                .into_iter()
-                .map(to_world)
-                .map(to_navmesh)
-                .collect(),
-            TypedShape::Capsule(shape) => shape
-                .to_polyline(RESOLUTION)
-                .into_iter()
-                .map(to_world)
-                .map(to_navmesh)
-                .collect(),
-            TypedShape::Triangle(shape) => [shape.a, shape.b, shape.c]
-                .into_iter()
-                .map(to_world)
-                .map(to_navmesh)
-                .collect(),
-            TypedShape::TriMesh(shape) => shape
-                .vertices()
-                .iter()
-                .map(ref_to_world)
-                .map(to_navmesh)
-                .collect(),
-            TypedShape::Polyline(shape) => shape
-                .vertices()
-                .iter()
-                .map(ref_to_world)
-                .map(to_navmesh)
-                .collect(),
+            TypedShape::Ball(shape) => vec![
+                shape
+                    .to_polyline(RESOLUTION)
+                    .into_iter()
+                    .map(to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
+            TypedShape::Cuboid(shape) => vec![
+                shape
+                    .to_polyline()
+                    .into_iter()
+                    .map(to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
+            TypedShape::Capsule(shape) => vec![
+                shape
+                    .to_polyline(RESOLUTION)
+                    .into_iter()
+                    .map(to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
+            TypedShape::Triangle(shape) => vec![
+                [shape.a, shape.b, shape.c]
+                    .into_iter()
+                    .map(to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
+            TypedShape::TriMesh(shape) => vec![
+                shape
+                    .vertices()
+                    .iter()
+                    .map(ref_to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
+            TypedShape::Polyline(shape) => vec![
+                shape
+                    .vertices()
+                    .iter()
+                    .map(ref_to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
             TypedShape::Compound(shape) => shape
                 .shapes()
                 .iter()
                 .flat_map(|(iso, shape)| {
-                    // TODO: handle the isometry of each shape
-                    info!("isometry transform: {:?}", iso.translation);
+                    let global_iso = Isometry3d::from_translation(obstacle_transform.translation())
+                        * Isometry3d::from_rotation(obstacle_transform.rotation());
+
+                    let iso = Isometry3d::from_xyz(iso.translation.x, iso.translation.y, 0.)
+                        * Isometry3d::from_rotation(Quat::from_rotation_z(f32::to_radians(
+                            -iso.rotation.angle(),
+                        )));
                     shape.as_typed_shape().get_polygon(
-                        obstacle_transform,
+                        &GlobalTransform::from(Transform::from_isometry(global_iso * iso)),
                         navmesh_transform,
                         (up, _shift),
                     )
                 })
                 .collect(),
-            TypedShape::ConvexPolygon(shape) => shape
-                .points()
-                .iter()
-                .map(ref_to_world)
-                .map(to_navmesh)
-                .collect(),
-            TypedShape::RoundCuboid(shape) => shape
-                .to_polyline(RESOLUTION)
+            TypedShape::ConvexPolygon(shape) => vec![
+                shape
+                    .points()
+                    .iter()
+                    .map(ref_to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
+            TypedShape::RoundCuboid(shape) => vec![
+                shape
+                    .to_polyline(RESOLUTION)
+                    .into_iter()
+                    .map(to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
+            TypedShape::RoundTriangle(shape) => vec![
+                [
+                    shape.inner_shape.a,
+                    shape.inner_shape.b,
+                    shape.inner_shape.c,
+                ]
                 .into_iter()
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
-            TypedShape::RoundTriangle(shape) => [
-                shape.inner_shape.a,
-                shape.inner_shape.b,
-                shape.inner_shape.c,
-            ]
-            .into_iter()
-            .map(to_world)
-            .map(to_navmesh)
-            .collect(),
-            TypedShape::RoundConvexPolygon(shape) => shape
-                .to_polyline(RESOLUTION)
-                .into_iter()
-                .map(to_world)
-                .map(to_navmesh)
-                .collect(),
+            ],
+            TypedShape::RoundConvexPolygon(shape) => vec![
+                shape
+                    .to_polyline(RESOLUTION)
+                    .into_iter()
+                    .map(to_world)
+                    .map(to_navmesh)
+                    .collect(),
+            ],
             TypedShape::Segment(_) => {
                 warn!("Segment collider not supported for NavMesh obstacle generation");
                 vec![]
@@ -159,24 +182,28 @@ impl InnerObstacleSource for TypedShape<'_> {
                         .as_shape::<RegularPolygonShape>()
                         .expect("the custom shape should be a RegularPolygonShape");
 
-                    (0..=regular_polygon_shape.sides)
-                        .map(|p| {
-                            copypasta::single_circle_coordinate(
-                                regular_polygon_shape.circumcircle.radius,
-                                regular_polygon_shape.sides,
-                                p.try_into().unwrap(),
-                            )
-                        })
-                        .map(|v| to_navmesh(to_world(v.into())))
-                        .collect()
+                    vec![
+                        (0..=regular_polygon_shape.sides)
+                            .map(|p| {
+                                copypasta::single_circle_coordinate(
+                                    regular_polygon_shape.circumcircle.radius,
+                                    regular_polygon_shape.sides,
+                                    p.try_into().unwrap(),
+                                )
+                            })
+                            .map(|v| to_navmesh(to_world(v.into())))
+                            .collect(),
+                    ]
                 } else if custom.is::<EllipseShape>() {
                     let ellipse_shape = custom
                         .as_shape::<EllipseShape>()
                         .expect("the custom shape should be a RegularPolygonShape");
 
-                    copypasta::ellipse_inner(ellipse_shape.half_size, RESOLUTION)
-                        .map(|v| to_navmesh(to_world(v.into())))
-                        .collect()
+                    vec![
+                        copypasta::ellipse_inner(ellipse_shape.half_size, RESOLUTION)
+                            .map(|v| to_navmesh(to_world(v.into())))
+                            .collect(),
+                    ]
                 } else {
                     warn!("Custom collider not supported for NavMesh obstacle generation");
                     vec![]

@@ -97,20 +97,6 @@ fn setup(mut commands: Commands) {
         ))
         .with_scale(Vec3::splat(FACTOR)),
     ));
-
-    let mut rng = rand::rng();
-    for _ in 0..50 {
-        // Obstacles are spawn in world coordinates.
-        let transform = Transform::from_translation(
-            Vec3::new(
-                rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
-                0.0,
-            ) * FACTOR,
-        )
-        .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
-        new_obstacle(&mut commands, &mut rng, transform);
-    }
 }
 
 fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Transform)>) {
@@ -152,68 +138,45 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&SharedShapeStorage, &Tran
 }
 
 fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) {
-    commands.spawn((
-        match rng.random_range(0..7) {
-            0 => SharedShapeStorage::rectangle(
-                rng.random_range(1.0..5.0) * FACTOR,
-                rng.random_range(1.0..5.0) * FACTOR,
-            ),
-            1 => SharedShapeStorage::circle(rng.random_range(1.0..5.0) * FACTOR),
-            2 => SharedShapeStorage::ellipse(
-                rng.random_range(1.0..5.0) * FACTOR,
-                rng.random_range(1.0..5.0) * FACTOR,
-            ),
-            3 => SharedShapeStorage::capsule(
-                rng.random_range(1.0..3.0) * FACTOR,
-                rng.random_range(1.5..5.0) * FACTOR,
-            ),
-            4 => SharedShapeStorage::round_rectangle(
-                rng.random_range(1.0..3.0) * FACTOR,
-                rng.random_range(1.5..5.0) * FACTOR,
-                rng.random_range(1.0..2.0) * FACTOR,
-            ),
-            5 => SharedShapeStorage::regular_polygon(
-                rng.random_range(1.0..5.0) * FACTOR,
-                rng.random_range(3..8),
-            ),
-            6 => {
-                let rectangle = SharedShape::cuboid(
-                    rng.random_range(1.0..5.0) * FACTOR,
-                    rng.random_range(1.0..5.0) * FACTOR,
-                );
-                let circle = SharedShape::ball(rng.random_range(1.0..5.0) * FACTOR);
-                let rectangle_transform = Transform::from_translation(
-                    Vec3::new(
-                        rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                        rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
-                        0.0,
-                    ) * FACTOR,
-                )
-                .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
-                let circle_transform = Transform::from_translation(
-                    Vec3::new(
-                        rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                        rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
-                        0.0,
-                    ) * FACTOR,
-                )
-                .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
-                let rectangle_iso = parry2d::math::Isometry::<f32>::new(
-                    rectangle_transform.translation.truncate().into(),
-                    rectangle_transform.rotation.to_axis_angle().1,
-                );
-                let circle_iso = parry2d::math::Isometry::<f32>::new(
-                    circle_transform.translation.truncate().into(),
-                    circle_transform.rotation.to_axis_angle().1,
-                );
+    let rectangle = SharedShape::cuboid(
+        rng.random_range(1.0..5.0) * FACTOR,
+        rng.random_range(1.0..5.0) * FACTOR,
+    );
 
-                SharedShapeStorage::from(SharedShape::compound(vec![
-                    (rectangle_iso, rectangle),
-                    (circle_iso, circle),
-                ]))
-            }
-            _ => unreachable!(),
-        },
+    let circle = SharedShape::ball(rng.random_range(1.0..5.0) * FACTOR);
+
+    let rectangle_transform = Transform::from_translation(
+        Vec3::new(
+            rng.random_range((-10.)..(10.)),
+            rng.random_range((-10.)..(10.)),
+            0.0,
+        ) * FACTOR,
+    )
+    .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
+
+    let circle_transform = Transform::from_translation(
+        Vec3::new(
+            rng.random_range((-10.)..(10.)),
+            rng.random_range((-10.)..(10.)),
+            0.0,
+        ) * FACTOR,
+    )
+    .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..(2.0 * PI))));
+
+    let rectangle_iso = parry2d::math::Isometry::<f32>::new(
+        rectangle_transform.translation.truncate().into(),
+        rectangle_transform.rotation.to_axis_angle().1,
+    );
+    let circle_iso = parry2d::math::Isometry::<f32>::new(
+        circle_transform.translation.truncate().into(),
+        circle_transform.rotation.to_axis_angle().1,
+    );
+
+    commands.spawn((
+        SharedShapeStorage::from(SharedShape::compound(vec![
+            (rectangle_iso, rectangle),
+            (circle_iso, circle),
+        ])),
         transform,
     ));
 }
