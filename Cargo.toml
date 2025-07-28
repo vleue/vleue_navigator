@@ -78,12 +78,12 @@ features = [
 default-features = false
 
 [features]
-default = ["debug-with-gizmos"]
+default = ["debug-with-gizmos", "parry2d"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]
 avian3d = ["dep:avian3d"]
-parry2d = ["dep:parry2d", "dep:nalgebra","dep:bitflags"]
+parry2d = ["dep:parry2d", "dep:nalgebra", "dep:bitflags"]
 
 [[example]]
 name = "auto_navmesh_avian2d"
