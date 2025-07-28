@@ -78,7 +78,13 @@ features = [
 default-features = false
 
 [features]
-default = ["debug-with-gizmos"]
+default = [
+    "debug-with-gizmos",
+    "detailed-layers",
+    "avian2d",
+    "avian3d",
+    "parry2d",
+]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]
