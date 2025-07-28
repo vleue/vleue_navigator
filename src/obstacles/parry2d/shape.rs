@@ -6,15 +6,11 @@ use parry2d::{
     shape::{RoundShape, SharedShape, TypedShape, Voxels},
 };
 
-use crate::{
-    obstacles::parry2d::{
-        InnerObstacleSource,
-        error::TrimeshBuilderError,
-        math::{AdjustPrecision, AsF32, IVector, Scalar, Vector, make_isometry},
-        primitives::{EllipseShape, RegularPolygonShape},
-        transform::{Position, Rotation},
-    },
-    prelude::ObstacleSource,
+use crate::obstacles::parry2d::{
+    error::TrimeshBuilderError,
+    math::{AdjustPrecision, AsF32, IVector, Scalar, Vector, make_isometry},
+    primitives::{EllipseShape, RegularPolygonShape},
+    transform::{Position, Rotation},
 };
 
 /// A sharedshape obstacle that can be used to create a [`NavMesh`].
