@@ -2,7 +2,9 @@ use std::f32::consts::FRAC_PI_2;
 
 use bevy::{color::palettes, prelude::*};
 use polyanya::{U32Layer, Vec2Helper};
-use vleue_navigator::{VleueNavigatorPlugin, display_mesh_gizmo, prelude::*};
+use vleue_navigator::{
+    VleueNavigatorPlugin, display_mesh_gizmo, display_polygon_gizmo, prelude::*,
+};
 
 #[path = "helpers/camera_controller.rs"]
 mod camera_controller;
@@ -118,7 +120,7 @@ fn draw_parsed_recast_navmesh(
 
     let point_as_vec3 = |point: Vec2| {
         let coords = mesh.get_point_layer(point)[0];
-        coords.as_vec3(mesh)
+        coords.position_with_height(mesh)
     };
 
     let mut heighted_path = vec![];
@@ -126,9 +128,17 @@ fn draw_parsed_recast_navmesh(
     let mut current = start;
     let mut next_i = 0;
     let mut next_coords = mesh.get_point_layer(path.path[next_i])[0];
-    let mut next = next_coords.as_vec3(mesh);
+    let mut next = next_coords.position_with_height(mesh);
     for polygon_index in &path.path_through_polygons {
         let layer = &mesh.layers[polygon_index.layer() as usize];
+        display_polygon_gizmo(
+            layer,
+            polygon_index.polygon(),
+            &mesh_to_world,
+            palettes::tailwind::BLUE_500.into(),
+            &mut gizmos,
+        );
+
         let polygon = &layer.polygons[polygon_index.polygon() as usize];
         if polygon.contains(layer, next_coords.position()) {
             next_i += 1;
@@ -137,63 +147,31 @@ fn draw_parsed_recast_navmesh(
                 heighted_path.push(next);
                 current = next;
                 next_coords = mesh.get_point_layer(path.path[next_i])[0];
-                next = next_coords.as_vec3(mesh);
+                next = next_coords.position_with_height(mesh);
             }
         }
         let a = point_as_vec3(layer.vertices[polygon.vertices[0] as usize].coords);
         let b = point_as_vec3(layer.vertices[polygon.vertices[1] as usize].coords);
         let c = point_as_vec3(layer.vertices[polygon.vertices[2] as usize].coords);
-
         let line = next - current;
-
         let normal = Plane3d::from_points(a, b, c).0.normal;
-
-        let mut v = polygon
-            .vertices
-            .iter()
-            .filter(|i| **i != u32::MAX)
-            .map(|i| {
-                (layer.vertices[*i as usize].coords)
-                    .extend(-layer.height.get(*i as usize).cloned().unwrap_or_default())
-            })
-            .map(|v| mesh_to_world.transform_point(v))
-            .collect::<Vec<_>>();
-        if !v.is_empty() {
-            let first_index = polygon.vertices[0] as usize;
-            let first = &layer.vertices[first_index];
-            v.push(mesh_to_world.transform_point(
-                (first.coords).extend(-layer.height.get(first_index).cloned().unwrap_or_default()),
-            ));
-        }
-
-        gizmos.linestrip(v, palettes::tailwind::BLUE_500);
         if line.dot(normal.as_vec3()).abs() > 0.00001 {
-            let mut intersections = Vec::with_capacity(2);
             let poly_coords = polygon.coords(layer);
-            let closing = [
+            let closing = vec![
                 poly_coords.last().unwrap().clone(),
                 poly_coords.first().unwrap().clone(),
             ];
-            for edge in poly_coords.windows(2) {
-                let intersection =
-                    polyanya::line_intersect_segment((current.xz(), next.xz()), (edge[0], edge[1]));
-                if let Some(intersection) = intersection {
-                    intersections.push(intersection);
-                }
-            }
-            let intersection = polyanya::line_intersect_segment(
-                (current.xz(), next.xz()),
-                (closing[0], closing[1]),
-            );
-            if let Some(intersection) = intersection {
-                intersections.push(intersection);
-            }
-            if let Some(new) = intersections
-                .iter()
+
+            if let Some(new) = poly_coords
+                .windows(2)
+                .chain([closing.as_slice()])
+                .filter_map(|edge| {
+                    polyanya::line_intersect_segment((current.xz(), next.xz()), (edge[0], edge[1]))
+                })
                 .filter(|p| p.on_segment((current.xz(), next.xz())))
-                .max_by_key(|p| (current.xz().distance_squared(**p) * 10000.0) as u32)
+                .max_by_key(|p| (current.xz().distance_squared(*p) * 10000.0) as u32)
             {
-                let new = point_as_vec3(*new);
+                let new = point_as_vec3(new);
                 path_gizmos.sphere(new, 0.1, palettes::tailwind::RED_400);
 
                 heighted_path.push(new);
