@@ -527,11 +527,9 @@ fn update_navmesh_asset(
                 settings.bypass_change_detection().cached = to_cache;
             }
             debug!(
-                "navmesh {:?} ({:?}) built{}",
-                handle,
-                entity,
+                "navmesh {handle:?} ({entity:?}) built{}",
                 if let Some(layer) = &settings.layer {
-                    format!(" (layer {})", layer)
+                    format!(" (layer {layer})")
                 } else {
                     "".to_string()
                 }
