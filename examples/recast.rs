@@ -88,8 +88,8 @@ fn draw_parsed_recast_navmesh(
     let start = vec3(46.998413, 9.998184, 1.717747);
     let end = vec3(20.703018, 18.651773, -80.770203);
 
-    gizmos.sphere(start, 1.0, palettes::tailwind::LIME_400);
-    gizmos.sphere(end, 1.0, palettes::tailwind::YELLOW_400);
+    gizmos.sphere(start, 0.5, palettes::tailwind::LIME_400);
+    gizmos.sphere(end, 0.5, palettes::tailwind::YELLOW_400);
 
     let mesh = if (time.elapsed_secs() as u32 / 5) % 2 == 0 {
         &recast.0
@@ -133,7 +133,7 @@ fn draw_parsed_recast_navmesh(
         if polygon.contains(layer, next_coords.position()) {
             next_i += 1;
             if next_i < path.path.len() - 1 {
-                gizmos.sphere(next, 0.2, palettes::tailwind::BLUE_400);
+                path_gizmos.sphere(next, 0.1, palettes::tailwind::BLUE_400);
                 heighted_path.push(next);
                 current = next;
                 next_coords = mesh.get_point_layer(path.path[next_i])[0];
@@ -194,7 +194,7 @@ fn draw_parsed_recast_navmesh(
                 .max_by_key(|p| (current.xz().distance_squared(**p) * 10000.0) as u32)
             {
                 let new = point_as_vec3(*new);
-                gizmos.sphere(new, 0.2, palettes::tailwind::RED_400);
+                path_gizmos.sphere(new, 0.1, palettes::tailwind::RED_400);
 
                 heighted_path.push(new);
                 current = new;
@@ -202,6 +202,7 @@ fn draw_parsed_recast_navmesh(
         }
     }
 
+    heighted_path.insert(0, start);
     heighted_path.push(end);
     path_gizmos.linestrip(heighted_path, palettes::tailwind::LIME_600);
 }
