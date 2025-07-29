@@ -498,7 +498,6 @@ pub fn display_polygon_gizmo<T: bevy::gizmos::config::GizmoConfigGroup>(
     let scale = layer.scale;
     #[cfg(not(feature = "detailed-layers"))]
     let scale = Vec2::ONE;
-    // for polygon in &layer.polygons {
     let polygon = &layer.polygons[polygon as usize];
     let mut v = polygon
         .vertices
