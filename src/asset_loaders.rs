@@ -19,8 +19,8 @@ pub enum NavMeshLoaderError {
 impl Display for NavMeshLoaderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NavMeshLoaderError::Io(io_error) => write!(f, "IO error: {}", io_error),
-            NavMeshLoaderError::MeshError(mesh_error) => write!(f, "Mesh error: {}", mesh_error),
+            NavMeshLoaderError::Io(io_error) => write!(f, "IO error: {io_error}"),
+            NavMeshLoaderError::MeshError(mesh_error) => write!(f, "Mesh error: {mesh_error}"),
         }
     }
 }
