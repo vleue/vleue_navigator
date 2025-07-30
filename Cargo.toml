@@ -33,6 +33,9 @@ optional = true
 version = "0.22"
 optional = true
 
+[dependencies.rayon]
+version = "1.10.0"
+
 [dependencies.nalgebra]
 version = "0.33"
 features = ["convert-glam029"]
@@ -78,7 +81,7 @@ features = [
 default-features = false
 
 [features]
-default = ["debug-with-gizmos"]
+default = ["debug-with-gizmos", "parry2d"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]

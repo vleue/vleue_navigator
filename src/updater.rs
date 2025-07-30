@@ -19,7 +19,7 @@ use bevy::{
 use polyanya::{Layer, Mesh, Triangulation};
 
 use crate::{NavMesh, obstacles::ObstacleSource};
-
+use rayon::prelude::*;
 /// A Marker component for an obstacle that can be cached.
 ///
 /// Caching obstacles can help to optimize the [`NavMesh`] generation process.
@@ -228,16 +228,18 @@ fn build_navmesh<T: ObstacleSource>(
         base.set_agent_radius(settings.agent_radius);
         base.set_agent_radius_simplification(settings.simplify);
         base.agent_radius_on_outer_edge(settings.agent_radius_on_outer_edge);
-        let obstacle_polys = cached_obstacles
-            .iter()
+        let obstacle_polys: Vec<Vec<Vec2>> = cached_obstacles
+            .par_iter()
             .flat_map(|(transform, obstacle)| {
                 obstacle
                     .get_polygons(transform, &mesh_transform, up)
-                    .into_iter()
+                    .into_par_iter()
             })
-            .filter(|p: &Vec<Vec2>| !p.is_empty())
-            .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
-        base.add_obstacles(obstacle_polys);
+            .filter(|p| !p.is_empty())
+            .map(|p| p.into_par_iter().map(|v| v / scale).collect::<Vec<_>>())
+            .collect();
+
+        base.add_obstacles(obstacle_polys.into_iter());
         if settings.simplify != 0.0 {
             base.simplify(settings.simplify);
         }
@@ -248,16 +250,17 @@ fn build_navmesh<T: ObstacleSource>(
     };
     let mut triangulation = base.clone();
 
-    let obstacle_polys = obstacles
-        .iter()
+    let obstacle_polys: Vec<Vec<Vec2>> = obstacles
+        .par_iter()
         .flat_map(|(transform, obstacle)| {
             obstacle
                 .get_polygons(transform, &mesh_transform, up)
-                .into_iter()
+                .into_par_iter()
         })
         .filter(|p: &Vec<Vec2>| !p.is_empty())
-        .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
-    triangulation.add_obstacles(obstacle_polys);
+        .map(|p| p.into_par_iter().map(|v| v / scale).collect::<Vec<_>>())
+        .collect();
+    triangulation.add_obstacles(obstacle_polys.into_iter());
 
     if settings.simplify != 0.0 {
         triangulation.simplify(settings.simplify);
@@ -396,6 +399,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     }
 
     let has_removed_obstacles = !removed_obstacles.is_empty();
+
     let mut to_check = navmeshes
         .iter_mut()
         .filter_map(|(entity, settings, _, mode, ..)| {
