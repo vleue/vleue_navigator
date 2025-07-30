@@ -111,24 +111,28 @@ impl InnerObstacleSource for TypedShape<'_> {
                     .map(to_navmesh)
                     .collect(),
             ],
-            TypedShape::Compound(shape) => shape
-                .shapes()
-                .par_iter()
-                .flat_map(|(iso, shape)| {
-                    let global_iso = Isometry3d::from_translation(obstacle_transform.translation())
-                        * Isometry3d::from_rotation(obstacle_transform.rotation());
+            TypedShape::Compound(shape) => vec![
+                shape
+                    .shapes()
+                    .par_iter()
+                    .flat_map(|(iso, shape)| {
+                        let global_iso =
+                            Isometry3d::from_translation(obstacle_transform.translation())
+                                * Isometry3d::from_rotation(obstacle_transform.rotation());
 
-                    let iso = Isometry3d::from_xyz(iso.translation.x, iso.translation.y, 0.)
-                        * Isometry3d::from_rotation(Quat::from_rotation_z(f32::to_radians(
-                            -iso.rotation.angle(),
-                        )));
-                    shape.as_typed_shape().get_polygon(
-                        &GlobalTransform::from(Transform::from_isometry(global_iso * iso)),
-                        navmesh_transform,
-                        (up, _shift),
-                    )
-                })
-                .collect(),
+                        let iso = Isometry3d::from_xyz(iso.translation.x, iso.translation.y, 0.)
+                            * Isometry3d::from_rotation(Quat::from_rotation_z(f32::to_radians(
+                                -iso.rotation.angle(),
+                            )));
+                        shape.as_typed_shape().get_polygon(
+                            &GlobalTransform::from(Transform::from_isometry(global_iso * iso)),
+                            navmesh_transform,
+                            (up, _shift),
+                        )
+                    })
+                    .flatten()
+                    .collect(),
+            ],
             TypedShape::ConvexPolygon(shape) => vec![
                 shape
                     .points()
