@@ -45,6 +45,12 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
+[dev-dependencies.polyanya]
+version = "0.13.0"
+features = ["serde"]
+git = "https://github.com/vleue/polyanya"
+branch = "recast"
+
 [dev-dependencies.bevy]
 version = "0.16.0"
 features = [

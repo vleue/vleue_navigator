@@ -1,18 +1,25 @@
-use std::f32::consts::FRAC_PI_2;
+use std::{f32::consts::FRAC_PI_2, fs::File};
 
-use bevy::{color::palettes, prelude::*};
-use vleue_navigator::{
-    VleueNavigatorPlugin, display_mesh_gizmo, display_polygon_gizmo, prelude::*,
+use bevy::{
+    color::palettes::{self},
+    core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
+    prelude::*,
 };
+use vleue_navigator::{VleueNavigatorPlugin, display_layer_gizmo, prelude::*};
 
 #[path = "helpers/camera_controller.rs"]
 mod camera_controller;
 
 fn main() {
-    let rasterised_mesh = polyanya::RecastPolyMesh::from_file("assets/recast/poly_mesh.json");
-    let detailed_mesh = polyanya::RecastPolyMeshDetail::from_file("assets/recast/detail_mesh.json");
-    let full_navmesh: polyanya::Mesh =
-        polyanya::RecastFullMesh::new(rasterised_mesh, detailed_mesh).into();
+    let rasterised: polyanya::RecastPolyMesh =
+        serde_json::from_reader(File::open("assets/recast/poly_mesh.json").unwrap()).unwrap();
+    let detailed: polyanya::RecastPolyMeshDetail =
+        serde_json::from_reader(File::open("assets/recast/detail_mesh.json").unwrap()).unwrap();
+    let mut full_navmesh: polyanya::Mesh =
+        polyanya::RecastFullMesh::new(rasterised, detailed).into();
+
+    full_navmesh.search_delta = 0.25;
+    full_navmesh.search_steps = 20;
 
     App::new()
         .insert_resource(ClearColor(Color::srgb(0., 0., 0.01)))
@@ -25,10 +32,20 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (draw_navmesh, draw_path, layers_info, switch_layers),
+            (
+                draw_navmesh,
+                draw_path,
+                layers_info,
+                switch_layers,
+                autonomous_demo,
+            ),
         )
         .insert_resource(Layers(vec![true; full_navmesh.layers.len()]))
         .insert_resource(RecastNavmesh(full_navmesh))
+        .insert_resource(AmbientLight {
+            brightness: 200.0,
+            ..default()
+        })
         .insert_gizmo_config::<NavMeshGizmos>(
             NavMeshGizmos,
             GizmoConfig {
@@ -78,8 +95,14 @@ struct Layers(Vec<bool>);
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(50.0, 150.0, -30.0).looking_at(Vec3::new(0.0, 0.0, -30.0), Vec3::Y),
+        Camera {
+            hdr: true,
+            ..default()
+        },
+        Transform::from_xyz(35.0, 90.0, -40.0).looking_at(Vec3::new(15.0, 0.0, -40.0), Vec3::Y),
         camera_controller::CameraController::default(),
+        Tonemapping::TonyMcMapface,
+        Bloom::NATURAL,
     ));
 
     commands.spawn(SceneRoot(
@@ -96,18 +119,28 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
-fn draw_navmesh(mut navmesh_gizmos: Gizmos<NavMeshGizmos>, recast: Res<RecastNavmesh>) {
+fn draw_navmesh(
+    mut navmesh_gizmos: Gizmos<NavMeshGizmos>,
+    recast: Res<RecastNavmesh>,
+    layers: Res<Layers>,
+) {
     let mesh = &recast.0;
-    let colors: Vec<_> = LAYER_COLORS
+    let colors: Vec<Color> = LAYER_COLORS
         .iter()
         .map(|color| color.clone().into())
         .collect();
-    display_mesh_gizmo(
-        mesh,
-        &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)).into(),
-        colors.as_slice(),
-        &mut navmesh_gizmos,
-    );
+    for (layer, (color, enabled)) in mesh.layers.iter().zip(colors.iter().zip(layers.0.iter())) {
+        let mut color = *color;
+        if !enabled {
+            color.set_alpha(0.2);
+        }
+        display_layer_gizmo(
+            layer,
+            &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)).into(),
+            color,
+            &mut navmesh_gizmos,
+        );
+    }
 }
 
 fn draw_path(
@@ -123,9 +156,6 @@ fn draw_path(
     gizmos.sphere(end, 0.5, palettes::tailwind::YELLOW_400);
 
     let mesh = &recast.0;
-    // let Some(path) = mesh.path(start.xz(), end.xz()) else {
-    //     return;
-    // };
     let Some(path) = mesh.path_on_layers(
         start.xz(),
         end.xz(),
@@ -139,27 +169,10 @@ fn draw_path(
         return;
     };
 
-    // for (layer, polygon) in path.polygons() {
-    //     let layer = &mesh.layers[layer as usize];
-    //     display_polygon_gizmo(
-    //         layer,
-    //         polygon,
-    //         &Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)).into(),
-    //         palettes::tailwind::BLUE_500.into(),
-    //         &mut gizmos,
-    //     );
-    // }
-
     let mut path_with_height = path.path_with_height(start, end, mesh);
 
     for point in &path_with_height {
-        if path.path.contains(&point.xz()) {
-            // This point is on the original path
-            path_gizmos.sphere(*point, 0.1, palettes::tailwind::BLUE_600);
-        } else {
-            // This point was added to follow the terrain height
-            path_gizmos.sphere(*point, 0.1, palettes::tailwind::RED_600);
-        }
+        path_gizmos.sphere(*point, 0.1, palettes::tailwind::BLUE_600);
     }
     path_with_height.insert(0, start);
     path_gizmos.linestrip(path_with_height, palettes::tailwind::LIME_600);
@@ -227,3 +240,179 @@ fn switch_layers(mut layers: ResMut<Layers>, input: Res<ButtonInput<KeyCode>>) {
         }
     }
 }
+
+fn autonomous_demo(
+    mut camera_transform: Single<&mut Transform, (Without<Agent>, With<Camera>)>,
+    input: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    mut current_position: Local<(Option<Timer>, u32)>,
+    mut moving: Local<bool>,
+    mut started: Local<bool>,
+    mut finished: Local<bool>,
+    mut bloomed: Local<bool>,
+    mut timer: Local<Option<Timer>>,
+    mut layers: ResMut<Layers>,
+    mut commands: Commands,
+    recast: Res<RecastNavmesh>,
+    mut spawn_timer: Local<(Option<Timer>, f32)>,
+    mut agents: Query<(Entity, &mut Transform, &MeshMaterial3d<StandardMaterial>), With<Agent>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let positions = [
+        vec3(35.0, 90.0, -40.0),
+        vec3(40.0, 20.0, -60.0),
+        vec3(20.0, 30.0, -15.0),
+        vec3(35.0, 50.0, -15.0),
+    ];
+    let rotations = [
+        Transform::from_translation(positions[0])
+            .looking_at(Vec3::new(15.0, 0.0, -40.0), Vec3::Y)
+            .rotation,
+        Transform::from_translation(positions[1])
+            .looking_at(Vec3::new(15.0, 10.0, -70.0), Vec3::Y)
+            .rotation,
+        Transform::from_translation(positions[2])
+            .looking_at(Vec3::new(10.0, 10.0, -25.0), Vec3::Y)
+            .rotation,
+        Transform::from_translation(positions[3])
+            .looking_at(Vec3::new(40.0, 10.0, 0.0), Vec3::Y)
+            .rotation,
+    ];
+
+    if current_position.0.is_none() {
+        current_position.0 = Some(Timer::from_seconds(10.0, TimerMode::Repeating));
+    }
+
+    if camera_transform
+        .translation
+        .distance_squared(positions[current_position.1 as usize])
+        < 1.0
+    {
+        *moving = false;
+    }
+
+    if input.just_pressed(KeyCode::Space)
+        || (current_position
+            .0
+            .as_mut()
+            .unwrap()
+            .tick(time.delta())
+            .just_finished()
+            && !*finished)
+    {
+        current_position.1 = (current_position.1 + 1) % positions.len() as u32;
+        *moving = true;
+        if current_position.1 == 2 {
+            *started = true;
+        }
+        if current_position.1 == 3 {
+            *bloomed = true;
+        }
+        if *started && current_position.1 == 0 {
+            *finished = true;
+            spawn_timer.0 = Some(Timer::from_seconds(1.5, TimerMode::Repeating));
+        }
+    }
+
+    if *moving {
+        camera_transform.translation.smooth_nudge(
+            &positions[current_position.1 as usize],
+            2.0,
+            time.delta_secs(),
+        );
+        camera_transform.rotation.smooth_nudge(
+            &rotations[current_position.1 as usize],
+            2.0,
+            time.delta_secs(),
+        );
+    }
+
+    if *started {
+        if timer.is_none() {
+            *timer = Some(Timer::from_seconds(0.87, TimerMode::Repeating));
+        }
+
+        use rand::seq::SliceRandom;
+
+        if timer.as_mut().unwrap().tick(time.delta()).just_finished() {
+            let layer = match current_position.1 {
+                0 => *[1, 4].choose(&mut rand::thread_rng()).unwrap(),
+                1 => 4,
+                2 => 4,
+                3 => 1,
+                _ => unreachable!(),
+            };
+            layers.0[layer as usize] = !layers.0[layer as usize];
+        }
+    }
+    let start = vec3(46.998413, 9.998184, 1.717747);
+    let end = vec3(20.703018, 18.651773, -80.770203);
+
+    if spawn_timer.0.is_none() {
+        let mut timer = Timer::from_seconds(2.5, TimerMode::Repeating);
+        timer.set_elapsed(std::time::Duration::from_secs(2));
+        spawn_timer.0 = Some(timer);
+    }
+
+    if spawn_timer
+        .0
+        .as_mut()
+        .unwrap()
+        .tick(time.delta())
+        .just_finished()
+    {
+        let sphere = meshes.add(Sphere::new(1.0).mesh());
+
+        commands.spawn((
+            Mesh3d(sphere.clone()),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: palettes::tailwind::LIME_400.into(),
+                emissive_exposure_weight: 0.0,
+                ..default()
+            })),
+            Transform::from_translation(start),
+            Agent,
+        ));
+    }
+
+    let mesh = &recast.0;
+    let layers: std::collections::HashSet<u8> = layers
+        .0
+        .iter()
+        .enumerate()
+        .filter_map(|(n, e)| (!e).then_some(n as u8))
+        .collect();
+    for (entity, mut transform, material) in &mut agents {
+        let Some(path) = mesh.path_on_layers(transform.translation.xz(), end.xz(), layers.clone())
+        else {
+            continue;
+        };
+        if *bloomed {
+            let next_polygon_in_path = path.polygons().first().unwrap().0;
+            let material = materials.get_mut(material.id());
+            let material = material.unwrap();
+            if next_polygon_in_path == 2 {
+                material.emissive = Srgba::new(0.6, 10.0, 0.2, 1.0).into();
+            } else {
+                material.emissive = palettes::css::BLACK.into();
+            }
+            if next_polygon_in_path != 0 {
+                material.base_color = LAYER_COLORS[next_polygon_in_path as usize].into();
+            }
+        }
+        let move_dir = (path.path_with_height(transform.translation, end, mesh)[0]
+            - transform.translation)
+            .normalize();
+        transform.translation += move_dir / 10.0;
+        if *finished {
+            transform.translation += move_dir / 15.0;
+        }
+        if transform.translation.distance_squared(end) < 0.1 {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+#[derive(Component)]
+struct Agent;
