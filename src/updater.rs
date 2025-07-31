@@ -10,7 +10,7 @@ use tracing::instrument;
 use bevy::{
     asset::uuid::{self, Uuid},
     diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
-    ecs::entity::EntityHashMap,
+    ecs::entity::{EntityHashMap, EntityHashSet},
     platform::time::Instant,
     prelude::*,
     tasks::AsyncComputeTaskPool,
@@ -130,6 +130,8 @@ pub struct NavMeshSettings {
     ///
     /// When using layers, applying the agent radius to outer edges can block stitching them together.
     pub agent_radius_on_outer_edge: bool,
+    /// A set of obstacle entities that should be ignored when building the [`NavMesh`].
+    pub ignore_obstacles: EntityHashSet,
 }
 
 impl Default for NavMeshSettings {
@@ -149,6 +151,7 @@ impl Default for NavMeshSettings {
             scale: Vec2::ONE,
             agent_radius: 0.0,
             agent_radius_on_outer_edge: false,
+            ignore_obstacles: EntityHashSet::default(),
         }
     }
 }
@@ -324,13 +327,18 @@ type ObstacleQueries<'world, 'state, 'a, 'b, 'c, Obstacle, Marker> = (
     Query<
         'world,
         'state,
-        (Ref<'a, GlobalTransform>, Ref<'b, Obstacle>),
+        (Entity, Ref<'a, GlobalTransform>, Ref<'b, Obstacle>),
         (With<Marker>, Without<CachableObstacle>),
     >,
     Query<
         'world,
         'state,
-        (&'a GlobalTransform, &'b Obstacle, Ref<'c, CachableObstacle>),
+        (
+            Entity,
+            &'a GlobalTransform,
+            &'b Obstacle,
+            Ref<'c, CachableObstacle>,
+        ),
         With<Marker>,
     >,
 );
@@ -358,7 +366,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     }
 
     let cachable_obstacles_changed = !removed_cachable_obstacles.is_empty()
-        || cachable_obstacles.iter().any(|(_, _, c)| c.is_added());
+        || cachable_obstacles.iter().any(|(_, _, _, c)| c.is_added());
     if cachable_obstacles_changed {
         for (_, mut settings, ..) in &mut navmeshes {
             debug!("cache cleared due to cachable obstacle change");
@@ -383,7 +391,7 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                 || matches!(mode, NavMeshUpdateMode::OnDemand(true))
                 || dynamic_obstacles
                     .iter()
-                    .any(|(t, o)| t.is_changed() || o.is_changed())
+                    .any(|(_, t, o)| t.is_changed() || o.is_changed())
             {
                 Some(entity)
             } else {
@@ -429,14 +437,18 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
             let cached_obstacles = if settings.cached.is_none() {
                 cachable_obstacles
                     .iter()
-                    .map(|(t, o, _)| (*t, o.clone()))
+                    .filter_map(|(e, t, o, _)| {
+                        (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone()))
+                    })
                     .collect::<Vec<_>>()
             } else {
                 vec![]
             };
             let obstacles_local = dynamic_obstacles
                 .iter()
-                .map(|(t, o)| (*t, o.clone()))
+                .filter_map(|(e, t, o)| {
+                    (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone()))
+                })
                 .collect::<Vec<_>>();
             let settings_local = settings.clone();
             let transform_local = global_transform.compute_transform();
@@ -515,11 +527,9 @@ fn update_navmesh_asset(
                 settings.bypass_change_detection().cached = to_cache;
             }
             debug!(
-                "navmesh {:?} ({:?}) built{}",
-                handle,
-                entity,
+                "navmesh {handle:?} ({entity:?}) built{}",
                 if let Some(layer) = &settings.layer {
-                    format!(" (layer {})", layer)
+                    format!(" (layer {layer})")
                 } else {
                     "".to_string()
                 }
