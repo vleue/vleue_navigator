@@ -444,7 +444,7 @@ pub fn display_mesh_gizmo<T: bevy::gizmos::config::GizmoConfigGroup>(
     gizmos: &mut Gizmos<T>,
 ) {
     for (layer, color) in mesh.layers.iter().zip(colors.iter().cycle()) {
-        display_layer_gizmo(&layer, mesh_to_world, *color, gizmos);
+        display_layer_gizmo(layer, mesh_to_world, *color, gizmos);
     }
 }
 
