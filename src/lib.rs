@@ -430,26 +430,95 @@ pub fn display_navmesh(
             let Some(layer) = &navmesh.layers.get(settings.layer.unwrap_or(0) as usize) else {
                 continue;
             };
-            #[cfg(feature = "detailed-layers")]
-            let scale = layer.scale;
-            #[cfg(not(feature = "detailed-layers"))]
-            let scale = Vec2::ONE;
-            for polygon in &layer.polygons {
-                let mut v = polygon
-                    .vertices
-                    .iter()
-                    .filter(|i| **i != u32::MAX)
-                    .map(|i| layer.vertices[*i as usize].coords * scale)
-                    .map(|v| mesh_to_world.transform_point(v.extend(0.0)))
-                    .collect::<Vec<_>>();
-                if !v.is_empty() {
-                    let first = polygon.vertices[0];
-                    let first = &layer.vertices[first as usize];
-                    v.push(mesh_to_world.transform_point((first.coords * scale).extend(0.0)));
-                    gizmos.linestrip(v, color);
-                }
-            }
+            display_layer_gizmo(layer, mesh_to_world, color, &mut gizmos);
         }
+    }
+}
+
+#[cfg(feature = "debug-with-gizmos")]
+/// Display a mesh with gizmos.
+pub fn display_mesh_gizmo<T: bevy::gizmos::config::GizmoConfigGroup>(
+    mesh: &polyanya::Mesh,
+    mesh_to_world: &bevy::prelude::GlobalTransform,
+    colors: &[Color],
+    gizmos: &mut Gizmos<T>,
+) {
+    for (layer, color) in mesh.layers.iter().zip(colors.iter().cycle()) {
+        display_layer_gizmo(layer, mesh_to_world, *color, gizmos);
+    }
+}
+
+#[cfg(feature = "debug-with-gizmos")]
+/// Display a layer with gizmos.
+pub fn display_layer_gizmo<T: bevy::gizmos::config::GizmoConfigGroup>(
+    layer: &polyanya::Layer,
+    mesh_to_world: &bevy::prelude::GlobalTransform,
+    color: Color,
+    gizmos: &mut Gizmos<T>,
+) {
+    #[cfg(feature = "detailed-layers")]
+    let scale = layer.scale;
+    #[cfg(not(feature = "detailed-layers"))]
+    let scale = Vec2::ONE;
+    for polygon in &layer.polygons {
+        let mut v = polygon
+            .vertices
+            .iter()
+            .filter(|i| **i != u32::MAX)
+            .map(|i| {
+                (layer.vertices[*i as usize].coords * scale)
+                    .extend(-layer.height.get(*i as usize).cloned().unwrap_or_default())
+            })
+            .map(|v| mesh_to_world.transform_point(v))
+            .collect::<Vec<_>>();
+        if !v.is_empty() {
+            let first_index = polygon.vertices[0] as usize;
+            let first = &layer.vertices[first_index];
+            v.push(
+                mesh_to_world.transform_point(
+                    (first.coords * scale)
+                        .extend(-layer.height.get(first_index).cloned().unwrap_or_default()),
+                ),
+            );
+            gizmos.linestrip(v, color);
+        }
+    }
+}
+
+#[cfg(feature = "debug-with-gizmos")]
+/// Display a layer with gizmos.
+pub fn display_polygon_gizmo<T: bevy::gizmos::config::GizmoConfigGroup>(
+    layer: &polyanya::Layer,
+    polygon: u32,
+    mesh_to_world: &bevy::prelude::GlobalTransform,
+    color: Color,
+    gizmos: &mut Gizmos<T>,
+) {
+    #[cfg(feature = "detailed-layers")]
+    let scale = layer.scale;
+    #[cfg(not(feature = "detailed-layers"))]
+    let scale = Vec2::ONE;
+    let polygon = &layer.polygons[polygon as usize];
+    let mut v = polygon
+        .vertices
+        .iter()
+        .filter(|i| **i != u32::MAX)
+        .map(|i| {
+            (layer.vertices[*i as usize].coords * scale)
+                .extend(-layer.height.get(*i as usize).cloned().unwrap_or_default())
+        })
+        .map(|v| mesh_to_world.transform_point(v))
+        .collect::<Vec<_>>();
+    if !v.is_empty() {
+        let first_index = polygon.vertices[0] as usize;
+        let first = &layer.vertices[first_index];
+        v.push(
+            mesh_to_world.transform_point(
+                (first.coords * scale)
+                    .extend(-layer.height.get(first_index).cloned().unwrap_or_default()),
+            ),
+        );
+        gizmos.linestrip(v, color);
     }
 }
 
