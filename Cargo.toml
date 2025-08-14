@@ -47,7 +47,7 @@ version = "0.14.0"
 
 [dependencies.bevy]
 version = "0.16.0"
-features = ["bevy_render", "bevy_asset", "bevy_log"]
+features = ["bevy_asset", "bevy_log"]
 default-features = false
 
 [dev-dependencies]
@@ -85,7 +85,8 @@ default-features = false
 
 [features]
 default = ["debug-with-gizmos"]
-debug-with-gizmos = ["bevy/bevy_gizmos"]
+render = ["bevy/bevy_render"]
+debug-with-gizmos = ["render", "bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]
 avian3d = ["dep:avian3d"]
