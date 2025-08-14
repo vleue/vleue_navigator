@@ -160,8 +160,16 @@ fn mesh_change(
             );
             let around = -0.6..0.6;
             obstacles.push(vec![
-                point + vec2(rng.random_range(around.clone()), rng.random_range(around.clone())),
-                point + vec2(rng.random_range(around.clone()), rng.random_range(around.clone())),
+                point
+                    + vec2(
+                        rng.random_range(around.clone()),
+                        rng.random_range(around.clone()),
+                    ),
+                point
+                    + vec2(
+                        rng.random_range(around.clone()),
+                        rng.random_range(around.clone()),
+                    ),
                 point + vec2(rng.random_range(around.clone()), rng.random_range(around)),
             ]);
         }

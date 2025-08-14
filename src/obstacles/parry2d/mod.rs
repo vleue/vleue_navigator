@@ -10,7 +10,10 @@ use parry2d::shape::TypedShape;
 
 use crate::{obstacles::RESOLUTION, world_to_mesh};
 
-use self::{primitives::{EllipseShape, RegularPolygonShape}, shape::SharedShapeObstacle};
+use self::{
+    primitives::{EllipseShape, RegularPolygonShape},
+    shape::SharedShapeObstacle,
+};
 
 use super::ObstacleSource;
 

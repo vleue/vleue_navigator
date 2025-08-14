@@ -50,27 +50,18 @@ impl Shape for EllipseShape {
 
     fn compute_local_aabb(&self) -> parry2d::bounding_volume::Aabb {
         let aabb = self.aabb_2d(Isometry2d::IDENTITY);
-        parry2d::bounding_volume::Aabb::new(
-            aabb.min.into(),
-            aabb.max.into(),
-        )
+        parry2d::bounding_volume::Aabb::new(aabb.min.into(), aabb.max.into())
     }
 
     fn compute_aabb(&self, position: &Isometry<Real>) -> parry2d::bounding_volume::Aabb {
         let isometry = na_iso_to_iso(position);
         let aabb = self.aabb_2d(isometry);
-        parry2d::bounding_volume::Aabb::new(
-            aabb.min.into(),
-            aabb.max.into(),
-        )
+        parry2d::bounding_volume::Aabb::new(aabb.min.into(), aabb.max.into())
     }
 
     fn compute_local_bounding_sphere(&self) -> parry2d::bounding_volume::BoundingSphere {
         let sphere = self.bounding_circle(Isometry2d::IDENTITY);
-        parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.into(),
-            sphere.radius(),
-        )
+        parry2d::bounding_volume::BoundingSphere::new(sphere.center.into(), sphere.radius())
     }
 
     fn compute_bounding_sphere(
@@ -79,10 +70,7 @@ impl Shape for EllipseShape {
     ) -> parry2d::bounding_volume::BoundingSphere {
         let isometry = na_iso_to_iso(position);
         let sphere = self.bounding_circle(isometry);
-        parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.into(),
-            sphere.radius(),
-        )
+        parry2d::bounding_volume::BoundingSphere::new(sphere.center.into(), sphere.radius())
     }
 
     fn clone_box(&self) -> Box<dyn Shape> {
@@ -104,7 +92,7 @@ impl Shape for EllipseShape {
         ShapeType::Custom
     }
 
-    fn as_typed_shape(&self) -> TypedShape {
+    fn as_typed_shape(&'_ self) -> TypedShape<'_> {
         TypedShape::Custom(self)
     }
 
@@ -250,27 +238,18 @@ impl Shape for RegularPolygonShape {
 
     fn compute_local_aabb(&self) -> parry2d::bounding_volume::Aabb {
         let aabb = self.aabb_2d(Isometry2d::IDENTITY);
-        parry2d::bounding_volume::Aabb::new(
-            aabb.min.into(),
-            aabb.max.into(),
-        )
+        parry2d::bounding_volume::Aabb::new(aabb.min.into(), aabb.max.into())
     }
 
     fn compute_aabb(&self, position: &Isometry<Real>) -> parry2d::bounding_volume::Aabb {
         let isometry = na_iso_to_iso(position);
         let aabb = self.aabb_2d(isometry);
-        parry2d::bounding_volume::Aabb::new(
-            aabb.min.into(),
-            aabb.max.into(),
-        )
+        parry2d::bounding_volume::Aabb::new(aabb.min.into(), aabb.max.into())
     }
 
     fn compute_local_bounding_sphere(&self) -> parry2d::bounding_volume::BoundingSphere {
         let sphere = self.bounding_circle(Isometry2d::IDENTITY);
-        parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.into(),
-            sphere.radius(),
-        )
+        parry2d::bounding_volume::BoundingSphere::new(sphere.center.into(), sphere.radius())
     }
 
     fn compute_bounding_sphere(
@@ -279,10 +258,7 @@ impl Shape for RegularPolygonShape {
     ) -> parry2d::bounding_volume::BoundingSphere {
         let isometry = na_iso_to_iso(position);
         let sphere = self.bounding_circle(isometry);
-        parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.into(),
-            sphere.radius(),
-        )
+        parry2d::bounding_volume::BoundingSphere::new(sphere.center.into(), sphere.radius())
     }
 
     fn clone_box(&self) -> Box<dyn Shape> {
