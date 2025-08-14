@@ -5,7 +5,7 @@ use bevy::{
 };
 
 const RESOLUTION: u32 = 32;
-
+#[cfg(feature = "render")]
 mod aabb;
 #[cfg(feature = "avian2d")]
 pub(crate) mod avian2d;
