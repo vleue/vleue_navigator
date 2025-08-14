@@ -26,11 +26,11 @@ use bevy::{
     asset::{Asset, AssetApp, RenderAssetUsages},
     log::{debug, warn},
     math::{Affine3A, Quat, Vec2, Vec3, Vec3Swizzles},
-    prelude::{Mesh, Transform, TransformPoint},
+    prelude::{Transform, TransformPoint},
     reflect::TypePath,
 };
 
-use bevy_mesh::{Indices, MeshVertexAttributeId, PrimitiveTopology, VertexAttributeValues};
+use bevy_mesh::{Indices, Mesh, MeshVertexAttributeId, PrimitiveTopology, VertexAttributeValues};
 use itertools::Itertools;
 
 pub mod asset_loaders;
