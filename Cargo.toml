@@ -48,7 +48,7 @@ version = "0.14.0"
 
 [dependencies.bevy]
 version = "0.16.0"
-features = ["bevy_render", "bevy_asset", "bevy_log"]
+features = ["bevy_asset", "bevy_log"]
 default-features = false
 
 [dev-dependencies]
