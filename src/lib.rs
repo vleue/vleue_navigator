@@ -42,6 +42,8 @@ mod updater;
 
 /// Prelude for imports
 pub mod prelude {
+    #[cfg(feature = "parry2d")]
+    pub use crate::obstacles::parry2d::shape::SharedShapeObstacle;
     pub use crate::obstacles::{
         ObstacleSource, cached::CachedObstacle, primitive::PrimitiveObstacle,
     };
