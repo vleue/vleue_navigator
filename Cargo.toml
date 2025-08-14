@@ -16,6 +16,7 @@ categories = ["game-development"]
 itertools = "0.14"
 tracing = { version = "0.1", optional = true }
 log = "0.4.27"
+bevy_mesh = { version = "0.16.1" }
 
 [dependencies.avian2d]
 version = "0.3"
@@ -85,7 +86,9 @@ default-features = false
 
 [features]
 default = ["debug-with-gizmos"]
-debug-with-gizmos = ["bevy/bevy_gizmos"]
+
+render = ["bevy/bevy_render"]
+debug-with-gizmos = ["render", "bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
 avian2d = ["dep:avian2d"]
 avian3d = ["dep:avian3d"]

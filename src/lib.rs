@@ -23,17 +23,14 @@ use bevy::{
 };
 use bevy::{
     app::{App, Plugin},
-    asset::{Asset, AssetApp},
+    asset::{Asset, AssetApp, RenderAssetUsages},
     log::{debug, warn},
     math::{Affine3A, Quat, Vec2, Vec3, Vec3Swizzles},
     prelude::{Mesh, Transform, TransformPoint},
     reflect::TypePath,
-    render::{
-        mesh::{Indices, MeshVertexAttributeId, VertexAttributeValues},
-        render_asset::RenderAssetUsages,
-        render_resource::PrimitiveTopology,
-    },
 };
+
+use bevy_mesh::{Indices, MeshVertexAttributeId, PrimitiveTopology, VertexAttributeValues};
 use itertools::Itertools;
 
 pub mod asset_loaders;
