@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 use itertools::Either;
 use parry2d::{
-    math::{DIM, Point},
+    math::{DIM, Point, Real},
     query::Unsupported,
     shape::{RoundShape, SharedShape, TypedShape, Voxels},
 };
 
-use crate::obstacles::parry2d::{
+use super::{
     error::TrimeshBuilderError,
-    math::{AdjustPrecision, AsF32, IVector, Scalar, Vector, make_isometry},
+    math::make_isometry,
     primitives::{EllipseShape, RegularPolygonShape},
     transform::{Position, Rotation},
 };
@@ -16,12 +16,12 @@ use crate::obstacles::parry2d::{
 /// A sharedshape obstacle that can be used to create a [`NavMesh`].
 /// something defined in avian2d
 #[derive(Debug, Clone, Component)]
-pub struct SharedShapeStorage {
+pub struct SharedShapeObstacle {
     /// The raw unscaled collider shape.
     pub shape: SharedShape,
     /// The scaled version of the collider shape.
     ///
-    /// If the scale is `Vector::ONE`, this will be `None` and `unscaled_shape`
+    /// If the scale is `Vec2::ONE`, this will be `None` and `unscaled_shape`
     /// will be used instead.
     scaled_shape: SharedShape,
     /// The global scale used for the collider shape.
@@ -67,7 +67,7 @@ impl From<FillMode> for parry2d::transformation::voxelization::FillMode {
 #[derive(Hash, Clone, Copy, PartialEq, Eq, Debug, Reflect)]
 #[reflect(opaque, Hash, PartialEq, Debug)]
 pub struct TrimeshFlags(u8);
-impl From<SharedShape> for SharedShapeStorage {
+impl From<SharedShape> for SharedShapeObstacle {
     fn from(value: SharedShape) -> Self {
         Self {
             shape: value.clone(),
@@ -136,17 +136,17 @@ pub struct VhacdParameters {
     ///
     /// Default: 0.1 (in 2D), 0.01 (in 3D).
     /// Valid range `[0.0, 1.0]`.
-    pub concavity: Scalar,
+    pub concavity: Real,
     /// Controls the bias toward clipping along symmetry planes.
     ///
     /// Default: 0.05.
     /// Valid Range: `[0.0, 1.0]`.
-    pub alpha: Scalar,
+    pub alpha: Real,
     /// Controls the bias toward clipping along revolution planes.
     ///
     /// Default: 0.05.
     /// Valid Range: `[0.0, 1.0]`.
-    pub beta: Scalar,
+    pub beta: Real,
     /// Resolution used during the voxelization stage.
     ///
     /// Default: 256 (in 2D), 64 (in 3D).
@@ -212,7 +212,7 @@ impl From<VhacdParameters> for parry2d::transformation::vhacd::VHACDParameters {
     }
 }
 
-impl SharedShapeStorage {
+impl SharedShapeObstacle {
     /// Returns the raw unscaled shape of the collider.
     pub fn shape(&self) -> &SharedShape {
         &self.shape
@@ -240,7 +240,7 @@ impl SharedShapeStorage {
         self.scale
     }
 
-    /// Creates a collider with a compound shape defined by a given vector of colliders with a position and a rotation.
+    /// Creates a collider with a compound shape defined by a given Vec2 of colliders with a position and a rotation.
     ///
     /// Especially for dynamic rigid bodies, compound shape colliders should be preferred over triangle meshes and polylines,
     /// because convex shapes typically provide more reliable results.
@@ -251,7 +251,7 @@ impl SharedShapeStorage {
         shapes: Vec<(
             impl Into<Position>,
             impl Into<Rotation>,
-            impl Into<SharedShapeStorage>,
+            impl Into<SharedShapeObstacle>,
         )>,
     ) -> Self {
         let shapes = shapes
@@ -267,49 +267,49 @@ impl SharedShapeStorage {
     }
 
     /// Creates a collider with a circle shape defined by its radius.
-    pub fn circle(radius: Scalar) -> Self {
+    pub fn circle(radius: Real) -> Self {
         SharedShape::ball(radius).into()
     }
 
     /// Creates a collider with an ellipse shape defined by a half-width and half-height.
-    pub fn ellipse(half_width: Scalar, half_height: Scalar) -> Self {
+    pub fn ellipse(half_width: Real, half_height: Real) -> Self {
         SharedShape::new(EllipseShape(Ellipse::new(half_width, half_height))).into()
     }
 
     /// Creates a collider with a rectangle shape defined by its extents.
-    pub fn rectangle(x_length: Scalar, y_length: Scalar) -> Self {
+    pub fn rectangle(x_length: Real, y_length: Real) -> Self {
         SharedShape::cuboid(x_length * 0.5, y_length * 0.5).into()
     }
 
     /// Creates a collider with a rectangle shape defined by its extents and rounded corners.
-    pub fn round_rectangle(x_length: Scalar, y_length: Scalar, border_radius: Scalar) -> Self {
+    pub fn round_rectangle(x_length: Real, y_length: Real, border_radius: Real) -> Self {
         SharedShape::round_cuboid(x_length * 0.5, y_length * 0.5, border_radius).into()
     }
 
     /// Creates a collider with a capsule shape defined by its radius
     /// and its height along the `Y` axis, excluding the hemispheres.
-    pub fn capsule(radius: Scalar, length: Scalar) -> Self {
+    pub fn capsule(radius: Real, length: Real) -> Self {
         SharedShape::capsule(
-            (Vector::Y * length * 0.5).into(),
-            (Vector::NEG_Y * length * 0.5).into(),
+            (Vec2::Y * length * 0.5).into(),
+            (Vec2::NEG_Y * length * 0.5).into(),
             radius,
         )
         .into()
     }
 
     /// Creates a collider with a capsule shape defined by its radius and endpoints `a` and `b`.
-    pub fn capsule_endpoints(radius: Scalar, a: Vector, b: Vector) -> Self {
+    pub fn capsule_endpoints(radius: Real, a: Vec2, b: Vec2) -> Self {
         SharedShape::capsule(a.into(), b.into(), radius).into()
     }
 
     /// Creates a collider with a [half-space](https://en.wikipedia.org/wiki/Half-space_(geometry)) shape
     /// defined by the outward normal of its planar boundary.
-    pub fn half_space(outward_normal: Vector) -> Self {
+    pub fn half_space(outward_normal: Vec2) -> Self {
         SharedShape::halfspace(nalgebra::Unit::new_normalize(outward_normal.into())).into()
     }
 
     /// Creates a collider with a segment shape defined by its endpoints `a` and `b`.
-    pub fn segment(a: Vector, b: Vector) -> Self {
+    pub fn segment(a: Vec2, b: Vec2) -> Self {
         SharedShape::segment(a.into(), b.into()).into()
     }
 
@@ -320,7 +320,7 @@ impl SharedShapeStorage {
     ///
     /// If you know that the given points produce a counterclockwise triangle,
     /// consider using [`Collider::triangle_unchecked`] instead.
-    pub fn triangle(a: Vector, b: Vector, c: Vector) -> Self {
+    pub fn triangle(a: Vec2, b: Vec2, c: Vec2) -> Self {
         let mut triangle = parry2d::shape::Triangle::new(a.into(), b.into(), c.into());
 
         // Make sure the triangle is counterclockwise. This is needed for collision detection.
@@ -337,7 +337,7 @@ impl SharedShapeStorage {
     /// This is needed for collision detection.
     ///
     /// If you are unsure about the orientation of the triangle, consider using [`Collider::triangle`] instead.
-    pub fn triangle_unchecked(a: Vector, b: Vector, c: Vector) -> Self {
+    pub fn triangle_unchecked(a: Vec2, b: Vec2, c: Vec2) -> Self {
         SharedShape::triangle(a.into(), b.into(), c.into()).into()
     }
 
@@ -351,7 +351,7 @@ impl SharedShapeStorage {
     }
 
     /// Creates a collider with a polyline shape defined by its vertices and optionally an index buffer.
-    pub fn polyline(vertices: Vec<Vector>, indices: Option<Vec<[u32; 2]>>) -> Self {
+    pub fn polyline(vertices: Vec<Vec2>, indices: Option<Vec<[u32; 2]>>) -> Self {
         let vertices = vertices.into_iter().map(|v| v.into()).collect();
         SharedShape::polyline(vertices, indices).into()
     }
@@ -368,7 +368,7 @@ impl SharedShapeStorage {
     ///
     /// Panics if the given vertex and index buffers do not contain any triangles,
     /// there are duplicate vertices, or if at least two adjacent triangles have opposite orientations.
-    pub fn trimesh(vertices: Vec<Vector>, indices: Vec<[u32; 3]>) -> Self {
+    pub fn trimesh(vertices: Vec<Vec2>, indices: Vec<[u32; 3]>) -> Self {
         Self::try_trimesh(vertices, indices)
             .unwrap_or_else(|error| panic!("Trimesh creation failed: {error:?}"))
     }
@@ -386,7 +386,7 @@ impl SharedShapeStorage {
     /// Returns a [`TrimeshBuilderError`] if the given vertex and index buffers do not contain any triangles,
     /// there are duplicate vertices, or if at least two adjacent triangles have opposite orientations.
     pub fn try_trimesh(
-        vertices: Vec<Vector>,
+        vertices: Vec<Vec2>,
         indices: Vec<[u32; 3]>,
     ) -> Result<Self, TrimeshBuilderError> {
         let vertices = vertices.into_iter().map(|v| v.into()).collect();
@@ -407,7 +407,7 @@ impl SharedShapeStorage {
     /// Panics if after preprocessing the given vertex and index buffers do not contain any triangles,
     /// there are duplicate vertices, or if at least two adjacent triangles have opposite orientations.
     pub fn trimesh_with_config(
-        vertices: Vec<Vector>,
+        vertices: Vec<Vec2>,
         indices: Vec<[u32; 3]>,
         flags: TrimeshFlags,
     ) -> Self {
@@ -429,7 +429,7 @@ impl SharedShapeStorage {
     /// Returns a [`TrimeshBuilderError`] if after preprocessing the given vertex and index buffers do not contain any triangles,
     /// there are duplicate vertices, or if at least two adjacent triangles have opposite orientations.
     pub fn try_trimesh_with_config(
-        vertices: Vec<Vector>,
+        vertices: Vec<Vec2>,
         indices: Vec<[u32; 3]>,
         flags: TrimeshFlags,
     ) -> Result<Self, TrimeshBuilderError> {
@@ -440,7 +440,7 @@ impl SharedShapeStorage {
 
     /// Creates a collider shape with a compound shape obtained from the decomposition of a given polyline
     /// defined by its vertex and index buffers.
-    pub fn convex_decomposition(vertices: Vec<Vector>, indices: Vec<[u32; 2]>) -> Self {
+    pub fn convex_decomposition(vertices: Vec<Vec2>, indices: Vec<[u32; 2]>) -> Self {
         let vertices = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
         SharedShape::convex_decomposition(&vertices, &indices).into()
     }
@@ -449,7 +449,7 @@ impl SharedShapeStorage {
     /// defined by its vertex and index buffers. The given [`VhacdParameters`] are used for configuring
     /// the decomposition process.
     pub fn convex_decomposition_with_config(
-        vertices: Vec<Vector>,
+        vertices: Vec<Vec2>,
         indices: Vec<[u32; 2]>,
         params: &VhacdParameters,
     ) -> Self {
@@ -459,7 +459,7 @@ impl SharedShapeStorage {
 
     /// Creates a collider with a [convex polygon](https://en.wikipedia.org/wiki/Convex_polygon) shape obtained after computing
     /// the [convex hull](https://en.wikipedia.org/wiki/Convex_hull) of the given points.
-    pub fn convex_hull(points: Vec<Vector>) -> Option<Self> {
+    pub fn convex_hull(points: Vec<Vec2>) -> Option<Self> {
         let points = points.iter().map(|v| (*v).into()).collect::<Vec<_>>();
         SharedShape::convex_hull(&points).map(Into::into)
     }
@@ -467,14 +467,14 @@ impl SharedShapeStorage {
     /// Creates a collider with a [convex polygon](https://en.wikipedia.org/wiki/Convex_polygon) shape **without** computing
     /// the [convex hull](https://en.wikipedia.org/wiki/Convex_hull) of the given points: convexity of the input is
     /// assumed and not checked.
-    pub fn convex_polyline(points: Vec<Vector>) -> Option<Self> {
+    pub fn convex_polyline(points: Vec<Vec2>) -> Option<Self> {
         let points = points.iter().map(|v| (*v).into()).collect::<Vec<_>>();
         SharedShape::convex_polyline(points).map(Into::into)
     }
     /// Creates a collider shape made of voxels.
     ///
     /// Each voxel has the size `voxel_size` and grid coordinate given by `grid_coordinates`.
-    pub fn voxels(voxel_size: Vector, grid_coordinates: &[IVector]) -> Self {
+    pub fn voxels(voxel_size: Vec2, grid_coordinates: &[IVec2]) -> Self {
         let shape = Voxels::new(
             voxel_size.into(),
             &Self::ivec_array_from_point_int_array(grid_coordinates),
@@ -484,7 +484,7 @@ impl SharedShapeStorage {
     /// Creates a collider shape made of voxels.
     ///
     /// Each voxel has the size `voxel_size` and contains at least one point from `points`.
-    pub fn voxels_from_points(voxel_size: Vector, points: &[Vector]) -> Self {
+    pub fn voxels_from_points(voxel_size: Vec2, points: &[Vec2]) -> Self {
         SharedShape::voxels_from_points(
             voxel_size.into(),
             &Self::vec_array_from_point_float_array(points),
@@ -493,19 +493,16 @@ impl SharedShapeStorage {
     }
     /// Creates a voxel collider obtained from the decomposition of the given polyline into voxelized convex parts.
     pub fn voxelized_polyline(
-        vertices: &[Vector],
+        vertices: &[Vec2],
         indices: &[[u32; 2]],
-        voxel_size: Scalar,
+        voxel_size: Real,
         fill_mode: FillMode,
     ) -> Self {
         let vertices = Self::vec_array_from_point_float_array(vertices);
         SharedShape::voxelized_mesh(&vertices, indices, voxel_size, fill_mode.into()).into()
     }
     #[doc = "Creates a collider with a compound shape obtained from the decomposition of the given polyline into voxelized convex parts."]
-    pub fn voxelized_convex_decomposition(
-        vertices: &[Vector],
-        indices: &[[u32; DIM]],
-    ) -> Vec<Self> {
+    pub fn voxelized_convex_decomposition(vertices: &[Vec2], indices: &[[u32; DIM]]) -> Vec<Self> {
         Self::voxelized_convex_decomposition_with_config(
             vertices,
             indices,
@@ -514,7 +511,7 @@ impl SharedShapeStorage {
     }
     #[doc = "Creates a collider with a compound shape obtained from the decomposition of the given polyline into voxelized convex parts."]
     pub fn voxelized_convex_decomposition_with_config(
-        vertices: &[Vector],
+        vertices: &[Vec2],
         indices: &[[u32; DIM]],
         parameters: &VhacdParameters,
     ) -> Vec<Self> {
@@ -528,14 +525,14 @@ impl SharedShapeStorage {
         .collect()
     }
 
-    fn ivec_array_from_point_int_array(points: &[IVector]) -> Vec<Point<i32>> {
+    fn ivec_array_from_point_int_array(points: &[IVec2]) -> Vec<Point<i32>> {
         points
             .iter()
             .map(|p| Point::new(p.x, p.y))
             .collect::<Vec<_>>()
     }
 
-    fn vec_array_from_point_float_array(points: &[Vector]) -> Vec<Point<Scalar>> {
+    fn vec_array_from_point_float_array(points: &[Vec2]) -> Vec<Point<Real>> {
         points
             .iter()
             .map(|p| Point::new(p.x, p.y))
@@ -548,14 +545,14 @@ impl SharedShapeStorage {
     ///
     /// `heights` is a list indicating the altitude of each subdivision point, and `scale` controls
     /// the scaling factor along each axis.
-    pub fn heightfield(heights: Vec<Scalar>, scale: Vector) -> Self {
+    pub fn heightfield(heights: Vec<Real>, scale: Vec2) -> Self {
         SharedShape::heightfield(heights.into(), scale.into()).into()
     }
 }
 
 pub fn scale_shape(
     shape: &SharedShape,
-    scale: Vector,
+    scale: Vec2,
     num_subdivisions: u32,
 ) -> Result<SharedShape, Unsupported> {
     let scale = scale.abs();
@@ -580,7 +577,7 @@ pub fn scale_shape(
                 } else {
                     // A 2D circle becomes an ellipse when scaled non-uniformly.
                     Ok(SharedShape::new(EllipseShape(Ellipse {
-                        half_size: Vec2::splat(b.radius) * scale.f32().abs(),
+                        half_size: Vec2::splat(b.radius) * scale.abs(),
                     })))
                 }
             }
@@ -625,7 +622,7 @@ pub fn scale_shape(
             for (iso, shape) in c.shapes() {
                 scaled.push((
                     make_isometry(
-                        Vector::from(iso.translation) * scale,
+                        Vec2::from(iso.translation) * scale,
                         Rotation::radians(iso.rotation.angle()),
                     ),
                     scale_shape(shape, scale, num_subdivisions)?,
@@ -637,7 +634,7 @@ pub fn scale_shape(
             {
                 if let Some(ellipse) = shape.as_shape::<EllipseShape>() {
                     return Ok(SharedShape::new(EllipseShape(Ellipse {
-                        half_size: ellipse.half_size * scale.f32().abs(),
+                        half_size: ellipse.half_size * scale.abs(),
                     })));
                 }
                 if let Some(polygon) = shape.as_shape::<RegularPolygonShape>() {
@@ -650,7 +647,7 @@ pub fn scale_shape(
                         let vertices = polygon
                             .vertices(0.0)
                             .into_iter()
-                            .map(|v| v.adjust_precision().into())
+                            .map(|v| v.into())
                             .collect::<Vec<_>>();
 
                         return scale_shape(

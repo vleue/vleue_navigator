@@ -162,7 +162,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn((
-                        Mesh2d(meshes.add(navmesh.to_mesh())),
+                        Mesh2d(meshes.add(navmesh.to_mesh()).into()),
                         Transform::from_translation(Vec3::new(
                             -mesh.size.x / 2.0 * factor,
                             -mesh.size.y / 2.0 * factor,

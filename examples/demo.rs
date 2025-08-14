@@ -156,8 +156,12 @@ fn life_of_obstacle(
             if cachable.remove(&entity) {
                 commands.entity(entity).remove::<CachableObstacle>();
             }
-        } else if example_settings.cache_enabled && cachable.insert(entity) {
-            commands.entity(entity).insert(CachableObstacle);
+        } else {
+            if example_settings.cache_enabled {
+                if cachable.insert(entity) {
+                    commands.entity(entity).insert(CachableObstacle);
+                }
+            }
         }
     }
 }
@@ -362,8 +366,7 @@ fn new_obstacle(
                 });
         }
         4 => {
-            let primitive =
-                RegularPolygon::new(rng.random_range(1.0..5.0), rng.random_range(3..11));
+            let primitive = RegularPolygon::new(rng.random_range(1.0..5.0), rng.random_range(3..11));
             commands
                 .spawn((
                     transform,
@@ -424,8 +427,7 @@ fn new_obstacle(
                 });
         }
         7 => {
-            let primitive =
-                CircularSegment::new(rng.random_range(1.5..5.0), rng.random_range(1.0..PI));
+            let primitive = CircularSegment::new(rng.random_range(1.5..5.0), rng.random_range(1.0..PI));
             commands
                 .spawn((
                     transform,

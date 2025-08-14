@@ -1,4 +1,5 @@
 use bevy::{color::palettes, diagnostic::DiagnosticsStore, prelude::*};
+use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -8,7 +9,6 @@ pub enum UiSettings {
     AgentRadius,
     AgentRadiusOuter,
     Cache,
-    NavMeshSelect,
 }
 
 #[derive(Component)]
@@ -21,12 +21,7 @@ pub enum UiSettingsButtons {
     AgentRadiusDec,
     AgentRadiusOuterToggle,
     ToggleCache,
-    NavMeshSelectInc,
-    NavMeshSelectDec,
 }
-
-#[derive(Debug, Resource, Default)]
-pub struct ShowingNavMesh(pub Option<Entity>);
 
 #[derive(Resource, Default)]
 pub struct ExampleSettings {
@@ -62,7 +57,6 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildSpawnerComman
 }
 
 pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
-    commands.init_resource::<ShowingNavMesh>();
     commands.init_resource::<ExampleSettings>();
     commands
         .spawn((
@@ -105,30 +99,6 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                     ));
                 button(" - ", UiSettingsButtons::SimplifyDec, parent);
                 button(" + ", UiSettingsButtons::SimplifyInc, parent);
-            });
-            parent.spawn(Node { ..default() }).with_children(|parent| {
-                parent
-                    .spawn((
-                        Text("NavMeshSelect: ".to_string()),
-                        TextFont {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        TextLayout {
-                            justify: JustifyText::Right,
-                            ..default()
-                        },
-                        UiSettings::NavMeshSelect,
-                    ))
-                    .with_child((
-                        TextSpan::default(),
-                        TextFont {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                    ));
-                button(" - ", UiSettingsButtons::NavMeshSelectDec, parent);
-                button(" + ", UiSettingsButtons::NavMeshSelectInc, parent);
             });
             parent.spawn(Node { ..default() }).with_children(|parent| {
                 parent
@@ -235,21 +205,14 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
 }
 
 pub fn display_settings(
-    settings: Query<Ref<NavMeshSettings>>,
+    settings: Single<Ref<NavMeshSettings>>,
     example_settings: Res<ExampleSettings>,
-    showing_navmesh: Res<ShowingNavMesh>,
     mut texts: Query<(Entity, &UiSettings)>,
     mut buttons: Query<(&mut BackgroundColor, &UiSettings), With<Button>>,
     mut text_writer: TextUiWriter,
 ) {
-    let settings = match showing_navmesh.0 {
-        Some(showing_navmesh) => settings.get(showing_navmesh).unwrap(),
-        None => match settings.iter().next() {
-            Some(settings) => settings,
-            None => return,
-        },
-    };
-    if (settings).is_changed() {
+    let settings = settings.deref();
+    if (*settings).is_changed() {
         for (text, param) in &mut texts {
             match param {
                 UiSettings::Simplify => {
@@ -266,11 +229,6 @@ pub fn display_settings(
                 }
                 UiSettings::AgentRadiusOuter => (),
                 UiSettings::Cache => (),
-                UiSettings::NavMeshSelect => {
-                    if let Some(showing_navmesh) = showing_navmesh.0 {
-                        *text_writer.text(text, 1) = format!("{showing_navmesh:.2}")
-                    }
-                }
             }
         }
     }
@@ -294,7 +252,6 @@ pub fn display_settings(
                         palettes::tailwind::RED_600.into()
                     }
                 }
-                UiSettings::NavMeshSelect => (),
             }
         }
     }
@@ -309,20 +266,13 @@ pub fn update_settings<const STEP: u32>(
         ),
         (Changed<Interaction>, With<Button>),
     >,
-    mut settings: Query<&mut NavMeshSettings>,
-    showing_navmesh: Res<ShowingNavMesh>,
+    mut settings: Single<&mut NavMeshSettings>,
     mut example_settings: ResMut<ExampleSettings>,
 ) {
     for (interaction, button, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                let mut settings = match showing_navmesh.0 {
-                    Some(showing_navmesh) => settings.get_mut(showing_navmesh).unwrap(),
-                    None => match settings.iter_mut().next() {
-                        Some(settings) => settings,
-                        None => return,
-                    },
-                };
+                let settings = settings.as_mut();
                 match *button {
                     UiSettingsButtons::SimplifyDec => {
                         settings.simplify = (settings.simplify - STEP as f32 / 1000.0).max(0.0);
@@ -348,8 +298,6 @@ pub fn update_settings<const STEP: u32>(
                     UiSettingsButtons::AgentRadiusOuterToggle => {
                         settings.agent_radius_on_outer_edge = !settings.agent_radius_on_outer_edge;
                     }
-                    UiSettingsButtons::NavMeshSelectInc => {}
-                    UiSettingsButtons::NavMeshSelectDec => {}
                 }
             }
             Interaction::Hovered => {
@@ -422,26 +370,20 @@ pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
 pub fn update_stats<T: Component>(
     mut text: Query<Entity, With<UiStats>>,
     obstacles: Query<&T>,
-    navmesh: Query<(Ref<NavMeshStatus>, &ManagedNavMesh)>,
-    showing_navmesh: Res<ShowingNavMesh>,
+    navmesh: Single<(Ref<NavMeshStatus>, &ManagedNavMesh)>,
     navmeshes: Res<Assets<NavMesh>>,
     diagnostics: Res<DiagnosticsStore>,
     mut text_writer: TextUiWriter,
 ) {
-    let (status, handle) = match showing_navmesh.0 {
-        Some(showing_navmesh) => navmesh.get(showing_navmesh).unwrap(),
-        None => match navmesh.iter().next() {
-            Some(navmesh) => navmesh,
-            None => return,
-        },
-    };
+    let (status, handle) = navmesh.deref();
+
     if !status.is_changed() && !status.is_added() {
         return;
     }
 
     let Ok(text) = text.single_mut() else { return };
     *text_writer.text(text, 2) = format!("{:?}", *status);
-    *text_writer.color(text, 2) = match *status {
+    *text_writer.color(text, 2) = match **status {
         NavMeshStatus::Building => palettes::tailwind::AMBER_500.into(),
         NavMeshStatus::Built => palettes::tailwind::GREEN_400.into(),
         NavMeshStatus::Failed => palettes::tailwind::RED_600.into(),
@@ -452,7 +394,7 @@ pub fn update_stats<T: Component>(
     *text_writer.text(text, 6) = format!(
         "{}",
         navmeshes
-            .get(handle)
+            .get(*handle)
             .map(|nm| nm
                 .get()
                 .layers

@@ -84,7 +84,7 @@ fn on_mesh_change(
     *current_mesh_entity = Some(
         commands
             .spawn((
-                Mesh2d(meshes.add(navmesh.to_mesh())),
+                Mesh2d(meshes.add(navmesh.to_mesh()).into()),
                 Transform::from_translation(Vec3::new(
                     -MESH_WIDTH / 2.0 * factor,
                     -MESH_HEIGHT / 2.0 * factor,
@@ -97,7 +97,7 @@ fn on_mesh_change(
             ))
             .with_children(|main_mesh| {
                 main_mesh.spawn((
-                    Mesh2d(meshes.add(navmesh.to_wireframe_mesh())),
+                    Mesh2d(meshes.add(navmesh.to_wireframe_mesh()).into()),
                     Transform::from_translation(Vec3::new(0.0, 0.0, 0.1)),
                     MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 1.0)))),
                 ));
@@ -160,16 +160,8 @@ fn mesh_change(
             );
             let around = -0.6..0.6;
             obstacles.push(vec![
-                point
-                    + vec2(
-                        rng.random_range(around.clone()),
-                        rng.random_range(around.clone()),
-                    ),
-                point
-                    + vec2(
-                        rng.random_range(around.clone()),
-                        rng.random_range(around.clone()),
-                    ),
+                point + vec2(rng.random_range(around.clone()), rng.random_range(around.clone())),
+                point + vec2(rng.random_range(around.clone()), rng.random_range(around.clone())),
                 point + vec2(rng.random_range(around.clone()), rng.random_range(around)),
             ]);
         }

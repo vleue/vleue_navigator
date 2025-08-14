@@ -39,12 +39,11 @@ fn main() {
         .add_systems(
             Startup,
             (
+                setup,
                 ui::setup_stats::<true>,
                 ui::setup_settings::<false>,
-                agent::setup_agent::<10, 10, 1>,
-                setup,
-            )
-                .chain(),
+                agent::setup_agent::<10>,
+            ),
         )
         .add_systems(
             Update,

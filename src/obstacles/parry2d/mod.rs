@@ -4,20 +4,17 @@ pub mod primitives;
 pub mod shape;
 pub mod transform;
 
-use crate::{
-    obstacles::{
-        RESOLUTION,
-        parry2d::primitives::{EllipseShape, RegularPolygonShape},
-    },
-    prelude::{ObstacleSource, SharedShapeStorage},
-    world_to_mesh,
-};
 use bevy::prelude::*;
 use nalgebra::{Const, OPoint};
 use parry2d::shape::TypedShape;
-use rayon::prelude::*;
 
-impl ObstacleSource for SharedShapeStorage {
+use crate::{obstacles::RESOLUTION, world_to_mesh};
+
+use self::{primitives::{EllipseShape, RegularPolygonShape}, shape::SharedShapeObstacle};
+
+use super::ObstacleSource;
+
+impl ObstacleSource for SharedShapeObstacle {
     fn get_polygons(
         &self,
         obstacle_transform: &GlobalTransform,
@@ -67,7 +64,7 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::Ball(shape) => vec![
                 shape
                     .to_polyline(RESOLUTION)
-                    .into_par_iter()
+                    .into_iter()
                     .map(to_world)
                     .map(to_navmesh)
                     .collect(),
@@ -75,7 +72,7 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::Cuboid(shape) => vec![
                 shape
                     .to_polyline()
-                    .into_par_iter()
+                    .into_iter()
                     .map(to_world)
                     .map(to_navmesh)
                     .collect(),
@@ -83,14 +80,14 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::Capsule(shape) => vec![
                 shape
                     .to_polyline(RESOLUTION)
-                    .into_par_iter()
+                    .into_iter()
                     .map(to_world)
                     .map(to_navmesh)
                     .collect(),
             ],
             TypedShape::Triangle(shape) => vec![
                 [shape.a, shape.b, shape.c]
-                    .into_par_iter()
+                    .into_iter()
                     .map(to_world)
                     .map(to_navmesh)
                     .collect(),
@@ -98,7 +95,7 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::TriMesh(shape) => vec![
                 shape
                     .vertices()
-                    .par_iter()
+                    .iter()
                     .map(ref_to_world)
                     .map(to_navmesh)
                     .collect(),
@@ -106,14 +103,14 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::Polyline(shape) => vec![
                 shape
                     .vertices()
-                    .par_iter()
+                    .iter()
                     .map(ref_to_world)
                     .map(to_navmesh)
                     .collect(),
             ],
             TypedShape::Compound(shape) => shape
                 .shapes()
-                .par_iter()
+                .iter()
                 .flat_map(|(iso, shape)| {
                     let global_iso = Isometry3d::from_translation(obstacle_transform.translation())
                         * Isometry3d::from_rotation(obstacle_transform.rotation());
@@ -132,7 +129,7 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::ConvexPolygon(shape) => vec![
                 shape
                     .points()
-                    .par_iter()
+                    .iter()
                     .map(ref_to_world)
                     .map(to_navmesh)
                     .collect(),
@@ -140,7 +137,7 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::RoundCuboid(shape) => vec![
                 shape
                     .to_polyline(RESOLUTION)
-                    .into_par_iter()
+                    .into_iter()
                     .map(to_world)
                     .map(to_navmesh)
                     .collect(),
@@ -151,7 +148,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                     shape.inner_shape.b,
                     shape.inner_shape.c,
                 ]
-                .into_par_iter()
+                .into_iter()
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
@@ -159,7 +156,7 @@ impl InnerObstacleSource for TypedShape<'_> {
             TypedShape::RoundConvexPolygon(shape) => vec![
                 shape
                     .to_polyline(RESOLUTION)
-                    .into_par_iter()
+                    .into_iter()
                     .map(to_world)
                     .map(to_navmesh)
                     .collect(),

@@ -19,7 +19,7 @@ use bevy::{
 use polyanya::{Layer, Mesh, Triangulation};
 
 use crate::{NavMesh, obstacles::ObstacleSource};
-use rayon::prelude::*;
+
 /// A Marker component for an obstacle that can be cached.
 ///
 /// Caching obstacles can help to optimize the [`NavMesh`] generation process.
@@ -75,17 +75,6 @@ impl From<&ManagedNavMesh> for AssetId<NavMesh> {
     }
 }
 
-/// Determines how obstacle entities are filtered when building the [`NavMesh`].
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum FilterObstaclesMode {
-    #[default]
-    /// Allow all obstacles.
-    All,
-    /// Allow the obstacles in the set of [`EntityHashSet`].
-    Allow,
-    /// Ignore the obstacles in the set of [`EntityHashSet`].
-    Ignore,
-}
 /// Settings for nav mesh generation.
 #[derive(Component, Clone, Debug)]
 #[require(ManagedNavMesh = ManagedNavMesh::single())]
@@ -141,10 +130,8 @@ pub struct NavMeshSettings {
     ///
     /// When using layers, applying the agent radius to outer edges can block stitching them together.
     pub agent_radius_on_outer_edge: bool,
-    /// A set of obstacle entities that should be filter when building the [`NavMesh`].
-    pub filter_obstacles: EntityHashSet,
-    /// The mode which filter obstacle entities that should be filter when building the [`NavMesh`].
-    pub filter_obstacles_mode: FilterObstaclesMode,
+    /// A set of obstacle entities that should be ignored when building the [`NavMesh`].
+    pub ignore_obstacles: EntityHashSet,
 }
 
 impl Default for NavMeshSettings {
@@ -164,8 +151,7 @@ impl Default for NavMeshSettings {
             scale: Vec2::ONE,
             agent_radius: 0.0,
             agent_radius_on_outer_edge: false,
-            filter_obstacles: EntityHashSet::default(),
-            filter_obstacles_mode: FilterObstaclesMode::default(),
+            ignore_obstacles: EntityHashSet::default(),
         }
     }
 }
@@ -228,18 +214,16 @@ fn build_navmesh<T: ObstacleSource>(
         base.set_agent_radius(settings.agent_radius);
         base.set_agent_radius_simplification(settings.simplify);
         base.agent_radius_on_outer_edge(settings.agent_radius_on_outer_edge);
-        let obstacle_polys: Vec<Vec<Vec2>> = cached_obstacles
-            .par_iter()
+        let obstacle_polys = cached_obstacles
+            .iter()
             .flat_map(|(transform, obstacle)| {
                 obstacle
                     .get_polygons(transform, &mesh_transform, up)
-                    .into_par_iter()
+                    .into_iter()
             })
-            .filter(|p| !p.is_empty())
-            .map(|p| p.into_par_iter().map(|v| v / scale).collect::<Vec<_>>())
-            .collect();
-
-        base.add_obstacles(obstacle_polys.into_iter());
+            .filter(|p: &Vec<Vec2>| !p.is_empty())
+            .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
+        base.add_obstacles(obstacle_polys);
         if settings.simplify != 0.0 {
             base.simplify(settings.simplify);
         }
@@ -250,17 +234,16 @@ fn build_navmesh<T: ObstacleSource>(
     };
     let mut triangulation = base.clone();
 
-    let obstacle_polys: Vec<Vec<Vec2>> = obstacles
-        .par_iter()
+    let obstacle_polys = obstacles
+        .iter()
         .flat_map(|(transform, obstacle)| {
             obstacle
                 .get_polygons(transform, &mesh_transform, up)
-                .into_par_iter()
+                .into_iter()
         })
         .filter(|p: &Vec<Vec2>| !p.is_empty())
-        .map(|p| p.into_par_iter().map(|v| v / scale).collect::<Vec<_>>())
-        .collect();
-    triangulation.add_obstacles(obstacle_polys.into_iter());
+        .map(|p| p.into_iter().map(|v| v / scale).collect::<Vec<_>>());
+    triangulation.add_obstacles(obstacle_polys);
 
     if settings.simplify != 0.0 {
         triangulation.simplify(settings.simplify);
@@ -399,7 +382,6 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     }
 
     let has_removed_obstacles = !removed_obstacles.is_empty();
-
     let mut to_check = navmeshes
         .iter_mut()
         .filter_map(|(entity, settings, _, mode, ..)| {
@@ -453,47 +435,21 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
                 continue;
             }
             let cached_obstacles = if settings.cached.is_none() {
-                match settings.filter_obstacles_mode {
-                    FilterObstaclesMode::All => cachable_obstacles
-                        .iter()
-                        .map(|(_, t, o, _)| (*t, o.clone()))
-                        .collect::<Vec<_>>(),
-                    FilterObstaclesMode::Allow => cachable_obstacles
-                        .iter()
-                        .filter_map(|(e, t, o, _)| {
-                            (settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
-                        })
-                        .collect::<Vec<_>>(),
-                    FilterObstaclesMode::Ignore => cachable_obstacles
-                        .iter()
-                        .filter_map(|(e, t, o, _)| {
-                            (!settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
-                        })
-                        .collect::<Vec<_>>(),
-                }
+                cachable_obstacles
+                    .iter()
+                    .filter_map(|(e, t, o, _)| {
+                        (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone()))
+                    })
+                    .collect::<Vec<_>>()
             } else {
                 vec![]
             };
-
-            let obstacles_local = match settings.filter_obstacles_mode {
-                FilterObstaclesMode::All => dynamic_obstacles
-                    .iter()
-                    .map(|(_e, t, o)| (*t, o.clone()))
-                    .collect::<Vec<_>>(),
-                FilterObstaclesMode::Allow => dynamic_obstacles
-                    .iter()
-                    .filter_map(|(e, t, o)| {
-                        (settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
-                    })
-                    .collect::<Vec<_>>(),
-                FilterObstaclesMode::Ignore => dynamic_obstacles
-                    .iter()
-                    .filter_map(|(e, t, o)| {
-                        (!settings.filter_obstacles.contains(&e)).then_some((*t, o.clone()))
-                    })
-                    .collect::<Vec<_>>(),
-            };
-
+            let obstacles_local = dynamic_obstacles
+                .iter()
+                .filter_map(|(e, t, o)| {
+                    (!settings.ignore_obstacles.contains(&e)).then_some((*t, o.clone()))
+                })
+                .collect::<Vec<_>>();
             let settings_local = settings.clone();
             let transform_local = global_transform.compute_transform();
 
@@ -571,9 +527,7 @@ fn update_navmesh_asset(
                 settings.bypass_change_detection().cached = to_cache;
             }
             debug!(
-                "navmesh {:?} ({:?}) built{}",
-                handle,
-                entity,
+                "navmesh {handle:?} ({entity:?}) built{}",
                 if let Some(layer) = &settings.layer {
                     format!(" (layer {layer})")
                 } else {

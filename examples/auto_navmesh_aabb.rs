@@ -45,12 +45,11 @@ fn main() {
         .add_systems(
             Startup,
             (
+                setup,
                 ui::setup_stats::<true>,
                 ui::setup_settings::<false>,
-                agent::setup_agent::<10, 10, 1>,
-                setup,
-            )
-                .chain(),
+                agent::setup_agent::<10>,
+            ),
         )
         .add_systems(
             Update,
@@ -108,11 +107,7 @@ fn setup(mut commands: Commands) {
             Obstacle,
             Aabb::from_min_max(
                 Vec3::ZERO,
-                Vec3::new(
-                    rng.random_range(10.0..50.0),
-                    rng.random_range(10.0..50.0),
-                    0.0,
-                ),
+                Vec3::new(rng.random_range(10.0..50.0), rng.random_range(10.0..50.0), 0.0),
             ),
             Transform::from_translation(
                 Vec3::new(
@@ -194,11 +189,7 @@ fn spawn_obstacle_on_click(
                 Obstacle,
                 Aabb::from_min_max(
                     Vec3::ZERO,
-                    Vec3::new(
-                        rng.random_range(10.0..50.),
-                        rng.random_range(10.0..50.0),
-                        0.0,
-                    ),
+                    Vec3::new(rng.random_range(10.0..50.), rng.random_range(10.0..50.0), 0.0),
                 ),
                 Transform::from_translation(position.extend(0.0))
                     .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..PI))),

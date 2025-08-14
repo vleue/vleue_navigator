@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-
-use crate::obstacles::parry2d::math::{AdjustPrecision, Scalar, Vector, Vector2};
+use parry2d::math::Real;
 
 #[derive(Reflect, Clone, Copy, Component, Debug, PartialEq)]
 #[reflect(Debug, Component, PartialEq)]
@@ -8,32 +7,32 @@ pub struct Rotation {
     /// The cosine of the rotation angle in radians.
     ///
     /// This is the real part of the unit complex number representing the rotation.
-    pub cos: Scalar,
+    pub cos: Real,
     /// The sine of the rotation angle in radians.
     ///
     /// This is the imaginary part of the unit complex number representing the rotation.
-    pub sin: Scalar,
+    pub sin: Real,
 }
 #[derive(Reflect, Clone, Copy, Component, Debug, Default, Deref, DerefMut, PartialEq)]
 #[reflect(Debug, Component, Default, PartialEq)]
-pub struct Position(pub Vector2);
+pub struct Position(pub Vec2);
 impl Position {
     /// A placeholder position. This is an invalid position and should *not*
     /// be used to an actually position entities in the world, but can be used
     /// to indicate that a position has not yet been initialized.
-    pub const PLACEHOLDER: Self = Self(Vector::MAX);
+    pub const PLACEHOLDER: Self = Self(Vec2::MAX);
 
     /// Creates a [`Position`] component with the given global `position`.
-    pub fn new(position: Vector) -> Self {
+    pub fn new(position: Vec2) -> Self {
         Self(position)
     }
 
     /// Creates a [`Position`] component with the global position `(x, y)`.
-    pub fn from_xy(x: Scalar, y: Scalar) -> Self {
-        Self(Vector::new(x, y))
+    pub fn from_xy(x: Real, y: Real) -> Self {
+        Self(Vec2::new(x, y))
     }
 }
-impl From<Rotation> for Scalar {
+impl From<Rotation> for Real {
     fn from(rot: Rotation) -> Self {
         rot.as_radians()
     }
@@ -42,12 +41,12 @@ impl From<Rotation> for Scalar {
 impl Rotation {
     /// Returns the rotation in radians in the `(-pi, pi]` range.
     #[inline]
-    pub fn as_radians(self) -> Scalar {
-        Scalar::atan2(self.sin, self.cos)
+    pub fn as_radians(self) -> Real {
+        Real::atan2(self.sin, self.cos)
     }
     /// Creates a [`Rotation`] from a counterclockwise angle in radians.
     #[inline]
-    pub fn radians(radians: Scalar) -> Self {
+    pub fn radians(radians: Real) -> Self {
         let (sin, cos) = radians.sin_cos();
 
         Self::from_sin_cos(sin, cos)
@@ -61,7 +60,7 @@ impl Rotation {
     ///
     /// Panics if `sin * sin + cos * cos != 1.0` when `debug_assertions` are enabled.
     #[inline]
-    pub fn from_sin_cos(sin: Scalar, cos: Scalar) -> Self {
+    pub fn from_sin_cos(sin: Real, cos: Real) -> Self {
         let rotation = Self { sin, cos };
         debug_assert!(
             rotation.is_normalized(),
@@ -89,38 +88,32 @@ impl Rotation {
     /// can be a result of incorrect construction or floating point error caused by
     /// successive operations.
     #[inline]
-    pub fn length_squared(self) -> Scalar {
-        Vector::new(self.sin, self.cos).length_squared()
+    pub fn length_squared(self) -> Real {
+        Vec2::new(self.sin, self.cos).length_squared()
     }
 }
 impl From<GlobalTransform> for Position {
     fn from(value: GlobalTransform) -> Self {
-        Self::from_xy(
-            value.translation().adjust_precision().x,
-            value.translation().adjust_precision().y,
-        )
+        Self::from_xy(value.translation().x, value.translation().y)
     }
 }
 
 impl From<&GlobalTransform> for Position {
     fn from(value: &GlobalTransform) -> Self {
-        Self::from_xy(
-            value.translation().adjust_precision().x,
-            value.translation().adjust_precision().y,
-        )
+        Self::from_xy(value.translation().x, value.translation().y)
     }
 }
 
 impl Ease for Position {
     fn interpolating_curve_unbounded(start: Self, end: Self) -> impl Curve<Self> {
         FunctionCurve::new(Interval::UNIT, move |t| {
-            Position(Vector::lerp(start.0, end.0, t))
+            Position(Vec2::lerp(start.0, end.0, t))
         })
     }
 }
 
-impl From<Vector> for Position {
-    fn from(val: Vector) -> Self {
+impl From<Vec2> for Position {
+    fn from(val: Vec2) -> Self {
         Position(val.xy())
     }
 }

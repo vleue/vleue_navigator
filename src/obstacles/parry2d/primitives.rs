@@ -1,7 +1,9 @@
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
+
 use bevy::{math::bounding::Bounded2d, prelude::*};
 use parry2d::{
     mass_properties::MassProperties,
-    math::Isometry,
+    math::{Isometry, Real},
     query::{
         PointQuery, RayCast, details::local_ray_intersection_with_support_map_with_params,
         gjk::VoronoiSimplex, point::local_point_projection_on_support_map,
@@ -11,9 +13,8 @@ use parry2d::{
 
 use nalgebra::{Point2, UnitVector2, Vector2};
 
-use crate::obstacles::parry2d::math::{
-    AdjustPrecision, AsF32, FRAC_PI_2, PI, Scalar, TAU, na_iso_to_iso,
-};
+use super::math::na_iso_to_iso;
+
 /// An ellipse shape that can be stored in a [`SharedShape`] for an [`Ellipse`].
 ///
 /// This wrapper is required to allow implementing the necessary traits from [`parry2d`]
@@ -23,8 +24,8 @@ pub struct EllipseShape(pub Ellipse);
 
 impl SupportMap for EllipseShape {
     #[inline]
-    fn local_support_point(&self, direction: &Vector2<Scalar>) -> Point2<Scalar> {
-        let [a, b] = self.half_size.adjust_precision().to_array();
+    fn local_support_point(&self, direction: &Vector2<Real>) -> Point2<Real> {
+        let [a, b] = self.half_size.to_array();
         let denom = (direction.x.powi(2) * a * a + direction.y.powi(2) * b * b).sqrt();
         Point2::new(a * a * direction.x / denom, b * b * direction.y / denom)
     }
@@ -37,10 +38,10 @@ impl Shape for EllipseShape {
 
     fn scale_dyn(
         &self,
-        scale: &parry2d::math::Vector<Scalar>,
+        scale: &parry2d::math::Vector<Real>,
         _num_subdivisions: u32,
     ) -> Option<Box<dyn Shape>> {
-        let half_size = Vec2::from(*scale).f32() * self.half_size;
+        let half_size = Vec2::from(*scale) * self.half_size;
         Some(Box::new(EllipseShape(Ellipse::new(
             half_size.x,
             half_size.y,
@@ -50,37 +51,37 @@ impl Shape for EllipseShape {
     fn compute_local_aabb(&self) -> parry2d::bounding_volume::Aabb {
         let aabb = self.aabb_2d(Isometry2d::IDENTITY);
         parry2d::bounding_volume::Aabb::new(
-            aabb.min.adjust_precision().into(),
-            aabb.max.adjust_precision().into(),
+            aabb.min.into(),
+            aabb.max.into(),
         )
     }
 
-    fn compute_aabb(&self, position: &Isometry<Scalar>) -> parry2d::bounding_volume::Aabb {
+    fn compute_aabb(&self, position: &Isometry<Real>) -> parry2d::bounding_volume::Aabb {
         let isometry = na_iso_to_iso(position);
         let aabb = self.aabb_2d(isometry);
         parry2d::bounding_volume::Aabb::new(
-            aabb.min.adjust_precision().into(),
-            aabb.max.adjust_precision().into(),
+            aabb.min.into(),
+            aabb.max.into(),
         )
     }
 
     fn compute_local_bounding_sphere(&self) -> parry2d::bounding_volume::BoundingSphere {
         let sphere = self.bounding_circle(Isometry2d::IDENTITY);
         parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.adjust_precision().into(),
-            sphere.radius().adjust_precision(),
+            sphere.center.into(),
+            sphere.radius(),
         )
     }
 
     fn compute_bounding_sphere(
         &self,
-        position: &Isometry<Scalar>,
+        position: &Isometry<Real>,
     ) -> parry2d::bounding_volume::BoundingSphere {
         let isometry = na_iso_to_iso(position);
         let sphere = self.bounding_circle(isometry);
         parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.adjust_precision().into(),
-            sphere.radius().adjust_precision(),
+            sphere.center.into(),
+            sphere.radius(),
         )
     }
 
@@ -88,10 +89,10 @@ impl Shape for EllipseShape {
         Box::new(*self)
     }
 
-    fn mass_properties(&self, density: Scalar) -> MassProperties {
-        let volume = self.area().adjust_precision();
+    fn mass_properties(&self, density: Real) -> MassProperties {
+        let volume = self.area();
         let mass = volume * density;
-        let inertia = mass * self.half_size.length_squared().adjust_precision() / 4.0;
+        let inertia = mass * self.half_size.length_squared() / 4.0;
         MassProperties::new(Point2::origin(), mass, inertia)
     }
 
@@ -107,11 +108,11 @@ impl Shape for EllipseShape {
         TypedShape::Custom(self)
     }
 
-    fn ccd_thickness(&self) -> Scalar {
-        self.half_size.max_element().adjust_precision()
+    fn ccd_thickness(&self) -> Real {
+        self.half_size.max_element()
     }
 
-    fn ccd_angular_thickness(&self) -> Scalar {
+    fn ccd_angular_thickness(&self) -> Real {
         PI
     }
 
@@ -124,7 +125,7 @@ impl RayCast for EllipseShape {
     fn cast_local_ray_and_get_normal(
         &self,
         ray: &parry2d::query::Ray,
-        max_toi: Scalar,
+        max_toi: Real,
         solid: bool,
     ) -> Option<parry2d::query::RayIntersection> {
         local_ray_intersection_with_support_map_with_params(
@@ -140,7 +141,7 @@ impl RayCast for EllipseShape {
 impl PointQuery for EllipseShape {
     fn project_local_point(
         &self,
-        pt: &parry2d::math::Point<Scalar>,
+        pt: &parry2d::math::Point<Real>,
         solid: bool,
     ) -> parry2d::query::PointProjection {
         local_point_projection_on_support_map(self, &mut VoronoiSimplex::new(), pt, solid)
@@ -148,7 +149,7 @@ impl PointQuery for EllipseShape {
 
     fn project_local_point_and_get_feature(
         &self,
-        pt: &parry2d::math::Point<Scalar>,
+        pt: &parry2d::math::Point<Real>,
     ) -> (parry2d::query::PointProjection, FeatureId) {
         (self.project_local_point(pt, false), FeatureId::Unknown)
     }
@@ -163,12 +164,12 @@ pub struct RegularPolygonShape(pub RegularPolygon);
 
 impl SupportMap for RegularPolygonShape {
     #[inline]
-    fn local_support_point(&self, direction: &Vector2<Scalar>) -> Point2<Scalar> {
+    fn local_support_point(&self, direction: &Vector2<Real>) -> Point2<Real> {
         // TODO: For polygons with a small number of sides, maybe just iterating
         //       through the vertices and comparing dot products is faster?
 
-        let external_angle = self.external_angle_radians().adjust_precision();
-        let circumradius = self.circumradius().adjust_precision();
+        let external_angle = self.external_angle_radians();
+        let circumradius = self.circumradius();
 
         // Counterclockwise
         let angle_from_top = if direction.x < 0.0 {
@@ -178,7 +179,7 @@ impl SupportMap for RegularPolygonShape {
         };
 
         // How many rotations of `external_angle` correspond to the vertex closest to the support direction.
-        let n = (angle_from_top / external_angle).round() % self.sides as Scalar;
+        let n = (angle_from_top / external_angle).round() % self.sides as Real;
 
         // Rotate by an additional 90 degrees so that the first vertex is always at the top.
         let target_angle = n * external_angle + FRAC_PI_2;
@@ -192,11 +193,11 @@ impl PolygonalFeatureMap for RegularPolygonShape {
     #[inline]
     fn local_support_feature(
         &self,
-        direction: &UnitVector2<Scalar>,
+        direction: &UnitVector2<Real>,
         out_feature: &mut PolygonalFeature,
     ) {
-        let external_angle = self.external_angle_radians().adjust_precision();
-        let circumradius = self.circumradius().adjust_precision();
+        let external_angle = self.external_angle_radians();
+        let circumradius = self.circumradius();
 
         // Counterclockwise
         let angle_from_top = if direction.x < 0.0 {
@@ -207,8 +208,8 @@ impl PolygonalFeatureMap for RegularPolygonShape {
 
         // How many rotations of `external_angle` correspond to the vertices.
         let n_unnormalized = angle_from_top / external_angle;
-        let n1 = n_unnormalized.floor() % self.sides as Scalar;
-        let n2 = n_unnormalized.ceil() % self.sides as Scalar;
+        let n1 = n_unnormalized.floor() % self.sides as Real;
+        let n2 = n_unnormalized.ceil() % self.sides as Real;
 
         // Rotate by an additional 90 degrees so that the first vertex is always at the top.
         let target_angle1 = n1 * external_angle + FRAC_PI_2;
@@ -237,10 +238,10 @@ impl Shape for RegularPolygonShape {
 
     fn scale_dyn(
         &self,
-        scale: &parry2d::math::Vector<Scalar>,
+        scale: &parry2d::math::Vector<Real>,
         _num_subdivisions: u32,
     ) -> Option<Box<dyn Shape>> {
-        let circumradius = Vec2::from(*scale).f32() * self.circumradius();
+        let circumradius = Vec2::from(*scale) * self.circumradius();
         Some(Box::new(RegularPolygonShape(RegularPolygon::new(
             circumradius.length(),
             self.sides,
@@ -250,37 +251,37 @@ impl Shape for RegularPolygonShape {
     fn compute_local_aabb(&self) -> parry2d::bounding_volume::Aabb {
         let aabb = self.aabb_2d(Isometry2d::IDENTITY);
         parry2d::bounding_volume::Aabb::new(
-            aabb.min.adjust_precision().into(),
-            aabb.max.adjust_precision().into(),
+            aabb.min.into(),
+            aabb.max.into(),
         )
     }
 
-    fn compute_aabb(&self, position: &Isometry<Scalar>) -> parry2d::bounding_volume::Aabb {
+    fn compute_aabb(&self, position: &Isometry<Real>) -> parry2d::bounding_volume::Aabb {
         let isometry = na_iso_to_iso(position);
         let aabb = self.aabb_2d(isometry);
         parry2d::bounding_volume::Aabb::new(
-            aabb.min.adjust_precision().into(),
-            aabb.max.adjust_precision().into(),
+            aabb.min.into(),
+            aabb.max.into(),
         )
     }
 
     fn compute_local_bounding_sphere(&self) -> parry2d::bounding_volume::BoundingSphere {
         let sphere = self.bounding_circle(Isometry2d::IDENTITY);
         parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.adjust_precision().into(),
-            sphere.radius().adjust_precision(),
+            sphere.center.into(),
+            sphere.radius(),
         )
     }
 
     fn compute_bounding_sphere(
         &self,
-        position: &Isometry<Scalar>,
+        position: &Isometry<Real>,
     ) -> parry2d::bounding_volume::BoundingSphere {
         let isometry = na_iso_to_iso(position);
         let sphere = self.bounding_circle(isometry);
         parry2d::bounding_volume::BoundingSphere::new(
-            sphere.center.adjust_precision().into(),
-            sphere.radius().adjust_precision(),
+            sphere.center.into(),
+            sphere.radius(),
         )
     }
 
@@ -288,12 +289,12 @@ impl Shape for RegularPolygonShape {
         Box::new(*self)
     }
 
-    fn mass_properties(&self, density: Scalar) -> MassProperties {
-        let volume = self.area().adjust_precision();
+    fn mass_properties(&self, density: Real) -> MassProperties {
+        let volume = self.area();
         let mass = volume * density;
 
-        let half_external_angle = PI / self.sides as Scalar;
-        let angular_inertia = mass * self.circumradius().adjust_precision().powi(2) / 6.0
+        let half_external_angle = PI / self.sides as Real;
+        let angular_inertia = mass * self.circumradius().powi(2) / 6.0
             * (1.0 + 2.0 * half_external_angle.cos().powi(2));
 
         MassProperties::new(Point2::origin(), mass, angular_inertia)
@@ -307,42 +308,42 @@ impl Shape for RegularPolygonShape {
         ShapeType::Custom
     }
 
-    fn as_typed_shape(&self) -> TypedShape {
+    fn as_typed_shape(&'_ self) -> TypedShape<'_> {
         TypedShape::Custom(self)
     }
 
-    fn ccd_thickness(&self) -> Scalar {
-        self.circumradius().adjust_precision()
+    fn ccd_thickness(&self) -> Real {
+        self.circumradius()
     }
 
-    fn ccd_angular_thickness(&self) -> Scalar {
-        PI - self.internal_angle_radians().adjust_precision()
+    fn ccd_angular_thickness(&self) -> Real {
+        PI - self.internal_angle_radians()
     }
 
     fn as_support_map(&self) -> Option<&dyn SupportMap> {
         Some(self)
     }
 
-    fn as_polygonal_feature_map(&self) -> Option<(&dyn PolygonalFeatureMap, Scalar)> {
+    fn as_polygonal_feature_map(&self) -> Option<(&dyn PolygonalFeatureMap, Real)> {
         Some((self, 0.0))
     }
 
     fn feature_normal_at_point(
         &self,
         feature: FeatureId,
-        _point: &Point2<Scalar>,
-    ) -> Option<UnitVector2<Scalar>> {
+        _point: &Point2<Real>,
+    ) -> Option<UnitVector2<Real>> {
         match feature {
             FeatureId::Face(id) => {
-                let external_angle = self.external_angle_radians().adjust_precision();
-                let normal_angle = id as Scalar * external_angle - external_angle * 0.5 + FRAC_PI_2;
+                let external_angle = self.external_angle_radians();
+                let normal_angle = id as Real * external_angle - external_angle * 0.5 + FRAC_PI_2;
                 Some(UnitVector2::new_unchecked(
                     Vec2::from_angle(normal_angle).into(),
                 ))
             }
             FeatureId::Vertex(id) => {
-                let external_angle = self.external_angle_radians().adjust_precision();
-                let normal_angle = id as Scalar * external_angle + FRAC_PI_2;
+                let external_angle = self.external_angle_radians();
+                let normal_angle = id as Real * external_angle + FRAC_PI_2;
                 Some(UnitVector2::new_unchecked(
                     Vec2::from_angle(normal_angle).into(),
                 ))
@@ -356,7 +357,7 @@ impl RayCast for RegularPolygonShape {
     fn cast_local_ray_and_get_normal(
         &self,
         ray: &parry2d::query::Ray,
-        max_toi: Scalar,
+        max_toi: Real,
         solid: bool,
     ) -> Option<parry2d::query::RayIntersection> {
         local_ray_intersection_with_support_map_with_params(
@@ -372,7 +373,7 @@ impl RayCast for RegularPolygonShape {
 impl PointQuery for RegularPolygonShape {
     fn project_local_point(
         &self,
-        pt: &parry2d::math::Point<Scalar>,
+        pt: &parry2d::math::Point<Real>,
         solid: bool,
     ) -> parry2d::query::PointProjection {
         local_point_projection_on_support_map(self, &mut VoronoiSimplex::new(), pt, solid)
@@ -380,7 +381,7 @@ impl PointQuery for RegularPolygonShape {
 
     fn project_local_point_and_get_feature(
         &self,
-        pt: &parry2d::math::Point<Scalar>,
+        pt: &parry2d::math::Point<Real>,
     ) -> (parry2d::query::PointProjection, FeatureId) {
         (self.project_local_point(pt, false), FeatureId::Unknown)
     }
