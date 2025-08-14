@@ -86,7 +86,6 @@ default-features = false
 
 [features]
 default = ["debug-with-gizmos"]
-
 render = ["bevy/bevy_render"]
 debug-with-gizmos = ["render", "bevy/bevy_gizmos"]
 detailed-layers = ["polyanya/detailed-layers"]
