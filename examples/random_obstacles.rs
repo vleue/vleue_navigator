@@ -2,6 +2,7 @@ use bevy::{
     color::palettes,
     math::vec2,
     prelude::*,
+    sprite_render::ColorMaterial,
     window::{PrimaryWindow, WindowResized},
 };
 use rand::Rng;
@@ -24,7 +25,7 @@ fn main() {
             }),
             VleueNavigatorPlugin,
         ))
-        .add_event::<NewPathStepEvent>()
+        .add_message::<NewPathStepEvent>()
         .insert_resource(PathToDisplay::default())
         .add_systems(Startup, setup)
         .add_systems(
@@ -173,11 +174,11 @@ fn mesh_change(
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 struct NewPathStepEvent(Vec2);
 
 fn on_click(
-    mut path_step_event: EventWriter<NewPathStepEvent>,
+    mut path_step_event: MessageWriter<NewPathStepEvent>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     primary_window: Single<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
@@ -213,7 +214,7 @@ fn on_click(
 }
 
 fn compute_paths(
-    mut event_new_step_path: EventReader<NewPathStepEvent>,
+    mut event_new_step_path: MessageReader<NewPathStepEvent>,
     mut path_to_display: ResMut<PathToDisplay>,
     meshes: Res<MyNavMesh>,
     navmeshes: Res<Assets<NavMesh>>,

@@ -40,7 +40,7 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildSpawnerComman
                 ..default()
             },
             Button,
-            BorderColor(palettes::tailwind::GRAY_500.into()),
+            BorderColor::all(palettes::tailwind::GRAY_500),
             BorderRadius::MAX,
             BackgroundColor(palettes::tailwind::GRAY_700.into()),
             action,
@@ -85,7 +85,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                             ..default()
                         },
                         TextLayout {
-                            justify: JustifyText::Right,
+                            justify: Justify::Right,
                             ..default()
                         },
                         UiSettings::Simplify,
@@ -109,7 +109,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                             ..default()
                         },
                         TextLayout {
-                            justify: JustifyText::Right,
+                            justify: Justify::Right,
                             ..default()
                         },
                         UiSettings::MergeSteps,
@@ -133,7 +133,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                             ..default()
                         },
                         TextLayout {
-                            justify: JustifyText::Right,
+                            justify: Justify::Right,
                             ..default()
                         },
                         UiSettings::AgentRadius,
@@ -159,7 +159,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                         ..default()
                     },
                     Button,
-                    BorderColor(palettes::tailwind::GRAY_500.into()),
+                    BorderColor::all(palettes::tailwind::GRAY_500),
                     BorderRadius::all(Val::Px(10.0)),
                     BackgroundColor(palettes::tailwind::GRAY_700.into()),
                     UiSettingsButtons::AgentRadiusOuterToggle,
@@ -186,7 +186,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                             ..default()
                         },
                         Button,
-                        BorderColor(palettes::tailwind::GRAY_500.into()),
+                        BorderColor::all(palettes::tailwind::GRAY_500),
                         BorderRadius::all(Val::Px(10.0)),
                         UiSettingsButtons::ToggleCache,
                         UiSettings::Cache,

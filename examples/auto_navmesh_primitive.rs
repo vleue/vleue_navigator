@@ -2,6 +2,7 @@ use bevy::{
     color::palettes,
     math::vec2,
     prelude::*,
+    sprite_render::ColorMaterial,
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;

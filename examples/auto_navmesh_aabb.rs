@@ -1,8 +1,9 @@
 use bevy::{
+    camera::primitives::Aabb,
     color::palettes,
     math::vec2,
     prelude::*,
-    render::primitives::Aabb,
+    sprite_render::ColorMaterial,
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;

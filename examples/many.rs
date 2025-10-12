@@ -11,6 +11,7 @@ use bevy::{
     math::Vec3Swizzles,
     platform::time::Instant,
     prelude::*,
+    sprite_render::ColorMaterial,
     tasks::AsyncComputeTaskPool,
     window::{PrimaryWindow, WindowResized},
 };

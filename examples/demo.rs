@@ -1,11 +1,14 @@
-use bevy::asset::weak_handle;
 use bevy::{
-    color::palettes, ecs::entity::EntityHashSet, math::vec2, prelude::*, render::view::RenderLayers,
+    asset::uuid_handle,
+    camera::visibility::RenderLayers,
+    color::palettes,
+    ecs::entity::EntityHashSet,
+    math::vec2,
+    prelude::*,
 };
 use polyanya::Triangulation;
 use rand::Rng;
-use std::f32::consts::{FRAC_PI_2, PI};
-use std::ops::Deref;
+use std::{f32::consts::{FRAC_PI_2, PI}, ops::Deref};
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
@@ -17,19 +20,19 @@ const MESH_WIDTH: u32 = 150;
 const MESH_HEIGHT: u32 = 100;
 
 pub const MATERIAL_OBSTACLE_1: Handle<StandardMaterial> =
-    weak_handle!("61751B75-682F-46BE-9BA8-907E51742910");
+    uuid_handle!("61751B75-682F-46BE-9BA8-907E51742910");
 pub const MATERIAL_OBSTACLE_2: Handle<StandardMaterial> =
-    weak_handle!("F2F2204F-AB91-4376-8A51-229BFFB56445");
+    uuid_handle!("F2F2204F-AB91-4376-8A51-229BFFB56445");
 pub const MATERIAL_OBSTACLE_3: Handle<StandardMaterial> =
-    weak_handle!("8E5870B1-1870-437E-8E52-2C52B2DFCE2D");
+    uuid_handle!("8E5870B1-1870-437E-8E52-2C52B2DFCE2D");
 pub const MATERIAL_OBSTACLE_CACHED_1: Handle<StandardMaterial> =
-    weak_handle!("A3706B94-BB44-4508-A051-C4B1879C0DEA");
+    uuid_handle!("A3706B94-BB44-4508-A051-C4B1879C0DEA");
 pub const MATERIAL_OBSTACLE_CACHED_2: Handle<StandardMaterial> =
-    weak_handle!("B458D794-04E8-4C76-A6C5-0E78D25D6DE4");
+    uuid_handle!("B458D794-04E8-4C76-A6C5-0E78D25D6DE4");
 pub const MATERIAL_OBSTACLE_CACHED_3: Handle<StandardMaterial> =
-    weak_handle!("5AC194EE-E5F1-40B7-B15A-BCBB1B972C95");
+    uuid_handle!("5AC194EE-E5F1-40B7-B15A-BCBB1B972C95");
 pub const MATERIAL_NAVMESH: Handle<StandardMaterial> =
-    weak_handle!("FF0E4D28-0C95-4A2C-8A67-4C0BC6988060");
+    uuid_handle!("FF0E4D28-0C95-4A2C-8A67-4C0BC6988060");
 
 #[derive(Component, Debug)]
 struct Obstacle;
