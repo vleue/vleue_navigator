@@ -118,15 +118,15 @@ fn spawn_obstacles(
         Mesh3d(meshes.add(Cuboid::new(cube_size, cube_size, cube_size))),
         MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
         Transform::from_xyz(
-            rand::thread_rng().gen_range(-25.0..25.0),
+            rand::rng().random_range(-25.0..25.0),
             50.0,
-            rand::thread_rng().gen_range(-20.0..-10.0),
+            rand::rng().random_range(-20.0..-10.0),
         )
         .looking_to(
             Vec3::new(
-                rand::thread_rng().gen_range(-1.0..1.0),
-                rand::thread_rng().gen_range(-1.0..1.0),
-                rand::thread_rng().gen_range(-1.0..1.0),
+                rand::rng().random_range(-1.0..1.0),
+                rand::rng().random_range(-1.0..1.0),
+                rand::rng().random_range(-1.0..1.0),
             )
             .normalize(),
             Vec3::Y,

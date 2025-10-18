@@ -189,7 +189,7 @@ fn spawn(
 ) {
     if navmeshes.contains(&known_meshes.aurora) {
         let window = *primary_window;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let screen = Vec2::new(window.width(), window.height());
         let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
 
@@ -213,7 +213,7 @@ fn spawn(
             .choose(&mut rng)
             .unwrap();
             let position = (in_mesh - MESH_SIZE / 2.0) * factor;
-            let color = Hsla::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5);
+            let color = Hsla::hsl(rng.random_range(0.0..360.0), 1.0, 0.5);
 
             to_spawn.push((
                 Sprite {
@@ -223,7 +223,7 @@ fn spawn(
                 },
                 Transform::from_translation(position.extend(1.0)).with_scale(Vec3::splat(5.0)),
                 Navigator {
-                    speed: rng.gen_range(50.0..100.0),
+                    speed: rng.random_range(50.0..100.0),
                 },
             ));
         }
@@ -375,11 +375,11 @@ fn go_somewhere(
     >,
     mut commands: Commands,
 ) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for navigator in &query {
         let target = Vec2::new(
-            rng.gen_range(0.0..MESH_SIZE.x),
-            rng.gen_range(0.0..MESH_SIZE.y),
+            rng.random_range(0.0..MESH_SIZE.x),
+            rng.random_range(0.0..MESH_SIZE.y),
         );
         commands.entity(navigator).insert(Target { target });
     }
