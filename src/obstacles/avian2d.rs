@@ -1,10 +1,9 @@
 use avian2d::{
-    dynamics::rigid_body::Sleeping,
     parry::{
         na::{Const, OPoint},
         shape::TypedShape,
     },
-    prelude::Collider,
+    prelude::{Collider, Sleeping},
 };
 use bevy::{
     math::{Vec3Swizzles, vec3},
@@ -123,7 +122,6 @@ impl InnerObstacleSource for TypedShape<'_> {
                 .map(to_world)
                 .map(to_navmesh)
                 .collect(),
-            // TODO: handle the round corner or RoundTriangle
             TypedShape::RoundTriangle(collider) => [
                 collider.inner_shape.a,
                 collider.inner_shape.b,
@@ -155,16 +153,22 @@ impl InnerObstacleSource for TypedShape<'_> {
                 warn!("Custom collider not supported for NavMesh obstacle generation");
                 vec![]
             }
+            TypedShape::Voxels(_) => {
+                warn!("Voxels collider not supported for NavMesh obstacle generation");
+                vec![]
+            }
         }
     }
 }
 
-pub fn on_sleeping_inserted(trigger: Trigger<OnInsert, Sleeping>, mut commands: Commands) {
-    commands.entity(trigger.target()).insert(CachableObstacle);
+pub fn on_sleeping_inserted(trigger: On<Insert, Sleeping>, mut commands: Commands) {
+    commands
+        .entity(trigger.event().entity)
+        .insert(CachableObstacle);
 }
 
-pub fn on_sleeping_removed(trigger: Trigger<OnRemove, Sleeping>, mut commands: Commands) {
+pub fn on_sleeping_removed(trigger: On<Remove, Sleeping>, mut commands: Commands) {
     commands
-        .entity(trigger.target())
+        .entity(trigger.event().entity)
         .remove::<CachableObstacle>();
 }
