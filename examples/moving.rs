@@ -7,6 +7,7 @@ use bevy::{
     color::palettes,
     math::Vec3Swizzles,
     prelude::*,
+    sprite_render::ColorMaterial,
     tasks::AsyncComputeTaskPool,
     window::{PrimaryWindow, WindowResized},
 };
@@ -139,7 +140,7 @@ fn on_mesh_change(
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Single<&Window, With<PrimaryWindow>>,
     navigator: Query<Entity, With<Navigator>>,
-    window_resized: EventReader<WindowResized>,
+    window_resized: MessageReader<WindowResized>,
     text: Query<Entity, With<Text>>,
     mut wait_for_mesh: Local<bool>,
 ) {
@@ -311,9 +312,9 @@ fn on_click(
                     commands.entity(navigator).insert(Target {
                         target: in_mesh,
                         navmesh: match mesh.mesh {
-                            CurrentMesh::Simple => meshes.simple.clone_weak(),
-                            CurrentMesh::Arena => meshes.arena.clone_weak(),
-                            CurrentMesh::Aurora => meshes.aurora.clone_weak(),
+                            CurrentMesh::Simple => meshes.simple.clone(),
+                            CurrentMesh::Arena => meshes.arena.clone(),
+                            CurrentMesh::Aurora => meshes.aurora.clone(),
                         },
                     });
                 } else {

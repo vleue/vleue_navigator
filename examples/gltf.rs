@@ -1,9 +1,9 @@
 use bevy::{
-    asset::{LoadState, weak_handle},
+    asset::{LoadState, uuid_handle},
     color::palettes,
     gltf::{Gltf, GltfMesh},
+    light::NotShadowCaster,
     math::Vec3Swizzles,
-    pbr::NotShadowCaster,
     prelude::*,
     window::PrimaryWindow,
 };
@@ -12,7 +12,7 @@ use std::f32::consts::FRAC_PI_2;
 use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
 
 const HANDLE_TRIMESH_OPTIMIZED: Handle<NavMesh> =
-    weak_handle!("100AD183-2C5C-49A1-AB32-142000E87828");
+    uuid_handle!("100AD183-2C5C-49A1-AB32-142000E87828");
 
 fn main() {
     App::new()
@@ -71,11 +71,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn((
         Camera3d::default(),
-        Camera {
-            #[cfg(not(target_arch = "wasm32"))]
-            hdr: true,
-            ..default()
-        },
+        Camera::default(),
+        #[cfg(not(target_arch = "wasm32"))]
+        bevy::render::view::Hdr,
         Transform::from_xyz(0.0, 70.0, 5.0).looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
     ));
 
@@ -231,7 +229,9 @@ fn setup_scene(
                 Visibility::Hidden,
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED),
             ));
-            navmeshes.insert(&HANDLE_TRIMESH_OPTIMIZED, navmesh);
+            navmeshes
+                .insert(&HANDLE_TRIMESH_OPTIMIZED, navmesh)
+                .expect("Failed to insert navmesh");
         }
 
         commands

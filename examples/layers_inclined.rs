@@ -37,8 +37,9 @@ fn main() {
         ))
         .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 10.0))
         .add_systems(Startup, setup)
-        .add_systems(Update, (despawn_obstacles, rotate_camera))
+        .add_systems(Update, rotate_camera)
         .add_systems(PostUpdate, display_path)
+        .add_systems(PreUpdate, despawn_obstacles)
         .add_systems(
             Update,
             spawn_obstacles.run_if(on_timer(Duration::from_secs_f32(0.5))),
@@ -339,7 +340,7 @@ fn despawn_obstacles(
 ) {
     for (entity, mut obstacle) in &mut query {
         if obstacle.0.tick(time.delta()).just_finished() {
-            commands.entity(entity).despawn();
+            commands.entity(entity).remove::<Sleeping>().despawn();
         }
     }
 }

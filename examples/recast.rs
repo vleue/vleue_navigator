@@ -2,8 +2,10 @@ use std::{f32::consts::FRAC_PI_2, fs::File};
 
 use bevy::{
     color::palettes::{self},
-    core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
+    core_pipeline::tonemapping::Tonemapping,
+    post_process::bloom::Bloom,
     prelude::*,
+    render::view::Hdr,
 };
 use vleue_navigator::{VleueNavigatorPlugin, display_layer_gizmo, prelude::*};
 
@@ -95,10 +97,8 @@ struct Layers(Vec<bool>);
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera3d::default(),
-        Camera {
-            hdr: true,
-            ..default()
-        },
+        Camera::default(),
+        Hdr,
         Transform::from_xyz(35.0, 90.0, -40.0).looking_at(Vec3::new(15.0, 0.0, -40.0), Vec3::Y),
         camera_controller::CameraController::default(),
         Tonemapping::TonyMcMapface,

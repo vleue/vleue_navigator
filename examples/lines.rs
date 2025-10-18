@@ -1,6 +1,7 @@
 use bevy::{
     color::palettes,
     prelude::*,
+    sprite_render::ColorMaterial,
     window::{PrimaryWindow, WindowResized},
 };
 use vleue_navigator::{NavMesh, VleueNavigatorPlugin};
@@ -19,7 +20,7 @@ fn main() {
             }),
             VleueNavigatorPlugin,
         ))
-        .add_event::<NewPathStepEvent>()
+        .add_message::<NewPathStepEvent>()
         .insert_resource(PathToDisplay::default())
         .add_systems(Startup, setup)
         .add_systems(
@@ -136,7 +137,7 @@ fn on_mesh_change(
     known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
-    window_resized: EventReader<WindowResized>,
+    window_resized: MessageReader<WindowResized>,
     text: Query<Entity, With<Text>>,
 ) {
     if !mesh.is_changed() && window_resized.is_empty() {
@@ -238,11 +239,11 @@ fn mesh_change(mut mesh: ResMut<MeshDetails>, keyboard_input: Res<ButtonInput<Ke
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 struct NewPathStepEvent(Vec2);
 
 fn on_click(
-    mut path_step_event: EventWriter<NewPathStepEvent>,
+    mut path_step_event: MessageWriter<NewPathStepEvent>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     primary_window: Single<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
@@ -283,7 +284,7 @@ fn on_click(
 }
 
 fn compute_paths(
-    mut event_new_step_path: EventReader<NewPathStepEvent>,
+    mut event_new_step_path: MessageReader<NewPathStepEvent>,
     mut path_to_display: ResMut<PathToDisplay>,
     mesh: Res<MeshDetails>,
     meshes: Res<Meshes>,

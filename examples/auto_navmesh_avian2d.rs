@@ -1,5 +1,5 @@
 use avian2d::{math::*, prelude::*};
-use bevy::{color::palettes, math::vec2, prelude::*};
+use bevy::{color::palettes, math::vec2, prelude::*, sprite_render::ColorMaterial};
 use rand::Rng;
 use vleue_navigator::prelude::*;
 

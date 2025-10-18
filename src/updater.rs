@@ -14,7 +14,7 @@ use bevy::{
     platform::time::Instant,
     prelude::*,
     tasks::AsyncComputeTaskPool,
-    transform::TransformSystem,
+    transform::TransformSystems,
 };
 use polyanya::{Layer, Mesh, Triangulation};
 
@@ -41,9 +41,7 @@ impl ManagedNavMesh {
     /// Get the [`NavMesh`] handle from an id
     #[inline(always)]
     pub const fn get_from_id(id: u128) -> Handle<NavMesh> {
-        Handle::Weak(AssetId::Uuid {
-            uuid: Uuid::from_u128(id),
-        })
+        Handle::Uuid(Uuid::from_u128(id), PhantomData)
     }
 
     /// Create a new [`ManagedNavMesh`].
@@ -57,9 +55,10 @@ impl ManagedNavMesh {
     /// Get the [`NavMesh`] handle used when having a single navmesh
     #[inline(always)]
     pub const fn get_single() -> Handle<NavMesh> {
-        Handle::Weak(AssetId::Uuid {
-            uuid: uuid::uuid!("91C38D03-ED0F-4997-B7BC-1CDD185317D4"),
-        })
+        Handle::Uuid(
+            uuid::uuid!("91C38D03-ED0F-4997-B7BC-1CDD185317D4"),
+            PhantomData,
+        )
     }
 }
 
@@ -650,7 +649,9 @@ fn update_navmesh_asset(
                     } else {
                         navmesh.set_transform(previous_navmesh_transform);
                     }
-                    navmeshes.insert(&handle.0, navmesh);
+                    navmeshes
+                        .insert(&handle.0, navmesh)
+                        .expect("Failed to update navmesh");
                 } else if let Some(navmesh) = navmeshes.get_mut(&handle.0) {
                     failed_stitches.extend(previously_failed);
                     failed_stitches.sort_unstable();
@@ -661,14 +662,18 @@ fn update_navmesh_asset(
                     });
                 } else {
                     let navmesh = NavMesh::from_polyanya_mesh(mesh);
-                    navmeshes.insert(&handle.0, navmesh);
+                    navmeshes
+                        .insert(&handle.0, navmesh)
+                        .expect("Failed to update navmesh");
                     *status = NavMeshStatus::Invalid;
                 }
             } else {
                 mesh.layers = vec![layer];
                 let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
                 navmesh.set_transform(global_transform.compute_transform());
-                navmeshes.insert(&handle.0, navmesh);
+                navmeshes
+                    .insert(&handle.0, navmesh)
+                    .expect("Failed to update navmesh");
                 *status = NavMeshStatus::Built;
             }
             diagnostics.add_measurement(&NAVMESH_BUILD_DURATION, || duration.as_secs_f64());
@@ -683,12 +688,12 @@ fn update_navmesh_asset(
 ///
 /// # Example
 ///
-/// When using [`Aabb`](bevy::render::primitives::Aabb) as the obstacle shape, the [`Obstacle`] component should be [`Aabb`](bevy::render::primitives::Aabb), and you should use a `Marker` component type of your own to differentiate between entities that are obstacles and those that aren't.
+/// When using [`Aabb`](bevy::camera::primitives::Aabb) as the obstacle shape, the [`Obstacle`] component should be [`Aabb`](bevy::render::primitives::Aabb), and you should use a `Marker` component type of your own to differentiate between entities that are obstacles and those that aren't.
 ///
 /// ```no_run
 /// use bevy::{
 ///     prelude::*,
-///     render::primitives::Aabb,
+///     camera::primitives::Aabb,
 /// };
 /// use vleue_navigator::prelude::*;
 ///
@@ -730,7 +735,7 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
     fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
-            trigger_navmesh_build::<Marker, Obstacle>.after(TransformSystem::TransformPropagate),
+            trigger_navmesh_build::<Marker, Obstacle>.after(TransformSystems::Propagate),
         )
         .add_systems(PreUpdate, (drop_dead_tasks, update_navmesh_asset).chain())
         .register_diagnostic(Diagnostic::new(NAVMESH_BUILD_DURATION));

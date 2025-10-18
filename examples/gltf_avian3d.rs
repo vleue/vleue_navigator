@@ -3,8 +3,8 @@ use bevy::{
     asset::LoadState,
     color::palettes,
     gltf::{Gltf, GltfMesh},
+    light::NotShadowCaster,
     math::Vec3Swizzles,
-    pbr::NotShadowCaster,
     prelude::*,
     time::common_conditions::on_timer,
 };
@@ -102,11 +102,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn((
         Camera3d::default(),
-        Camera {
-            #[cfg(not(target_arch = "wasm32"))]
-            hdr: true,
-            ..default()
-        },
+        Camera::default(),
         Transform::from_xyz(0.0, 70.0, 5.0).looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
     ));
 }
@@ -411,7 +407,7 @@ fn despawn_obstacles(
         if timer.0.tick(time.delta()).just_finished() {
             linvel.0 = Vec3::new(0.0, 50.0, 0.0);
         }
-        if timer.0.finished() {
+        if timer.0.is_finished() {
             transform.scale *= 0.98;
             if transform.scale.x < 0.01 {
                 commands.entity(entity).despawn();
