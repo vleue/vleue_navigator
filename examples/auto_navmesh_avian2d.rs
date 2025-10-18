@@ -82,9 +82,9 @@ fn setup(
                         } else {
                             step as f32 / 4.0
                         }
-                        + rand::thread_rng().gen_range(-1.0..1.0))
+                        + rand::rng().random_range(-1.0..1.0))
                         * 9.5,
-                    (y as f32 + rand::thread_rng().gen_range(-1.0..1.0)) * 6.0,
+                    (y as f32 + rand::rng().random_range(-1.0..1.0)) * 6.0,
                     0.0,
                 ),
                 RigidBody::Static,
@@ -105,8 +105,8 @@ fn setup(
             RigidBody::Dynamic,
             LinearVelocity(
                 Vec2::new(
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                    rand::thread_rng().gen_range(-1.0..1.0),
+                    rand::rng().random_range(-1.0..1.0),
+                    rand::rng().random_range(-1.0..1.0),
                 )
                 .normalize()
                     * 200.0,

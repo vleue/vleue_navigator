@@ -102,22 +102,26 @@ fn setup(mut commands: Commands) {
     // - the `Aabb` component to define the obstacle's shape
     // - the `Transform` component to define the obstacle's position
     // - the `GlobalTransform` so that it's correctly handled by Bevy
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..100 {
         commands.spawn((
             Obstacle,
             Aabb::from_min_max(
                 Vec3::ZERO,
-                Vec3::new(rng.gen_range(10.0..50.0), rng.gen_range(10.0..50.0), 0.0),
+                Vec3::new(
+                    rng.random_range(10.0..50.0),
+                    rng.random_range(10.0..50.0),
+                    0.0,
+                ),
             ),
             Transform::from_translation(
                 Vec3::new(
-                    rng.gen_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
-                    rng.gen_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
+                    rng.random_range((-(MESH_WIDTH as f32) / 2.0)..(MESH_WIDTH as f32 / 2.0)),
+                    rng.random_range((-(MESH_HEIGHT as f32) / 2.0)..(MESH_HEIGHT as f32 / 2.0)),
                     0.0,
                 ) * FACTOR,
             )
-            .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
+            .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..PI))),
         ));
     }
 }
@@ -185,15 +189,19 @@ fn spawn_obstacle_on_click(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .map(|ray| ray.origin.truncate())
         {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             commands.spawn((
                 Obstacle,
                 Aabb::from_min_max(
                     Vec3::ZERO,
-                    Vec3::new(rng.gen_range(10.0..50.), rng.gen_range(10.0..50.0), 0.0),
+                    Vec3::new(
+                        rng.random_range(10.0..50.),
+                        rng.random_range(10.0..50.0),
+                        0.0,
+                    ),
                 ),
                 Transform::from_translation(position.extend(0.0))
-                    .with_rotation(Quat::from_rotation_z(rng.gen_range(0.0..PI))),
+                    .with_rotation(Quat::from_rotation_z(rng.random_range(0.0..PI))),
                 GlobalTransform::default(),
             ));
             info!("spawning an obstacle at {}", position);

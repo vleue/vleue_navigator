@@ -125,7 +125,7 @@ fn setup(
     // Spawn some obstacles
     for x in -3..3 {
         for z in -3..3 {
-            let (mesh, collider) = types.choose(&mut rand::thread_rng()).unwrap();
+            let (mesh, collider) = types.choose(&mut rand::rng()).unwrap();
             let position = Vec3::new((x as f32 - 0.5) * spacing, 25.0, (z as f32 - 0.5) * spacing)
                 * obstacle_size;
             commands.spawn((

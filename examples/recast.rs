@@ -332,12 +332,11 @@ fn autonomous_demo(
         if timer.is_none() {
             *timer = Some(Timer::from_seconds(0.87, TimerMode::Repeating));
         }
-
-        use rand::seq::SliceRandom;
+        use rand::seq::IndexedRandom;
 
         if timer.as_mut().unwrap().tick(time.delta()).just_finished() {
             let layer = match current_position.1 {
-                0 => *[1, 4].choose(&mut rand::thread_rng()).unwrap(),
+                0 => *[1, 4].choose(&mut rand::rng()).unwrap(),
                 1 => 4,
                 2 => 4,
                 3 => 1,
