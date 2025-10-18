@@ -63,7 +63,7 @@ fn on_mesh_change(
     known_meshes: Res<MyNavMesh>,
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Single<&Window, With<PrimaryWindow>>,
-    window_resized: EventReader<WindowResized>,
+    window_resized: MessageReader<WindowResized>,
     text: Query<Entity, With<Text>>,
     mut waiting_for_available: Local<bool>,
 ) {

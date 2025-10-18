@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use avian3d::{math::*, prelude::*};
 use bevy::{
-    asset::weak_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
+    asset::uuid_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
 };
 
 use vleue_navigator::prelude::*;
@@ -46,17 +46,17 @@ fn main() {
 }
 
 pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> =
-    weak_handle!("369EA0F5-EC58-457E-94E4-BDB70D99AA20");
+    uuid_handle!("369EA0F5-EC58-457E-94E4-BDB70D99AA20");
 pub const MATERIAL_OBSTACLE_CACHED: Handle<StandardMaterial> =
-    weak_handle!("5895917E-BCB3-402B-AF02-39400A0D8F65");
+    uuid_handle!("5895917E-BCB3-402B-AF02-39400A0D8F65");
 
 fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    materials.insert(&MATERIAL_OBSTACLE_LIVE, Color::srgb(0.2, 0.7, 0.9).into());
-    materials.insert(&MATERIAL_OBSTACLE_CACHED, Color::srgb(0.2, 0.9, 0.7).into());
+    let _ = materials.insert(&MATERIAL_OBSTACLE_LIVE, Color::srgb(0.2, 0.7, 0.9).into());
+    let _ = materials.insert(&MATERIAL_OBSTACLE_CACHED, Color::srgb(0.2, 0.9, 0.7).into());
     let arena_mesh = meshes.add(Cuboid::default());
     let arena_material = materials.add(Color::srgb(0.7, 0.7, 0.8));
     // Ground

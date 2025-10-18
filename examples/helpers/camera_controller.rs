@@ -231,7 +231,7 @@ fn run_camera_controller(
                 cursor_options.visible = false;
             }
         } else {
-            for (window, mut cursor_options) in &mut windows {
+            for (_, mut cursor_options) in &mut windows {
                 cursor_options.grab_mode = CursorGrabMode::None;
                 cursor_options.visible = true;
             }

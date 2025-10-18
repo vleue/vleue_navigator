@@ -1,14 +1,13 @@
 use bevy::{
-    asset::uuid_handle,
-    camera::visibility::RenderLayers,
-    color::palettes,
-    ecs::entity::EntityHashSet,
-    math::vec2,
-    prelude::*,
+    asset::uuid_handle, camera::visibility::RenderLayers, color::palettes,
+    ecs::entity::EntityHashSet, math::vec2, prelude::*,
 };
 use polyanya::Triangulation;
 use rand::Rng;
-use std::{f32::consts::{FRAC_PI_2, PI}, ops::Deref};
+use std::{
+    f32::consts::{FRAC_PI_2, PI},
+    ops::Deref,
+};
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
@@ -142,7 +141,7 @@ fn life_of_obstacle(
         }
         lifetime.0.tick(time.delta());
 
-        if lifetime.0.finished() {
+        if lifetime.0.is_finished() {
             commands.entity(entity).despawn();
         } else if lifetime.0.fraction() < 0.2 {
             transform.scale = Vec3::new(
@@ -244,31 +243,31 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
         NavMeshUpdateMode::Direct,
     ));
 
-    materials.insert(
+    let _ = materials.insert(
         &MATERIAL_OBSTACLE_1,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::RED_600)),
     );
-    materials.insert(
+    let _ = materials.insert(
         &MATERIAL_OBSTACLE_2,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::RED_700)),
     );
-    materials.insert(
+    let _ = materials.insert(
         &MATERIAL_OBSTACLE_3,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::ORANGE_700)),
     );
-    materials.insert(
+    let _ = materials.insert(
         &MATERIAL_OBSTACLE_CACHED_1,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::GREEN_600)),
     );
-    materials.insert(
+    let _ = materials.insert(
         &MATERIAL_OBSTACLE_CACHED_2,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::GREEN_700)),
     );
-    materials.insert(
+    let _ = materials.insert(
         &MATERIAL_OBSTACLE_CACHED_3,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::TEAL_700)),
     );
-    materials.insert(
+    let _ = materials.insert(
         &MATERIAL_NAVMESH,
         StandardMaterial::from(Color::Srgba(palettes::tailwind::BLUE_800)),
     );
@@ -504,8 +503,8 @@ fn remove_obstacles(
 
 fn toggle_ui(
     mut layers: Query<&mut RenderLayers, With<Camera>>,
-    mut entered: EventReader<CursorEntered>,
-    mut left: EventReader<CursorLeft>,
+    mut entered: MessageReader<CursorEntered>,
+    mut left: MessageReader<CursorLeft>,
 ) {
     for _ in entered.read() {
         for mut layers in &mut layers {

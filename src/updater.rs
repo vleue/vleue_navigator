@@ -649,7 +649,9 @@ fn update_navmesh_asset(
                     } else {
                         navmesh.set_transform(previous_navmesh_transform);
                     }
-                    navmeshes.insert(&handle.0, navmesh);
+                    navmeshes
+                        .insert(&handle.0, navmesh)
+                        .expect("Failed to update navmesh");
                 } else if let Some(navmesh) = navmeshes.get_mut(&handle.0) {
                     failed_stitches.extend(previously_failed);
                     failed_stitches.sort_unstable();
@@ -660,14 +662,18 @@ fn update_navmesh_asset(
                     });
                 } else {
                     let navmesh = NavMesh::from_polyanya_mesh(mesh);
-                    navmeshes.insert(&handle.0, navmesh);
+                    navmeshes
+                        .insert(&handle.0, navmesh)
+                        .expect("Failed to update navmesh");
                     *status = NavMeshStatus::Invalid;
                 }
             } else {
                 mesh.layers = vec![layer];
                 let mut navmesh = NavMesh::from_polyanya_mesh(mesh);
                 navmesh.set_transform(global_transform.compute_transform());
-                navmeshes.insert(&handle.0, navmesh);
+                navmeshes
+                    .insert(&handle.0, navmesh)
+                    .expect("Failed to update navmesh");
                 *status = NavMeshStatus::Built;
             }
             diagnostics.add_measurement(&NAVMESH_BUILD_DURATION, || duration.as_secs_f64());

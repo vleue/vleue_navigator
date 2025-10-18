@@ -423,8 +423,8 @@ pub struct Ui;
 #[allow(dead_code)]
 pub fn toggle_ui(
     mut stats: Query<&mut Visibility, With<Ui>>,
-    mut entered: EventReader<CursorEntered>,
-    mut left: EventReader<CursorLeft>,
+    mut entered: MessageReader<CursorEntered>,
+    mut left: MessageReader<CursorLeft>,
 ) {
     for _ in entered.read() {
         for mut visibility in &mut stats {

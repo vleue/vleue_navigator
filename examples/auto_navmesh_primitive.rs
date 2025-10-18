@@ -245,7 +245,7 @@ fn display_mesh(
     navmeshes: Res<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_mesh_entity: Local<Option<Entity>>,
-    window_resized: EventReader<WindowResized>,
+    window_resized: MessageReader<WindowResized>,
     navmesh: Single<(&ManagedNavMesh, Ref<NavMeshStatus>)>,
 ) {
     let (navmesh_handle, status) = navmesh.deref();

@@ -137,7 +137,7 @@ fn on_mesh_change(
     known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
-    window_resized: EventReader<WindowResized>,
+    window_resized: MessageReader<WindowResized>,
     text: Query<Entity, With<Text>>,
 ) {
     if !mesh.is_changed() && window_resized.is_empty() {

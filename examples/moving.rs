@@ -140,7 +140,7 @@ fn on_mesh_change(
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Single<&Window, With<PrimaryWindow>>,
     navigator: Query<Entity, With<Navigator>>,
-    window_resized: EventReader<WindowResized>,
+    window_resized: MessageReader<WindowResized>,
     text: Query<Entity, With<Text>>,
     mut wait_for_mesh: Local<bool>,
 ) {

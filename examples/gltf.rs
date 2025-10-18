@@ -229,7 +229,9 @@ fn setup_scene(
                 Visibility::Hidden,
                 NavMeshDisp(HANDLE_TRIMESH_OPTIMIZED),
             ));
-            navmeshes.insert(&HANDLE_TRIMESH_OPTIMIZED, navmesh);
+            navmeshes
+                .insert(&HANDLE_TRIMESH_OPTIMIZED, navmesh)
+                .expect("Failed to insert navmesh");
         }
 
         commands

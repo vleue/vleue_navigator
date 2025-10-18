@@ -2,7 +2,7 @@ use std::{f32::consts::FRAC_PI_8, time::Duration};
 
 use avian3d::{math::*, prelude::*};
 use bevy::{
-    asset::weak_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
+    asset::uuid_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
 };
 
 use rand::Rng;
@@ -38,7 +38,7 @@ fn main() {
 }
 
 pub const MATERIAL_OBSTACLE_LIVE: Handle<StandardMaterial> =
-    weak_handle!("2DA56E2B-135A-47EB-843F-523360043F82");
+    uuid_handle!("2DA56E2B-135A-47EB-843F-523360043F82");
 const ANGLE: f32 = FRAC_PI_8;
 
 fn setup(
@@ -46,7 +46,7 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    materials.insert(&MATERIAL_OBSTACLE_LIVE, Color::srgb(0.2, 0.7, 0.9).into());
+    let _ = materials.insert(&MATERIAL_OBSTACLE_LIVE, Color::srgb(0.2, 0.7, 0.9).into());
 
     let arena_mesh = meshes.add(Cuboid::default());
     let arena_material = materials.add(Color::srgb(0.7, 0.7, 0.8));

@@ -132,7 +132,7 @@ fn on_mesh_change(
     known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
     primary_window: Single<&Window, With<PrimaryWindow>>,
-    window_resized: EventReader<WindowResized>,
+    window_resized: MessageReader<WindowResized>,
     mut wait_for_mesh: Local<bool>,
 ) {
     if !window_resized.is_empty() || *wait_for_mesh {
@@ -324,6 +324,7 @@ fn poll_path_tasks(
                     .is_in_mesh(transform.translation.xy() / factor + MESH_SIZE / 2.0)
                 {
                     commands.entity(entity).despawn();
+                    continue;
                 }
 
                 commands
