@@ -1,8 +1,8 @@
 use bevy::{
     math::{Dir3, Quat, Rot2, Vec2, Vec3, Vec3Swizzles, vec2},
     prelude::{
-        Capsule2d, Circle, CircularSector, CircularSegment, Component, Ellipse, Rectangle,
-        RegularPolygon, Rhombus,
+        Capsule2d, Circle, CircularSector, CircularSegment, Component, ConvexPolygon, Ellipse,
+        Polygon, Rectangle, RegularPolygon, Rhombus, Triangle2d,
     },
     transform::components::{GlobalTransform, Transform},
 };
@@ -13,7 +13,7 @@ use super::{ObstacleSource, RESOLUTION};
 
 /// A primitive obstacle that can be used to create a [`NavMesh`].
 /// Variants are made from primitive shapes defined in Bevy
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone)]
 pub enum PrimitiveObstacle {
     /// A rectangle primitive.
     Rectangle(Rectangle),
@@ -32,6 +32,12 @@ pub enum PrimitiveObstacle {
     RegularPolygon(RegularPolygon),
     /// A rhombus primitive, also known as a diamond shape.
     Rhombus(Rhombus),
+    /// A 2D triangle component.
+    Triangle(Triangle2d),
+    /// A polygon primitive.
+    Polygon(Polygon),
+    /// A convex polygon primitive.
+    ConvexPolygon(ConvexPolygon),
 }
 
 // Functions in this module are copied from Bevy
@@ -186,6 +192,21 @@ impl ObstacleSource for PrimitiveObstacle {
                     .map(|v| to_navmesh(to_world(v)))
                     .collect()
             }
+            PrimitiveObstacle::Triangle(primitive) => primitive
+                .vertices
+                .into_iter()
+                .map(|v| to_navmesh(to_world(v)))
+                .collect(),
+            PrimitiveObstacle::Polygon(primitive) => primitive
+                .vertices
+                .iter()
+                .map(|v| to_navmesh(to_world(*v)))
+                .collect(),
+            PrimitiveObstacle::ConvexPolygon(primitive) => primitive
+                .vertices()
+                .iter()
+                .map(|v| to_navmesh(to_world(*v)))
+                .collect(),
         }]
     }
 }
