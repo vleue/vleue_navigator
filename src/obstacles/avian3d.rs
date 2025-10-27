@@ -223,5 +223,5 @@ pub fn on_sleeping_inserted(trigger: On<Insert, Sleeping>, mut commands: Command
 pub fn on_sleeping_removed(trigger: On<Remove, Sleeping>, mut commands: Commands) {
     commands
         .entity(trigger.event().entity)
-        .remove::<CachableObstacle>();
+        .try_remove::<CachableObstacle>();
 }
