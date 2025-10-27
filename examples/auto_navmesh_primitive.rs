@@ -197,13 +197,43 @@ fn display_obstacle(mut gizmos: Gizmos, query: Query<(&PrimitiveObstacle, &Trans
                     palettes::tailwind::RED_600,
                 );
             }
+            PrimitiveObstacle::Triangle(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::Polygon(prim) => {
+                gizmos.primitive_2d(
+                    prim,
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
+                    palettes::tailwind::RED_600,
+                );
+            }
+            PrimitiveObstacle::ConvexPolygon(prim) => {
+                gizmos.primitive_2d(
+                    &Polygon::from(prim.clone()),
+                    Isometry2d::new(
+                        transform.translation.xy(),
+                        Rot2::radians(transform.rotation.to_axis_angle().1),
+                    ),
+                    palettes::tailwind::RED_600,
+                );
+            }
         }
     }
 }
 
 fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transform) {
     commands.spawn((
-        match rng.random_range(0..8) {
+        match rng.random_range(0..11) {
             0 => PrimitiveObstacle::Rectangle(Rectangle {
                 half_size: vec2(rng.random_range(1.0..5.0), rng.random_range(1.0..5.0)) * FACTOR,
             }),
@@ -233,6 +263,34 @@ fn new_obstacle(commands: &mut Commands, rng: &mut ThreadRng, transform: Transfo
                 rng.random_range(3.0..6.0) * FACTOR,
                 rng.random_range(2.0..3.0) * FACTOR,
             )),
+            8 => PrimitiveObstacle::Triangle(Triangle2d::new(
+                vec2(rng.random_range(-3.0..-2.0), rng.random_range(-1.0..1.0)) * FACTOR,
+                vec2(rng.random_range(-1.0..1.0), rng.random_range(-3.0..-2.0)) * FACTOR,
+                vec2(rng.random_range(2.0..3.0), rng.random_range(-1.0..1.0)) * FACTOR,
+            )),
+            9 => PrimitiveObstacle::Polygon(Polygon::new(
+                [
+                    vec2(rng.random_range(-3.0..-2.0), rng.random_range(-3.0..-2.0)) * FACTOR,
+                    vec2(rng.random_range(2.0..3.0), rng.random_range(-3.0..-2.0)) * FACTOR,
+                    vec2(rng.random_range(0.0..1.0), rng.random_range(-1.0..1.0)) * FACTOR,
+                    vec2(rng.random_range(2.0..3.0), rng.random_range(2.0..3.0)) * FACTOR,
+                    vec2(rng.random_range(-3.0..-2.0), rng.random_range(2.0..3.0)) * FACTOR,
+                    vec2(rng.random_range(-1.0..0.0), rng.random_range(-1.0..1.0)) * FACTOR,
+                ]
+                .to_vec(),
+            )),
+            10 => PrimitiveObstacle::ConvexPolygon(
+                ConvexPolygon::new(
+                    [
+                        vec2(rng.random_range(-3.0..-2.0), rng.random_range(-1.0..1.0)) * FACTOR,
+                        vec2(rng.random_range(-1.0..1.0), rng.random_range(-3.0..-2.0)) * FACTOR,
+                        vec2(rng.random_range(2.0..3.0), rng.random_range(-1.0..1.0)) * FACTOR,
+                        vec2(rng.random_range(-1.0..1.0), rng.random_range(2.0..3.0)) * FACTOR,
+                    ]
+                    .to_vec(),
+                )
+                .unwrap(),
+            ),
             _ => unreachable!(),
         },
         transform,
