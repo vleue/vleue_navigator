@@ -2,7 +2,10 @@
 
 use std::{error::Error, fmt::Display};
 
-use bevy::asset::{AssetLoader, LoadContext, io::Reader};
+use bevy::{
+    asset::{AssetLoader, LoadContext, io::Reader},
+    reflect::TypePath,
+};
 use polyanya::PolyanyaFile;
 
 use crate::NavMesh;
@@ -36,7 +39,7 @@ impl Error for NavMeshLoaderError {
 /// Asset loader for a mesh in the `mesh 2` format with a `.polyanya.mesh` extension.
 ///
 /// See <https://github.com/vleue/polyanya/blob/main/meshes/format.txt> for format description.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, TypePath)]
 pub struct NavMeshPolyanyaLoader;
 
 impl AssetLoader for NavMeshPolyanyaLoader {
