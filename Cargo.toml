@@ -24,7 +24,7 @@ default-features = false
 optional = true
 
 [dependencies.avian3d]
-version = "0.4"
+version = "0.5"
 features = ["3d", "f32", "parry-f32"]
 default-features = false
 optional = true
