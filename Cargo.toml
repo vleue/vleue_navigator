@@ -33,7 +33,7 @@ optional = true
 version = "0.15.0"
 
 [dependencies.bevy]
-version = "0.17.2"
+version = "0.18.0"
 features = ["bevy_render", "bevy_asset", "bevy_log"]
 default-features = false
 
@@ -47,7 +47,7 @@ version = "0.15.0"
 features = ["serde"]
 
 [dev-dependencies.bevy]
-version = "0.17.2"
+version = "0.18.0"
 features = [
     "bevy_window",
     "bevy_ui",
