@@ -63,7 +63,7 @@ struct CurrentMesh(Handle<NavMesh>);
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(GltfHandle(asset_server.load("meshes/navmesh.glb")));
 
-    commands.insert_resource(AmbientLight {
+    commands.insert_resource(GlobalAmbientLight {
         color: palettes::css::SEA_GREEN.into(),
         brightness: 100.0,
         affects_lightmapped_meshes: false,
