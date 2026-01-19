@@ -44,7 +44,7 @@ fn main() {
         )
         .insert_resource(Layers(vec![true; full_navmesh.layers.len()]))
         .insert_resource(RecastNavmesh(full_navmesh))
-        .insert_resource(AmbientLight {
+        .insert_resource(GlobalAmbientLight {
             brightness: 200.0,
             ..default()
         })

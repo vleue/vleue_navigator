@@ -34,6 +34,7 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildSpawnerComman
             Node {
                 margin: UiRect::all(Val::Px(5.0)),
                 border: UiRect::all(Val::Px(1.0)),
+                border_radius: BorderRadius::MAX,
                 justify_content: JustifyContent::Center,
                 height: Val::Px(30.0),
                 align_items: AlignItems::Center,
@@ -41,7 +42,6 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildSpawnerComman
             },
             Button,
             BorderColor::all(palettes::tailwind::GRAY_500),
-            BorderRadius::MAX,
             BackgroundColor(palettes::tailwind::GRAY_700.into()),
             action,
         ))
@@ -61,16 +61,16 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
     commands
         .spawn((
             Node {
+                border_radius: BorderRadius {
+                    top_left: Val::Px(0.),
+                    top_right: Val::Px(0.),
+                    bottom_left: Val::Px(20.0),
+                    bottom_right: Val::Px(0.),
+                },
                 position_type: PositionType::Absolute,
                 right: Val::Px(0.0),
                 flex_direction: FlexDirection::Column,
                 ..default()
-            },
-            BorderRadius {
-                top_left: Val::Px(0.),
-                top_right: Val::Px(0.),
-                bottom_left: Val::Px(20.0),
-                bottom_right: Val::Px(0.),
             },
             BackgroundColor(palettes::tailwind::GRAY_900.with_alpha(0.8).into()),
             Ui,
@@ -153,6 +153,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                     Node {
                         margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
                         border: UiRect::all(Val::Px(1.0)),
+                        border_radius: BorderRadius::all(Val::Px(10.0)),
                         justify_content: JustifyContent::Center,
                         height: Val::Px(30.0),
                         align_items: AlignItems::Center,
@@ -160,7 +161,6 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                     },
                     Button,
                     BorderColor::all(palettes::tailwind::GRAY_500),
-                    BorderRadius::all(Val::Px(10.0)),
                     BackgroundColor(palettes::tailwind::GRAY_700.into()),
                     UiSettingsButtons::AgentRadiusOuterToggle,
                     UiSettings::AgentRadiusOuter,
@@ -180,6 +180,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                         Node {
                             margin: UiRect::px(30.0, 30.0, 10.0, 30.0),
                             border: UiRect::all(Val::Px(1.0)),
+                            border_radius: BorderRadius::all(Val::Px(10.0)),
                             justify_content: JustifyContent::Center,
                             height: Val::Px(30.0),
                             align_items: AlignItems::Center,
@@ -187,7 +188,6 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                         },
                         Button,
                         BorderColor::all(palettes::tailwind::GRAY_500),
-                        BorderRadius::all(Val::Px(10.0)),
                         UiSettingsButtons::ToggleCache,
                         UiSettings::Cache,
                     ))
@@ -326,13 +326,13 @@ pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
                 left: Val::Px(0.0),
                 flex_direction: FlexDirection::Column,
                 min_width: Val::Px(300.0),
+                border_radius: BorderRadius {
+                    top_left: Val::Px(0.),
+                    top_right: Val::Px(0.),
+                    bottom_right: Val::Px(20.0),
+                    bottom_left: Val::Px(0.),
+                },
                 ..default()
-            },
-            BorderRadius {
-                top_left: Val::Px(0.),
-                top_right: Val::Px(0.),
-                bottom_right: Val::Px(20.0),
-                bottom_left: Val::Px(0.),
             },
             BackgroundColor(palettes::tailwind::GRAY_900.with_alpha(0.8).into()),
             Ui,
