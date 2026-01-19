@@ -8,6 +8,7 @@ use bevy::{
     app::TaskPoolThreadAssignmentPolicy,
     color::palettes,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    ecs::system::SystemChangeTick,
     math::Vec3Swizzles,
     platform::time::Instant,
     prelude::*,
@@ -62,7 +63,7 @@ fn main() {
                 mode_change,
             ),
         )
-        .add_systems(FixedUpdate, (spawn, update_ui))
+        .add_systems(FixedUpdate, (spawn, update_ui, self_regulate))
         .insert_resource(Time::<Fixed>::from_seconds(0.1))
         .run();
 }
@@ -389,14 +390,16 @@ fn update_ui(
     ui_query: Query<Entity, With<Text>>,
     mut text_writer: TextUiWriter,
     agents: Query<&Navigator>,
+    finding_paths: Query<&FindingPath>,
     mut count: Local<usize>,
     stats: Res<Stats>,
     diagnostics: Res<DiagnosticsStore>,
     task_mode: Res<TaskMode>,
 ) {
     let new_count = agents.iter().len();
+    let new_count_2 = finding_paths.iter().len();
     let Ok(text) = ui_query.single() else { return };
-    *text_writer.text(text, 2) = format!("{}\n", new_count);
+    *text_writer.text(text, 2) = format!("{} ({} active)\n", new_count, new_count_2);
     *text_writer.text(text, 4) = format!(
         "{:.2}\n",
         diagnostics
@@ -427,6 +430,20 @@ fn mode_change(keyboard_input: Res<ButtonInput<KeyCode>>, mut task_mode: ResMut<
         match *task_mode {
             TaskMode::Async => *task_mode = TaskMode::Blocking,
             TaskMode::Blocking => *task_mode = TaskMode::Async,
+        }
+    }
+}
+
+fn self_regulate(
+    mut commands: Commands,
+    system: SystemChangeTick,
+    not_moving: Query<(Entity, Ref<GlobalTransform>), With<Navigator>>,
+) {
+    for (entity, transform) in &not_moving {
+        if !transform.is_changed() {
+            if system.this_run().get() - transform.last_changed().get() > 100000 {
+                commands.entity(entity).despawn();
+            }
         }
     }
 }
