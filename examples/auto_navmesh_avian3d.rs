@@ -5,6 +5,7 @@ use bevy::{
     asset::uuid_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
 };
 
+use rand::prelude::*;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -98,8 +99,6 @@ fn setup(
 
     let obstacle_size = 2.0;
     let spacing = 1.0;
-
-    use rand::seq::SliceRandom;
 
     let types = [
         (
