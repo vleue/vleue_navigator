@@ -36,7 +36,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        features: ["--no-default-features", "--features avian2d", "--features avian3d", "--features debug-with-gizmos", "--features detailed-layers"]
+        features:
+          [
+            "--no-default-features",
+            "--features avian2d",
+            "--features avian3d",
+            "--features debug-with-gizmos",
+            "--features detailed-layers",
+          ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -48,7 +55,7 @@ jobs:
       - name: Run clippy
         run: |
           cargo check ${{ matrix.features }}
-                
+
   tests:
     name: Tests
     runs-on: ubuntu-latest
@@ -58,6 +65,11 @@ jobs:
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev libx264-164 libx264-dev
 
       - name: Run tests
         run: |
@@ -72,6 +84,11 @@ jobs:
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev libx264-164 libx264-dev
 
       - name: Run tests
         run: |
