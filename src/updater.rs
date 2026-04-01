@@ -208,7 +208,9 @@ fn build_navmesh<T: ObstacleSource>(
 ) -> (Option<Triangulation>, Layer) {
     let up = (mesh_transform.forward(), settings.upward_shift);
     let scale = settings.scale;
-    let base = if settings.cached.is_none() {
+    let base = if let Some(cached) = settings.cached {
+        cached
+    } else {
         let mut base = settings.fixed;
         base.set_agent_radius(settings.agent_radius);
         base.set_agent_radius_simplification(settings.simplify);
@@ -228,8 +230,6 @@ fn build_navmesh<T: ObstacleSource>(
         }
         base.prebuild();
         base
-    } else {
-        settings.cached.unwrap()
     };
     let mut triangulation = base.clone();
 
