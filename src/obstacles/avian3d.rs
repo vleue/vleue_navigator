@@ -1,7 +1,6 @@
 use avian3d::{
     dynamics::rigid_body::sleeping::Sleeping,
     parry::{
-        na::{Const, OPoint, Unit, Vector3},
         query::IntersectResult,
         shape::{Polyline, TriMesh, TypedShape},
     },
