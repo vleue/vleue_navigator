@@ -6,7 +6,7 @@ use avian3d::{
     },
     prelude::Collider,
 };
-use bevy::{math::vec3, prelude::*};
+use bevy::prelude::*;
 
 use crate::{updater::CachableObstacle, world_to_mesh};
 
@@ -46,7 +46,7 @@ impl InnerObstacleSource for TypedShape<'_> {
         let world_to_mesh = world_to_mesh(navmesh_transform);
 
         let to_navmesh =
-            |p: OPoint<f32, Const<3>>| world_to_mesh.transform_point(vec3(p.x, p.y, p.z)).xy();
+            |p: Vec3| world_to_mesh.transform_point(p).xy();
 
         let intersection_to_navmesh = |intersection: IntersectResult<Polyline>| match intersection {
             IntersectResult::Intersect(i) => i
@@ -64,48 +64,44 @@ impl InnerObstacleSource for TypedShape<'_> {
             / (up.x.powi(2) + up.y.powi(2) + up.z.powi(2)).sqrt();
         let shift: f32 = shift - d;
 
-        let to_world = |p: &OPoint<f32, Const<3>>| transform.transform_point(vec3(p.x, p.y, p.z));
+        let to_world = |p: &Vec3| transform.transform_point(*p);
 
-        let up_axis = Unit::new_normalize(Vector3::new(up.x, up.y, up.z));
-        let trimesh_to_world = |vertices: Vec<OPoint<f32, Const<3>>>| {
-            vertices
-                .iter()
-                .map(to_world)
-                .map(|v| v.into())
-                .collect::<Vec<OPoint<f32, Const<3>>>>()
+        let up_axis = Vec3::new(up.x, up.y, up.z).normalize_or_zero();
+        let trimesh_to_world = |vertices: Vec<Vec3>| {
+            vertices.iter().map(to_world).collect::<Vec<Vec3>>()
         };
         match self {
             TypedShape::Cuboid(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices).unwrap();
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::Ball(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices).unwrap();
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::Capsule(collider) => {
                 let (vertices, indices) = collider.to_trimesh(RESOLUTION, RESOLUTION);
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices).unwrap();
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::TriMesh(collider) => {
                 vec![intersection_to_navmesh(
-                    collider.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    collider.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::HeightField(collider) => {
                 let (vertices, indices) = collider.to_trimesh();
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices).unwrap();
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::Compound(collider) => {
@@ -127,7 +123,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices)
                     .expect("Failed to create TriMesh");
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::Cylinder(collider) => {
@@ -135,7 +131,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices)
                     .expect("Failed to create TriMesh");
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::Cone(collider) => {
@@ -143,7 +139,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices)
                     .expect("Failed to create TriMesh");
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::RoundCuboid(collider) => {
@@ -151,7 +147,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices)
                     .expect("Failed to create TriMesh");
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::RoundCylinder(collider) => {
@@ -159,7 +155,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices)
                     .expect("Failed to create TriMesh");
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::RoundCone(collider) => {
@@ -167,7 +163,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices)
                     .expect("Failed to create TriMesh");
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::RoundConvexPolyhedron(collider) => {
@@ -175,7 +171,7 @@ impl InnerObstacleSource for TypedShape<'_> {
                 let trimesh = TriMesh::new(trimesh_to_world(vertices), indices)
                     .expect("Failed to create TriMesh");
                 vec![intersection_to_navmesh(
-                    trimesh.intersection_with_local_plane(&up_axis, shift, f32::EPSILON),
+                    trimesh.intersection_with_local_plane(up_axis, shift, f32::EPSILON),
                 )]
             }
             TypedShape::Segment(_) => {
