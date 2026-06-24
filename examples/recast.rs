@@ -1,11 +1,11 @@
 use std::{f32::consts::FRAC_PI_2, fs::File};
 
 use bevy::{
+    camera::Hdr,
     color::palettes::{self},
     core_pipeline::tonemapping::Tonemapping,
     post_process::bloom::Bloom,
     prelude::*,
-    render::view::Hdr,
 };
 use vleue_navigator::{VleueNavigatorPlugin, display_layer_gizmo, prelude::*};
 
@@ -105,14 +105,14 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         Bloom::NATURAL,
     ));
 
-    commands.spawn(SceneRoot(
+    commands.spawn(WorldAssetRoot(
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("recast/dungeon.glb")),
     ));
 
     commands.spawn((
         DirectionalLight {
             illuminance: light_consts::lux::OVERCAST_DAY,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::from_xyz(1.0, 1.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -193,7 +193,7 @@ fn layers_info(mut commands: Commands, layers: Res<Layers>, texts: Query<Entity,
         ))
         .with_children(|p| {
             let font_size = TextFont {
-                font_size: 15.0,
+                font_size: FontSize::Px(15.0),
                 ..default()
             };
             for layer in layers.0.iter().enumerate() {
@@ -390,7 +390,7 @@ fn autonomous_demo(
         if *bloomed {
             let next_polygon_in_path = path.polygons().first().unwrap().0;
             let material = materials.get_mut(material.id());
-            let material = material.unwrap();
+            let mut material = material.unwrap();
             if next_polygon_in_path == 2 {
                 material.emissive = Srgba::new(0.6, 10.0, 0.2, 1.0).into();
             } else {

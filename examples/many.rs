@@ -117,7 +117,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 p.spawn((
                     TextSpan::new(text.to_string()),
                     TextFont {
-                        font_size,
+                        font_size: FontSize::Px(font_size),
                         ..default()
                     },
                 ));

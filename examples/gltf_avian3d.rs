@@ -94,7 +94,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         DirectionalLight {
             illuminance: 3000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
@@ -212,7 +212,7 @@ fn setup_scene(
                         color: palettes::css::BLUE.into(),
                         range: 500.0,
                         intensity: 100000.0,
-                        shadows_enabled: true,
+                        shadow_maps_enabled: true,
                         ..default()
                     },
                     Transform::from_xyz(0.0, 1.2, 0.0),
@@ -267,7 +267,7 @@ fn give_target_auto(
                     target.spawn((
                         PointLight {
                             color: palettes::css::RED.into(),
-                            shadows_enabled: true,
+                            shadow_maps_enabled: true,
                             range: 10.0,
                             ..default()
                         },

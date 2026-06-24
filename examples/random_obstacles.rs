@@ -125,21 +125,21 @@ fn on_mesh_change(
             p.spawn((
                 TextSpan::new("Random Triangle Obstacles\n".to_string()),
                 TextFont {
-                    font_size: 30.0,
+                    font_size: FontSize::Px(30.0),
                     ..default()
                 },
             ));
             p.spawn((
                 TextSpan::new("Press spacebar to change obstacles\n".to_string()),
                 TextFont {
-                    font_size: 25.0,
+                    font_size: FontSize::Px(25.0),
                     ..default()
                 },
             ));
             p.spawn((
                 TextSpan::new("Click to find a path".to_string()),
                 TextFont {
-                    font_size: 25.0,
+                    font_size: FontSize::Px(25.0),
                     ..default()
                 },
             ));

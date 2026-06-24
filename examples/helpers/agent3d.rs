@@ -132,7 +132,7 @@ pub fn refresh_path<const X: u32, const Y: u32>(
     if (!status.is_changed() || **status != NavMeshStatus::Built) && deltas.is_empty() {
         return;
     }
-    let Some(navmesh) = navmeshes.get_mut(*navmesh_handle) else {
+    let Some(mut navmesh) = navmeshes.get_mut(*navmesh_handle) else {
         return;
     };
 
