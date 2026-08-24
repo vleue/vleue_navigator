@@ -1,6 +1,6 @@
 use avian2d::{math::*, prelude::*};
 use bevy::{color::palettes, math::vec2, prelude::*, sprite_render::ColorMaterial};
-use rand::Rng;
+use rand::RngExt;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]

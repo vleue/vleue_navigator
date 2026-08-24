@@ -2,7 +2,7 @@ use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::{color::palettes, math::vec2, prelude::*, window::PrimaryWindow};
 use polyanya::Triangulation;
-use rand::Rng;
+use rand::RngExt;
 use vleue_navigator::prelude::*;
 
 #[path = "helpers/agent3d.rs"]
@@ -83,7 +83,7 @@ fn setup(
     for (x, y) in [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)] {
         commands.spawn((
             PointLight {
-                shadows_enabled: true,
+                shadow_maps_enabled: true,
                 intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 300_000.0,
                 range: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 10.0,
                 ..default()
@@ -157,7 +157,7 @@ fn setup(
 
 fn new_obstacle(
     commands: &mut Commands,
-    rng: &mut impl Rng,
+    rng: &mut impl RngExt,
     transform: Transform,
     meshes: &mut Assets<Mesh>,
     mat: &Handle<StandardMaterial>,

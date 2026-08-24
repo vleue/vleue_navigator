@@ -204,21 +204,21 @@ fn on_mesh_change(
                             .to_string(),
                         ),
                         TextFont {
-                            font_size: 25.0,
+                            font_size: FontSize::Px(25.0),
                             ..default()
                         },
                     ));
                     p.spawn((
                         TextSpan::new("Press spacebar to switch mesh\n".to_string()),
                         TextFont {
-                            font_size: 15.0,
+                            font_size: FontSize::Px(15.0),
                             ..default()
                         },
                     ));
                     p.spawn((
                         TextSpan::new("Click to find a path".to_string()),
                         TextFont {
-                            font_size: 15.0,
+                            font_size: FontSize::Px(15.0),
                             ..default()
                         },
                     ));
