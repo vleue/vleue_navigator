@@ -208,7 +208,9 @@ fn build_navmesh<T: ObstacleSource>(
 ) -> (Option<Triangulation>, Layer) {
     let up = (mesh_transform.forward(), settings.upward_shift);
     let scale = settings.scale;
-    let base = if settings.cached.is_none() {
+    let base = if let Some(cached) = settings.cached {
+        cached
+    } else {
         let mut base = settings.fixed;
         base.set_agent_radius(settings.agent_radius);
         base.set_agent_radius_simplification(settings.simplify);
@@ -228,8 +230,6 @@ fn build_navmesh<T: ObstacleSource>(
         }
         base.prebuild();
         base
-    } else {
-        settings.cached.unwrap()
     };
     let mut triangulation = base.clone();
 
@@ -615,10 +615,8 @@ fn update_navmesh_asset(
                         continue 'stitching;
                     }
 
-                    let stitch_indices = indices_from
-                        .into_iter()
-                        .zip(indices_to.into_iter())
-                        .collect::<Vec<_>>();
+                    let stitch_indices =
+                        indices_from.into_iter().zip(indices_to).collect::<Vec<_>>();
                     for indices in &stitch_indices {
                         if (layer_from.vertices[indices.0].coords + layer_from.offset)
                             .distance_squared(layer_to.vertices[indices.1].coords + layer_to.offset)
