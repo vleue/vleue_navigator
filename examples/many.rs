@@ -1,8 +1,4 @@
-use std::{
-    collections::VecDeque,
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{collections::VecDeque, time::Duration};
 
 use bevy::{
     app::TaskPoolThreadAssignmentPolicy,
@@ -18,7 +14,7 @@ use bevy::{
     render::{render_resource::AsBindGroup, storage::ShaderStorageBuffer},
     shader::ShaderRef,
     sprite_render::{ColorMaterial, Material2d, Material2dPlugin},
-    tasks::AsyncComputeTaskPool,
+    tasks::{block_on, poll_once, AsyncComputeTaskPool, Task},
     window::{PrimaryWindow, WindowResized},
 };
 use rand::prelude::*;
@@ -147,7 +143,7 @@ fn setup(
 fn on_mesh_change(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    navmeshes: Res<Assets<NavMesh>>,
+    mut navmeshes: ResMut<Assets<NavMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     known_meshes: Res<Meshes>,
     mut current_mesh_entity: Local<Option<Entity>>,
@@ -248,16 +244,22 @@ fn spawn(
     }
 }
 
-#[derive(Default)]
-struct TaskResult {
+struct PathResult {
     path: Option<polyanya::Path>,
-    done: bool,
+    /// Time between spawning the task and it actually starting.
     delay: f32,
+    /// Time the search itself took.
     duration: f32,
 }
 
+/// The task computing this agent's path.
+///
+/// Holding the [`Task`] rather than detaching it means that despawning an agent
+/// drops the task and cancels it. That matters under load: agents give up and
+/// despawn while their search is still queued, and a detached task would go on
+/// to compute a path for an agent that no longer exists.
 #[derive(Component)]
-struct FindingPath(Arc<RwLock<TaskResult>>);
+struct FindingPath(Task<PathResult>);
 
 fn compute_paths(
     mut commands: Commands,
@@ -267,40 +269,32 @@ fn compute_paths(
     task_mode: Res<TaskMode>,
     mesh: Res<Meshes>,
 ) {
-    let mesh = if let Some(mesh) = meshes.get(&mesh.aurora) {
-        mesh
-    } else {
+    let Some(mesh) = meshes.get(&mesh.aurora) else {
         return;
     };
+    let window = *primary_window;
+    let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
+    let task_mode = *task_mode;
+
     for (entity, target, transform) in &with_target {
-        let window = *primary_window;
-        let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
-
         let in_mesh = transform.translation.truncate() / factor + MESH_SIZE / 2.0;
-
         let to = target.target;
         let mesh = mesh.clone();
-        let finding = FindingPath(Arc::new(RwLock::new(TaskResult::default())));
-        let writer = finding.0.clone();
         let start = Instant::now();
-        let task_mode = *task_mode;
-        AsyncComputeTaskPool::get()
-            .spawn(async move {
-                let delay = (Instant::now() - start).as_secs_f32();
-                let path = if task_mode == TaskMode::Async {
-                    mesh.get_path(in_mesh, to).await
-                } else {
-                    mesh.path(in_mesh, to)
-                };
-                *writer.write().unwrap() = TaskResult {
-                    path,
-                    done: true,
-                    delay,
-                    duration: (Instant::now() - start).as_secs_f32() - delay,
-                };
-            })
-            .detach();
-        commands.entity(entity).insert(finding);
+        let task = AsyncComputeTaskPool::get().spawn(async move {
+            let delay = (Instant::now() - start).as_secs_f32();
+            let path = if task_mode == TaskMode::Async {
+                mesh.get_path(in_mesh, to).await
+            } else {
+                mesh.path(in_mesh, to)
+            };
+            PathResult {
+                path,
+                delay,
+                duration: (Instant::now() - start).as_secs_f32() - delay,
+            }
+        });
+        commands.entity(entity).insert(FindingPath(task));
     }
 }
 
@@ -312,43 +306,45 @@ struct Stats {
 
 fn poll_path_tasks(
     mut commands: Commands,
-    computing: Query<(Entity, &FindingPath, &Transform)>,
+    mut computing: Query<(Entity, &mut FindingPath, &Transform)>,
     mut stats: ResMut<Stats>,
     navmeshes: Res<Assets<NavMesh>>,
     meshes: Res<Meshes>,
     primary_window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    for (entity, task, transform) in &computing {
-        let mut task = task.0.write().unwrap();
-        if task.done {
-            stats.pathfinding_duration.push_front(task.duration);
-            stats.pathfinding_duration.truncate(100);
-            stats.task_delay.push_front(task.delay);
-            stats.task_delay.truncate(100);
-            if let Some(path) = task.path.take() {
-                commands
-                    .entity(entity)
-                    .insert(Path { path: path.path })
-                    .remove::<FindingPath>();
-            } else {
-                let window = *primary_window;
-                let screen = Vec2::new(window.width(), window.height());
-                let factor = (screen.x / MESH_SIZE.x).min(screen.y / MESH_SIZE.y);
+    let window = *primary_window;
+    let factor = (window.width() / MESH_SIZE.x).min(window.height() / MESH_SIZE.y);
 
-                if !navmeshes
-                    .get(&meshes.aurora)
-                    .unwrap()
-                    .is_in_mesh(transform.translation.xy() / factor + MESH_SIZE / 2.0)
-                {
-                    commands.entity(entity).despawn();
-                    continue;
-                }
+    for (entity, mut task, transform) in &mut computing {
+        // `is_finished` is a plain atomic load. Going straight to `poll_once`
+        // would set up a waker for every agent still searching, every frame.
+        if !task.0.is_finished() {
+            continue;
+        }
+        let Some(result) = block_on(poll_once(&mut task.0)) else {
+            continue;
+        };
+        stats.pathfinding_duration.push_front(result.duration);
+        stats.pathfinding_duration.truncate(100);
+        stats.task_delay.push_front(result.delay);
+        stats.task_delay.truncate(100);
 
-                commands
-                    .entity(entity)
-                    .remove::<FindingPath>()
-                    .remove::<Target>();
-            }
+        if let Some(path) = result.path {
+            commands
+                .entity(entity)
+                .insert(Path { path: path.path })
+                .remove::<FindingPath>();
+        } else if !navmeshes
+            .get(&meshes.aurora)
+            .unwrap()
+            .is_in_mesh(transform.translation.xy() / factor + MESH_SIZE / 2.0)
+        {
+            commands.entity(entity).despawn();
+        } else {
+            commands
+                .entity(entity)
+                .remove::<FindingPath>()
+                .remove::<Target>();
         }
     }
 }
