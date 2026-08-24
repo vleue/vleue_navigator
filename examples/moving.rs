@@ -163,7 +163,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn((
-                        Mesh2d(meshes.add(navmesh.to_mesh()).into()),
+                        Mesh2d(meshes.add(navmesh.to_mesh())),
                         Transform::from_translation(Vec3::new(
                             -mesh.size.x / 2.0 * factor,
                             -mesh.size.y / 2.0 * factor,
@@ -243,11 +243,11 @@ fn mesh_change(
     if mouse_input.just_released(MouseButton::Left) {
         *pressed_since = None;
     }
-    if let Some(started) = *pressed_since {
-        if (time.elapsed() - started).as_secs() > 1 {
-            touch_triggered = true;
-            *pressed_since = None;
-        }
+    if let Some(started) = *pressed_since
+        && (time.elapsed() - started).as_secs() > 1
+    {
+        touch_triggered = true;
+        *pressed_since = None;
     }
     if keyboard_input.just_pressed(KeyCode::Space) || touch_triggered {
         match mesh.mesh {

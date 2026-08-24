@@ -49,6 +49,11 @@ features = ["serde"]
 [dev-dependencies.bevy]
 version = "0.18.0"
 
+[lints.clippy]
+# Bevy systems routinely take many arguments and deeply nested query types.
+too_many_arguments = "allow"
+type_complexity = "allow"
+
 [features]
 default = ["debug-with-gizmos"]
 debug-with-gizmos = ["bevy/bevy_gizmos"]
