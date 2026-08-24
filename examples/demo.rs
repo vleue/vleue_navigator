@@ -3,7 +3,7 @@ use bevy::{
     ecs::entity::EntityHashSet, math::vec2, prelude::*,
 };
 use polyanya::Triangulation;
-use rand::Rng;
+use rand::RngExt;
 use std::{
     f32::consts::{FRAC_PI_2, PI},
     ops::Deref,
@@ -206,7 +206,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
     for (x, y) in [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)] {
         commands.spawn((
             PointLight {
-                shadows_enabled: true,
+                shadow_maps_enabled: true,
                 intensity: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 300_000.0,
                 range: MESH_WIDTH.min(MESH_HEIGHT) as f32 * 10.0,
                 ..default()
@@ -273,7 +273,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
 
 fn new_obstacle(
     commands: &mut Commands,
-    rng: &mut impl Rng,
+    rng: &mut impl RngExt,
     transform: Transform,
     meshes: &mut Assets<Mesh>,
     mat: &Handle<StandardMaterial>,

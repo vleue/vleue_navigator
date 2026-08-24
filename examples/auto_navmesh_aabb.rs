@@ -7,7 +7,7 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 use polyanya::Triangulation;
-use rand::Rng;
+use rand::RngExt;
 use std::f32::consts::PI;
 use std::ops::Deref;
 use vleue_navigator::prelude::*;

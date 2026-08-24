@@ -5,7 +5,7 @@ use bevy::{
     asset::uuid_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
 };
 
-use rand::Rng;
+use rand::RngExt;
 use vleue_navigator::prelude::*;
 
 #[derive(Component)]
@@ -66,7 +66,7 @@ fn setup(
     commands.spawn((
         DirectionalLight {
             illuminance: 5000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),

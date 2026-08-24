@@ -8,7 +8,7 @@ use bevy::{
     time::common_conditions::on_timer,
 };
 use polyanya::Triangulation;
-use rand::Rng;
+use rand::RngExt;
 use vleue_navigator::prelude::*;
 
 const MESH_UNIT: u32 = 100;
@@ -69,7 +69,7 @@ fn setup(
     commands.spawn((
         DirectionalLight {
             illuminance: 3000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
