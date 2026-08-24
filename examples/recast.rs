@@ -125,10 +125,7 @@ fn draw_navmesh(
     layers: Res<Layers>,
 ) {
     let mesh = &recast.0;
-    let colors: Vec<Color> = LAYER_COLORS
-        .iter()
-        .map(|color| color.clone().into())
-        .collect();
+    let colors: Vec<Color> = LAYER_COLORS.iter().map(|color| (*color).into()).collect();
     for (layer, (color, enabled)) in mesh.layers.iter().zip(colors.iter().zip(layers.0.iter())) {
         let mut color = *color;
         if !enabled {
@@ -150,7 +147,7 @@ fn draw_path(
     layers: Res<Layers>,
 ) {
     let start = vec3(46.998413, 9.998184, 1.717747);
-    let end = vec3(20.703018, 18.651773, -80.770203);
+    let end = vec3(20.703018, 18.651773, -80.770_2);
 
     gizmos.sphere(start, 0.5, palettes::tailwind::LIME_400);
     gizmos.sphere(end, 0.5, palettes::tailwind::YELLOW_400);
@@ -197,7 +194,7 @@ fn layers_info(mut commands: Commands, layers: Res<Layers>, texts: Query<Entity,
                 ..default()
             };
             for layer in layers.0.iter().enumerate() {
-                let color = LAYER_COLORS[layer.0].clone().into();
+                let color = LAYER_COLORS[layer.0].into();
                 p.spawn((
                     TextSpan::new(format!("Layer {}: ", layer.0)),
                     TextColor(color),
@@ -233,10 +230,10 @@ fn switch_layers(mut layers: ResMut<Layers>, input: Res<ButtonInput<KeyCode>>) {
     .iter()
     .enumerate()
     {
-        if input.just_pressed(*key) {
-            if let Some(layer) = layers.0.get_mut(index) {
-                *layer = !*layer;
-            }
+        if input.just_pressed(*key)
+            && let Some(layer) = layers.0.get_mut(index)
+        {
+            *layer = !*layer;
         }
     }
 }
@@ -346,7 +343,7 @@ fn autonomous_demo(
         }
     }
     let start = vec3(46.998413, 9.998184, 1.717747);
-    let end = vec3(20.703018, 18.651773, -80.770203);
+    let end = vec3(20.703018, 18.651773, -80.770_2);
 
     if spawn_timer.0.is_none() {
         let mut timer = Timer::from_seconds(2.5, TimerMode::Repeating);
