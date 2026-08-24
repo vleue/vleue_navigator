@@ -6,13 +6,18 @@ use std::{
 
 use bevy::{
     app::TaskPoolThreadAssignmentPolicy,
+    asset::RenderAssetUsages,
+    camera::visibility::NoFrustumCulling,
     color::palettes,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     ecs::system::SystemChangeTick,
     math::Vec3Swizzles,
+    mesh::PrimitiveTopology,
     platform::time::Instant,
     prelude::*,
-    sprite_render::ColorMaterial,
+    render::{render_resource::AsBindGroup, storage::ShaderStorageBuffer},
+    shader::ShaderRef,
+    sprite_render::{ColorMaterial, Material2d, Material2dPlugin},
     tasks::AsyncComputeTaskPool,
     window::{PrimaryWindow, WindowResized},
 };
@@ -48,6 +53,7 @@ fn main() {
             FrameTimeDiagnosticsPlugin::default(),
             LogDiagnosticsPlugin::default(),
             VleueNavigatorPlugin,
+            Material2dPlugin::<AgentsMaterial>::default(),
         ))
         .init_resource::<Stats>()
         .insert_resource(TaskMode::Blocking)
@@ -61,6 +67,7 @@ fn main() {
                 poll_path_tasks,
                 move_navigator,
                 mode_change,
+                update_agents_buffer.after(move_navigator),
             ),
         )
         .add_systems(FixedUpdate, (spawn, update_ui, self_regulate))
@@ -81,11 +88,23 @@ struct Meshes {
 
 const MESH_SIZE: Vec2 = Vec2::new(1024.0, 768.0);
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut agent_materials: ResMut<Assets<AgentsMaterial>>,
+    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+) {
     commands.spawn(Camera2d);
     commands.insert_resource(Meshes {
         aurora: asset_server.load("aurora-merged.polyanya.mesh"),
     });
+    setup_agents_draw(
+        &mut commands,
+        &mut meshes,
+        &mut agent_materials,
+        &mut buffers,
+    );
     commands
         .spawn((
             Text::default(),
@@ -170,6 +189,7 @@ fn on_mesh_change(
 #[derive(Component)]
 struct Navigator {
     speed: f32,
+    color: LinearRgba,
 }
 
 #[derive(Component)]
@@ -217,14 +237,10 @@ fn spawn(
             let color = Hsla::hsl(rng.random_range(0.0..360.0), 1.0, 0.5);
 
             to_spawn.push((
-                Sprite {
-                    color: Color::Srgba(color.into()),
-                    custom_size: Some(Vec2::ONE),
-                    ..default()
-                },
                 Transform::from_translation(position.extend(1.0)).with_scale(Vec3::splat(5.0)),
                 Navigator {
                     speed: rng.random_range(50.0..100.0),
+                    color: Color::Srgba(color.into()).into(),
                 },
             ));
         }
@@ -446,4 +462,111 @@ fn self_regulate(
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Agent rendering
+//
+// One `Sprite` per agent means bevy walks every agent several times per frame:
+// once to extract it, once to queue a phase item for it, once to sort those
+// items and once more to build its instance. At a hundred thousand agents that
+// is most of the frame.
+//
+// Instead every agent is drawn by a single entity holding one mesh and one
+// material. The mesh is a dummy: it only carries enough vertices to make the
+// draw call long enough. Positions, colours and sizes live in a storage buffer
+// that the vertex shader indexes with `vertex_index`, so a frame only costs one
+// small buffer write instead of a walk over every agent in the render world.
+// ---------------------------------------------------------------------------
+
+/// Vertices in the dummy mesh for each agent: two triangles.
+const VERTICES_PER_AGENT: usize = 6;
+
+/// How many agents the draw call has room for.
+///
+/// The mesh is built once at startup and never touched again. Resizing a mesh
+/// that bevy has already allocated makes it free and reallocate the whole
+/// buffer, and the draw goes blank until that settles, so it is better to pay
+/// for the room up front: this costs `MAX_DRAWN_AGENTS * 72` bytes of vertex
+/// data, and the example bogs down long before it spawns this many agents.
+const MAX_DRAWN_AGENTS: usize = 262_144;
+
+#[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
+struct AgentsMaterial {
+    #[storage(0, read_only)]
+    agents: Handle<ShaderStorageBuffer>,
+}
+
+impl Material2d for AgentsMaterial {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/agents.wgsl".into()
+    }
+    fn fragment_shader() -> ShaderRef {
+        "shaders/agents.wgsl".into()
+    }
+}
+
+#[derive(Resource)]
+struct AgentsDraw(Handle<AgentsMaterial>);
+
+fn setup_agents_draw(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<AgentsMaterial>,
+    buffers: &mut Assets<ShaderStorageBuffer>,
+) {
+    // Nothing ever reads these vertices, on the CPU or in the shader: they only
+    // make the draw call long enough to cover every agent.
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        vec![[0.0f32; 3]; MAX_DRAWN_AGENTS * VERTICES_PER_AGENT],
+    );
+
+    let material = materials.add(AgentsMaterial {
+        agents: buffers.add(ShaderStorageBuffer::default()),
+    });
+    commands.spawn((
+        Mesh2d(meshes.add(mesh)),
+        MeshMaterial2d(material.clone()),
+        // The shader places the quads itself, so this transform only decides
+        // where the whole draw sorts: above the navmesh.
+        Transform::from_xyz(0.0, 0.0, 1.0),
+        // The mesh vertices are all zeroes, so a computed `Aabb` would be
+        // meaningless and would cull the agents away.
+        NoFrustumCulling,
+    ));
+    commands.insert_resource(AgentsDraw(material));
+}
+
+fn update_agents_buffer(
+    agents: Query<(&Transform, &Navigator)>,
+    draw: Res<AgentsDraw>,
+    mut materials: ResMut<Assets<AgentsMaterial>>,
+    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut instances: Local<Vec<UVec4>>,
+) {
+    instances.clear();
+    instances.reserve(agents.iter().len().min(MAX_DRAWN_AGENTS));
+    for (transform, navigator) in agents.iter().take(MAX_DRAWN_AGENTS) {
+        instances.push(UVec4::new(
+            transform.translation.x.to_bits(),
+            transform.translation.y.to_bits(),
+            u32::from_le_bytes(navigator.color.to_u8_array()),
+            (transform.scale.x / 2.0).to_bits(),
+        ));
+    }
+
+    // Quads past the current agent count read past the end of this buffer and
+    // are collapsed by the shader. Going through the material rather than
+    // straight to the buffer marks the material as changed, which is what makes
+    // its bind group pick up the resized buffer.
+    let material = materials.get_mut(&draw.0).unwrap();
+    buffers
+        .get_mut(&material.agents)
+        .unwrap()
+        .set_data(instances.as_slice());
 }
