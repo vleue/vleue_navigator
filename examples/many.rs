@@ -148,7 +148,7 @@ fn on_mesh_change(
             *current_mesh_entity = Some(
                 commands
                     .spawn((
-                        Mesh2d(meshes.add(navmesh.to_mesh()).into()),
+                        Mesh2d(meshes.add(navmesh.to_mesh())),
                         Transform::from_translation(Vec3::new(
                             -MESH_SIZE.x / 2.0 * factor,
                             -MESH_SIZE.y / 2.0 * factor,
@@ -440,10 +440,10 @@ fn self_regulate(
     not_moving: Query<(Entity, Ref<GlobalTransform>), With<Navigator>>,
 ) {
     for (entity, transform) in &not_moving {
-        if !transform.is_changed() {
-            if system.this_run().get() - transform.last_changed().get() > 100000 {
-                commands.entity(entity).despawn();
-            }
+        if !transform.is_changed()
+            && system.this_run().get() - transform.last_changed().get() > 100000
+        {
+            commands.entity(entity).despawn();
         }
     }
 }
