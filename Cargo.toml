@@ -34,7 +34,7 @@ version = "0.17.0"
 
 [dependencies.bevy]
 version = "0.19.1"
-features = ["bevy_render", "bevy_asset", "bevy_log"]
+features = ["bevy_mesh", "bevy_camera", "bevy_asset", "bevy_log"]
 default-features = false
 
 [dev-dependencies]
