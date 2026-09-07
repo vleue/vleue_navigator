@@ -383,8 +383,9 @@ fn trigger_navmesh_build<Marker: Component, Obstacle: ObstacleSource>(
     let has_removed_obstacles = !removed_obstacles.is_empty();
     let mut to_check = navmeshes
         .iter_mut()
-        .filter_map(|(entity, settings, _, mode, ..)| {
+        .filter_map(|(entity, settings, transform, mode, ..)| {
             if settings.is_changed()
+                || transform.is_changed()
                 || cachable_obstacles_changed
                 || has_removed_obstacles
                 || matches!(mode, NavMeshUpdateMode::OnDemand(true))
@@ -748,5 +749,76 @@ impl<Obstacle: ObstacleSource, Marker: Component> Plugin
             app.add_observer(crate::obstacles::avian3d::on_sleeping_inserted)
                 .add_observer(crate::obstacles::avian3d::on_sleeping_removed);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bevy::{
+        asset::{AssetApp, AssetPlugin},
+        camera::primitives::Aabb,
+        diagnostic::DiagnosticsPlugin,
+        transform::TransformPlugin,
+    };
+
+    use super::*;
+
+    #[test]
+    fn moving_a_direct_navmesh_reprojects_static_obstacles() {
+        let obstacle_position = Vec3::new(5.0, 5.0, 0.0);
+        let mut app = App::new();
+        app.add_plugins((
+            MinimalPlugins,
+            AssetPlugin::default(),
+            TransformPlugin,
+            DiagnosticsPlugin,
+            NavmeshUpdaterPlugin::<Aabb>::default(),
+        ));
+        app.init_asset::<NavMesh>();
+        app.world_mut().spawn((
+            Aabb::from_min_max(Vec3::splat(-1.0), Vec3::splat(1.0)),
+            Transform::from_translation(obstacle_position),
+        ));
+        let navmesh = app
+            .world_mut()
+            .spawn((
+                NavMeshSettings {
+                    fixed: Triangulation::from_outer_edges(&[
+                        Vec2::ZERO,
+                        Vec2::new(20.0, 0.0),
+                        Vec2::splat(20.0),
+                        Vec2::new(0.0, 20.0),
+                    ]),
+                    ..default()
+                },
+                NavMeshUpdateMode::Direct,
+                NavMeshUpdateModeBlocking,
+                Transform::IDENTITY,
+            ))
+            .id();
+
+        app.update();
+        app.update();
+
+        app.world_mut()
+            .entity_mut(navmesh)
+            .get_mut::<Transform>()
+            .unwrap()
+            .translation
+            .x = 2.0;
+        app.update();
+        app.update();
+
+        let handle = app.world().entity(navmesh).get::<ManagedNavMesh>().unwrap();
+        let navmesh = app
+            .world()
+            .resource::<Assets<NavMesh>>()
+            .get(&**handle)
+            .unwrap();
+        assert_eq!(navmesh.transform().translation.x, 2.0);
+        assert!(
+            !navmesh.is_in_mesh(Vec2::new(3.0, 5.0)),
+            "the static obstacle should stay at world x=5 after the navmesh moves to x=2"
+        );
     }
 }
