@@ -33,7 +33,7 @@ optional = true
 version = "0.17.0"
 
 [dependencies.bevy]
-version = "0.19.1"
+version = "0.20.0"
 features = ["bevy_mesh", "bevy_camera", "bevy_asset", "bevy_log"]
 default-features = false
 
@@ -47,7 +47,7 @@ version = "0.17.0"
 features = ["serde"]
 
 [dev-dependencies.bevy]
-version = "0.19.1"
+version = "0.20.0"
 
 [lints.clippy]
 # Bevy systems routinely take many arguments and deeply nested query types.
