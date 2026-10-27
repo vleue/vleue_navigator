@@ -17,8 +17,9 @@ fn main() {
         serde_json::from_reader(File::open("assets/recast/poly_mesh.json").unwrap()).unwrap();
     let detailed: polyanya::RecastPolyMeshDetail =
         serde_json::from_reader(File::open("assets/recast/detail_mesh.json").unwrap()).unwrap();
-    let mut full_navmesh: polyanya::Mesh =
-        polyanya::RecastFullMesh::new(rasterised, detailed).into();
+    let mut full_navmesh: polyanya::Mesh = polyanya::RecastFullMesh::new(rasterised, detailed)
+        .try_into()
+        .unwrap();
 
     full_navmesh.search_delta = 0.25;
     full_navmesh.search_steps = 20;
@@ -166,7 +167,9 @@ fn draw_path(
         return;
     };
 
-    let mut path_with_height = path.path_with_height(start, end, mesh);
+    let Some(mut path_with_height) = path.path_with_height(start, end, mesh) else {
+        return;
+    };
 
     for point in &path_with_height {
         path_gizmos.sphere(*point, 0.1, palettes::tailwind::BLUE_600);
@@ -396,9 +399,10 @@ fn autonomous_demo(
                 material.base_color = LAYER_COLORS[next_polygon_in_path as usize].into();
             }
         }
-        let move_dir = (path.path_with_height(transform.translation, end, mesh)[0]
-            - transform.translation)
-            .normalize();
+        let Some(path_with_height) = path.path_with_height(transform.translation, end, mesh) else {
+            continue;
+        };
+        let move_dir = (path_with_height[0] - transform.translation).normalize();
         transform.translation += move_dir / 10.0;
         if *finished {
             transform.translation += move_dir / 15.0;

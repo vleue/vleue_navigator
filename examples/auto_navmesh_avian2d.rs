@@ -1,4 +1,4 @@
-use avian2d::{math::*, prelude::*};
+use avian2d::prelude::*;
 use bevy::{color::palettes, math::vec2, prelude::*, sprite_render::ColorMaterial};
 use rand::RngExt;
 use vleue_navigator::prelude::*;
@@ -25,7 +25,7 @@ fn main() {
             NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
         ))
         .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.1)))
-        .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 100.0))
+        .insert_resource(Gravity(Vec2::NEG_Y * 9.81 * 100.0))
         .add_systems(Startup, setup)
         .add_systems(
             PreUpdate,
@@ -88,7 +88,7 @@ fn setup(
                     0.0,
                 ),
                 RigidBody::Static,
-                Collider::circle(peg_radius as Scalar),
+                Collider::circle(peg_radius),
                 Obstacle::Peg,
             ));
         }
@@ -111,7 +111,7 @@ fn setup(
                 .normalize()
                     * 200.0,
             ),
-            Collider::circle(5.0 as Scalar),
+            Collider::circle(5.0),
             Puck(start),
         ));
     }

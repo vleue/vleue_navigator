@@ -1,6 +1,6 @@
-use std::time::Duration;
+use std::{f32::consts::FRAC_PI_2, time::Duration};
 
-use avian3d::{math::*, prelude::*};
+use avian3d::prelude::*;
 use bevy::{
     asset::uuid_handle, color::palettes, math::vec2, prelude::*, time::common_conditions::on_timer,
 };
@@ -27,7 +27,7 @@ fn main() {
         NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
     ))
     .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.1)))
-    .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 50.0))
+    .insert_resource(Gravity(Vec3::NEG_Y * 9.81 * 50.0))
     .add_systems(Startup, setup)
     .add_systems(
         Update,
