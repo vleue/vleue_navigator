@@ -1,6 +1,6 @@
 use std::f32::consts::FRAC_PI_2;
 
-use avian3d::{math::Vector, prelude::*};
+use avian3d::prelude::*;
 use bevy::{
     color::palettes,
     math::{vec2, vec3},
@@ -37,7 +37,7 @@ fn main() {
             VleueNavigatorPlugin,
             NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
         ))
-        .insert_resource(Gravity(Vector::NEG_Y * 9.81 * 10.0))
+        .insert_resource(Gravity(Vec3::NEG_Y * 9.81 * 10.0))
         .add_systems(Startup, setup)
         .add_systems(Update, (rotate_camera, display_path))
         .add_systems(Update, move_obstacles);
