@@ -1,4 +1,7 @@
-use bevy::{color::palettes, diagnostic::DiagnosticsStore, prelude::*};
+use bevy::{
+    color::palettes, diagnostic::DiagnosticsStore, picking::hover::Hovered, prelude::*,
+    ui::Pressed, ui_widgets::Button,
+};
 use std::ops::Deref;
 use vleue_navigator::prelude::*;
 
@@ -41,6 +44,7 @@ fn button(text: &str, action: UiSettingsButtons, parent: &mut ChildSpawnerComman
                 ..default()
             },
             Button,
+            Hovered::default(),
             BorderColor::all(palettes::tailwind::GRAY_500),
             BackgroundColor(palettes::tailwind::GRAY_700.into()),
             action,
@@ -61,12 +65,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
     commands
         .spawn((
             Node {
-                border_radius: BorderRadius {
-                    top_left: Val::Px(0.),
-                    top_right: Val::Px(0.),
-                    bottom_left: Val::Px(20.0),
-                    bottom_right: Val::Px(0.),
-                },
+                border_radius: BorderRadius::bottom_left(Val::Px(20.0)),
                 position_type: PositionType::Absolute,
                 right: Val::Px(0.0),
                 flex_direction: FlexDirection::Column,
@@ -160,6 +159,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                         ..default()
                     },
                     Button,
+                    Hovered::default(),
                     BorderColor::all(palettes::tailwind::GRAY_500),
                     BackgroundColor(palettes::tailwind::GRAY_700.into()),
                     UiSettingsButtons::AgentRadiusOuterToggle,
@@ -187,6 +187,7 @@ pub fn setup_settings<const WITH_CACHE: bool>(mut commands: Commands) {
                             ..default()
                         },
                         Button,
+                        Hovered::default(),
                         BorderColor::all(palettes::tailwind::GRAY_500),
                         UiSettingsButtons::ToggleCache,
                         UiSettings::Cache,
@@ -258,63 +259,54 @@ pub fn display_settings(
 }
 
 pub fn update_settings<const STEP: u32>(
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &UiSettingsButtons,
-            Option<&mut BackgroundColor>,
-        ),
-        (Changed<Interaction>, With<Button>),
+    pressed: Query<&UiSettingsButtons, (Added<Pressed>, With<Button>)>,
+    mut hovered: Query<
+        (&Hovered, &UiSettingsButtons, Option<&mut BackgroundColor>),
+        (Changed<Hovered>, With<Button>),
     >,
     mut settings: Single<&mut NavMeshSettings>,
     mut example_settings: ResMut<ExampleSettings>,
 ) {
-    for (interaction, button, mut color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                let settings = settings.as_mut();
-                match *button {
-                    UiSettingsButtons::SimplifyDec => {
-                        settings.simplify = (settings.simplify - STEP as f32 / 1000.0).max(0.0);
-                    }
-                    UiSettingsButtons::SimplifyInc => {
-                        settings.simplify = (settings.simplify + STEP as f32 / 1000.0).min(10.0);
-                    }
-                    UiSettingsButtons::MergeStepsDec => {
-                        settings.merge_steps = settings.merge_steps.saturating_sub(1);
-                    }
-                    UiSettingsButtons::MergeStepsInc => {
-                        settings.merge_steps = (settings.merge_steps + 1).min(5);
-                    }
-                    UiSettingsButtons::AgentRadiusDec => {
-                        settings.agent_radius = (settings.agent_radius - 0.1).max(0.0);
-                    }
-                    UiSettingsButtons::AgentRadiusInc => {
-                        settings.agent_radius = (settings.agent_radius + 0.1).min(5.0);
-                    }
-                    UiSettingsButtons::ToggleCache => {
-                        example_settings.cache_enabled = !example_settings.cache_enabled;
-                    }
-                    UiSettingsButtons::AgentRadiusOuterToggle => {
-                        settings.agent_radius_on_outer_edge = !settings.agent_radius_on_outer_edge;
-                    }
-                }
+    for button in &pressed {
+        let settings = settings.as_mut();
+        match *button {
+            UiSettingsButtons::SimplifyDec => {
+                settings.simplify = (settings.simplify - STEP as f32 / 1000.0).max(0.0);
             }
-            Interaction::Hovered => {
-                if !matches!(button, UiSettingsButtons::ToggleCache)
-                    && !matches!(button, UiSettingsButtons::AgentRadiusOuterToggle)
-                {
-                    color.as_mut().unwrap().0 = palettes::tailwind::GRAY_600.into();
-                }
+            UiSettingsButtons::SimplifyInc => {
+                settings.simplify = (settings.simplify + STEP as f32 / 1000.0).min(10.0);
             }
-            Interaction::None => {
-                if !matches!(button, UiSettingsButtons::ToggleCache)
-                    && !matches!(button, UiSettingsButtons::AgentRadiusOuterToggle)
-                {
-                    color.as_mut().unwrap().0 = palettes::tailwind::GRAY_700.into();
-                }
+            UiSettingsButtons::MergeStepsDec => {
+                settings.merge_steps = settings.merge_steps.saturating_sub(1);
+            }
+            UiSettingsButtons::MergeStepsInc => {
+                settings.merge_steps = (settings.merge_steps + 1).min(5);
+            }
+            UiSettingsButtons::AgentRadiusDec => {
+                settings.agent_radius = (settings.agent_radius - 0.1).max(0.0);
+            }
+            UiSettingsButtons::AgentRadiusInc => {
+                settings.agent_radius = (settings.agent_radius + 0.1).min(5.0);
+            }
+            UiSettingsButtons::ToggleCache => {
+                example_settings.cache_enabled = !example_settings.cache_enabled;
+            }
+            UiSettingsButtons::AgentRadiusOuterToggle => {
+                settings.agent_radius_on_outer_edge = !settings.agent_radius_on_outer_edge;
             }
         }
+    }
+    for (hovered, button, mut color) in &mut hovered {
+        if matches!(button, UiSettingsButtons::ToggleCache)
+            || matches!(button, UiSettingsButtons::AgentRadiusOuterToggle)
+        {
+            continue;
+        }
+        color.as_mut().unwrap().0 = if hovered.get() {
+            palettes::tailwind::GRAY_600.into()
+        } else {
+            palettes::tailwind::GRAY_700.into()
+        };
     }
 }
 
@@ -326,12 +318,7 @@ pub fn setup_stats<const INTERACTIVE: bool>(mut commands: Commands) {
                 left: Val::Px(0.0),
                 flex_direction: FlexDirection::Column,
                 min_width: Val::Px(300.0),
-                border_radius: BorderRadius {
-                    top_left: Val::Px(0.),
-                    top_right: Val::Px(0.),
-                    bottom_right: Val::Px(20.0),
-                    bottom_left: Val::Px(0.),
-                },
+                border_radius: BorderRadius::bottom_right(Val::Px(20.0)),
                 ..default()
             },
             BackgroundColor(palettes::tailwind::GRAY_900.with_alpha(0.8).into()),
